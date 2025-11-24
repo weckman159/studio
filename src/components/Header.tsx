@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { CarFront, Settings, User, LogOut } from 'lucide-react';
+import { Settings, User, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { auth } from '@/lib/firebase/client';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -35,10 +35,7 @@ export function Header() {
       <div className="container flex h-16 items-center">
         <div className="flex items-center space-x-2 md:hidden">
             <SidebarTrigger />
-            <Link href="/" className="mr-6 flex items-center space-x-2">
-              <CarFront className="h-6 w-6 text-primary" />
-              <span className="font-bold text-lg">AutoSphere</span>
-            </Link>
+            <span className="font-bold text-lg">AutoSphere</span>
         </div>
         <div className="flex flex-1 items-center justify-end space-x-4">
           {loading ? (
