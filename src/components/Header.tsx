@@ -11,16 +11,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { CarFront, Home, BookOpen, Warehouse, Settings, User, LogOut } from 'lucide-react';
+import { CarFront, Home, BookOpen, Users, ShoppingCart, Wrench, Calendar, CheckSquare, Radio, Settings, User, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { auth } from '@/lib/firebase/client';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { users } from '@/lib/data';
 
 const navLinks = [
-  { href: '/', label: 'Лента', icon: Home },
-  { href: '/garage', label: 'Гараж', icon: Warehouse },
-  { href: '/posts', label: 'Бортжурналы', icon: BookOpen },
+  { href: '/', label: 'Главная', icon: Home },
+  { href: '/journals', label: 'Журналы', icon: BookOpen },
+  { href: '/communities', label: 'Сообщества', icon: Users },
+  { href: '/marketplace', label: 'Маркетплейс', icon: ShoppingCart },
+  { href: '/workshops', label: 'Мастерские', icon: Wrench },
+  { href: '/events', label: 'События', icon: Calendar },
+  { href: '/voting', label: 'Голосование', icon: CheckSquare },
+  { href: '/news', label: 'Автоновости', icon: Radio },
 ];
 
 export function Header() {
@@ -42,9 +47,10 @@ export function Header() {
           <CarFront className="h-6 w-6 text-primary" />
           <span className="font-bold text-lg">AutoSphere</span>
         </Link>
-        <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
+        <nav className="hidden md:flex items-center space-x-4 text-sm font-medium">
           {navLinks.map(link => (
-            <Link key={link.href} href={link.href} className="transition-colors hover:text-primary">
+            <Link key={link.href} href={link.href} className="flex items-center transition-colors hover:text-primary">
+              <link.icon className="mr-2 h-4 w-4" />
               {link.label}
             </Link>
           ))}
