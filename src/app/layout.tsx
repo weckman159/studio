@@ -4,11 +4,26 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/hooks/use-auth";
+import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { CarFront, Home, BookOpen, Users, ShoppingCart, Wrench, Calendar, CheckSquare, Radio } from 'lucide-react';
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "AutoSphere",
   description: "A community for car enthusiasts",
 };
+
+const navLinks = [
+  { href: '/', label: 'Главная', icon: Home },
+  { href: '/journals', label: 'Журналы', icon: BookOpen },
+  { href: '/communities', label: 'Сообщества', icon: Users },
+  { href: '/marketplace', label: 'Маркетплейс', icon: ShoppingCart },
+  { href: '/workshops', label: 'Мастерские', icon: Wrench },
+  { href: '/events', label: 'События', icon: Calendar },
+  { href: '/voting', label: 'Голосование', icon: CheckSquare },
+  { href: '/news', label: 'Автоновости', icon: Radio },
+];
+
 
 export default function RootLayout({
   children,
@@ -25,12 +40,38 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="font-body antialiased flex flex-col">
+      <body className="font-body antialiased">
         <AuthProvider>
-          <Header />
-          <main className="flex-1">{children}</main>
-          <Footer />
-          <Toaster />
+          <SidebarProvider>
+            <Sidebar>
+                <SidebarHeader>
+                    <div className="flex items-center space-x-2">
+                     <CarFront className="h-6 w-6 text-primary" />
+                     <span className="font-bold text-lg">AutoSphere</span>
+                    </div>
+                </SidebarHeader>
+                <SidebarContent>
+                    <SidebarMenu>
+                        {navLinks.map(link => (
+                            <SidebarMenuItem key={link.href}>
+                                <SidebarMenuButton asChild>
+                                    <Link href={link.href}>
+                                        <link.icon />
+                                        <span>{link.label}</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        ))}
+                    </SidebarMenu>
+                </SidebarContent>
+            </Sidebar>
+            <SidebarInset>
+              <Header />
+              <main className="flex-1">{children}</main>
+              <Footer />
+              <Toaster />
+            </SidebarInset>
+          </SidebarProvider>
         </AuthProvider>
       </body>
     </html>

@@ -11,22 +11,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { CarFront, Home, BookOpen, Users, ShoppingCart, Wrench, Calendar, CheckSquare, Radio, Settings, User, LogOut } from 'lucide-react';
+import { CarFront, Settings, User, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { auth } from '@/lib/firebase/client';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { users } from '@/lib/data';
-
-const navLinks = [
-  { href: '/', label: 'Главная', icon: Home },
-  { href: '/journals', label: 'Журналы', icon: BookOpen },
-  { href: '/communities', label: 'Сообщества', icon: Users },
-  { href: '/marketplace', label: 'Маркетплейс', icon: ShoppingCart },
-  { href: '/workshops', label: 'Мастерские', icon: Wrench },
-  { href: '/events', label: 'События', icon: Calendar },
-  { href: '/voting', label: 'Голосование', icon: CheckSquare },
-  { href: '/news', label: 'Автоновости', icon: Radio },
-];
+import { SidebarTrigger } from './ui/sidebar';
 
 export function Header() {
   const { user, loading } = useAuth();
@@ -41,20 +31,15 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
-        <Link href="/" className="mr-6 flex items-center space-x-2">
-          <CarFront className="h-6 w-6 text-primary" />
-          <span className="font-bold text-lg">AutoSphere</span>
-        </Link>
-        <nav className="hidden md:flex items-center space-x-4 text-sm font-medium">
-          {navLinks.map(link => (
-            <Link key={link.href} href={link.href} className="flex items-center transition-colors hover:text-primary">
-              <link.icon className="mr-2 h-4 w-4" />
-              {link.label}
+        <div className="flex items-center space-x-2 md:hidden">
+            <SidebarTrigger />
+            <Link href="/" className="mr-6 flex items-center space-x-2">
+              <CarFront className="h-6 w-6 text-primary" />
+              <span className="font-bold text-lg">AutoSphere</span>
             </Link>
-          ))}
-        </nav>
+        </div>
         <div className="flex flex-1 items-center justify-end space-x-4">
           {loading ? (
              <div className="h-8 w-20 bg-muted rounded-md animate-pulse" />
