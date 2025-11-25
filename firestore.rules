@@ -6,14 +6,15 @@
  *
  * Data Structure:
  * - /users/{userId}: Stores public user profiles. Each user manages their own document.
- * - /users/{userId}/cars/{carId}: A subcollection for a user's "garage". Access is strictly limited to the parent user.
+ * - /users/{userId}/cars/{carId}: A subcollection for a user's "garage". Access is public for reads, but restricted to the owner for writes.
  * - /posts/{postId}: A top-level collection for all user-generated posts. Publicly readable.
  * - /comments/{commentId}: A top-level collection for all comments on posts. Publicly readable.
  * - /featured_cars/{date}: A read-only collection for the "Car of the Day," presumed to be managed by a backend process.
  *
  * Key Security Decisions:
  * - User Privacy: Listing all users via a collection query (`/users`) is explicitly disallowed to prevent data scraping.
- * - Path-Based Ownership: The `/users/{userId}` tree uses the document path as the primary source of truth for ownership, making rules simple and fast.
+ * - Public Garages: Car collections are publicly readable (`get`, `list`) to allow any user to view another's garage, fitting the community model.
+ * - Path-Based Ownership: The `/users/{userId}` tree uses the document path as the primary source of truth for ownership on write operations, making rules simple and fast.
  * - Denormalized Ownership: For top-level collections like `/posts` and `/comments`, a `userId` field is stored on each document. This allows for efficient ownership checks on writes without needing extra database reads.
  * - Secure Defaults: The `/featured_cars` collection is read-only for clients, ensuring this curated content cannot be tampered with. The default posture for any unspecified path is to deny all access.
  *
@@ -61,16 +62,16 @@ service cloud.firestore {
 
       /**
        * @description
-       *   Manages cars in a user's garage. Only the owner of the garage can add, view, update, or remove their own cars.
+       *   Manages cars in a user's garage. Garage is publicly readable.
+       *   Only the owner of the garage can add, update, or remove their own cars.
        * @path /users/{userId}/cars/{carId}
+       * @allow (get, list) Any user can view cars in any user's garage.
        * @allow (create) An authenticated user adding a car to their own garage.
-       * @allow (list) An authenticated user listing all cars in their own garage.
-       * @deny (get) A user trying to view a specific car in someone else's garage.
        * @deny (update) A user trying to modify a car in someone else's garage.
-       * @principle Restricts access to a user's own data tree using path-based ownership.
+       * @principle Allows public viewing of garages while restricting write access to the owner.
        */
       match /cars/{carId} {
-        allow get, list: if isOwner(userId);
+        allow get, list: if true;
         allow create: if isOwner(userId) && request.resource.data.userId == userId;
         allow update: if isOwner(userId) && resource != null && request.resource.data.userId == resource.data.userId;
         allow delete: if isOwner(userId) && resource != null;
