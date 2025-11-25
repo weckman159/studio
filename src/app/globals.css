@@ -97,4 +97,7 @@
   .ck.ck-button.ck-on, .ck.ck-button:not(.ck-disabled):hover {
     @apply bg-muted !important;
   }
+  .dark .ck-button .ck-icon, .dark .ck-button:hover .ck-icon {
+      color: hsl(var(--card-foreground));
+  }
 }
