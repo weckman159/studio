@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import Image from "next/image";
-import { notFound, useRouter } from "next/navigation";
+import { notFound, useRouter, useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { GarageCard } from "@/components/GarageCard";
@@ -16,7 +16,9 @@ import { AddCarForm } from '@/components/AddCarForm';
 import { useToast } from "@/hooks/use-toast";
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
-export default function ProfilePage({ params }: { params: { id: string } }) {
+export default function ProfilePage() {
+  const params = useParams();
+  const id = params.id as string;
   const { user: authUser, isUserLoading: isAuthUserLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -27,20 +29,20 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
 
   const userRef = useMemoFirebase(() => {
     if (!firestore) return null;
-    return doc(firestore, 'users', params.id);
-  }, [firestore, params.id]);
+    return doc(firestore, 'users', id);
+  }, [firestore, id]);
   
   const { data: user, isLoading: isUserLoading } = useDoc<UserData>(userRef);
 
   const userCarsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'users', params.id, 'cars'));
-  }, [firestore, params.id]);
+    return query(collection(firestore, 'users', id, 'cars'));
+  }, [firestore, id]);
 
   const { data: userCars, isLoading: carsLoading } = useCollection<Car>(userCarsQuery);
 
   const userAvatar = user ? PlaceHolderImages.find((img) => img.id === user.avatarId) : null;
-  const isOwner = authUser && authUser.uid === params.id;
+  const isOwner = authUser && authUser.uid === id;
 
   const handleEdit = (car: Car) => {
     setEditingCar(car);
