@@ -1,3 +1,4 @@
+
 export interface User {
   id: string;
   name: string;
@@ -30,7 +31,8 @@ export interface Post {
   carId: string;
   title: string;
   content: string;
-  imageId: string;
+  imageUrl?: string; // Replaces imageId for direct URL storage
+  imageId?: string; // Keep for fallback or existing data
   tags: string[];
   likes: number;
   comments: number;

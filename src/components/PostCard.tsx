@@ -24,7 +24,9 @@ interface PostCardProps {
 }
 
 export function PostCard({ post, user, car }: PostCardProps) {
-  const postImage = PlaceHolderImages.find((img) => img.id === post.imageId);
+  const postImage = post.imageUrl ? null : PlaceHolderImages.find((img) => img.id === post.imageId);
+  const finalImageUrl = post.imageUrl || postImage?.imageUrl;
+
   const userAvatar = PlaceHolderImages.find((img) => img.id === user.avatarId);
   const [formattedDate, setFormattedDate] = useState('');
 
@@ -58,14 +60,14 @@ export function PostCard({ post, user, car }: PostCardProps) {
       </CardHeader>
       <CardContent>
         <h2 className="text-2xl font-bold mb-4">{post.title}</h2>
-        {postImage && (
+        {finalImageUrl && (
           <div className="relative aspect-video mb-4 rounded-lg overflow-hidden">
             <Image
-              src={postImage.imageUrl}
+              src={finalImageUrl}
               alt={post.title}
               fill
               className="object-cover"
-              data-ai-hint={postImage.imageHint}
+              data-ai-hint={postImage?.imageHint}
             />
           </div>
         )}

@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, addDoc, serverTimestamp, query, where } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Car } from '@/lib/data';
+import { Upload } from 'lucide-react';
 
 export default function CreatePostPage() {
   const router = useRouter();
@@ -24,6 +26,7 @@ export default function CreatePostPage() {
   const [content, setContent] = useState('');
   const [tags, setTags] = useState('');
   const [carId, setCarId] = useState('');
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   
   const userCarsQuery = useMemoFirebase(() => {
@@ -32,6 +35,17 @@ export default function CreatePostPage() {
   }, [user, firestore]);
 
   const { data: userCars, isLoading: carsLoading } = useCollection<Car>(userCarsQuery);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImageUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,7 +60,7 @@ export default function CreatePostPage() {
 
     setLoading(true);
     try {
-      await addDoc(collection(firestore, 'posts'), {
+      const postData: any = {
         title,
         content,
         carId,
@@ -55,9 +69,14 @@ export default function CreatePostPage() {
         likes: 0,
         comments: 0,
         createdAt: serverTimestamp(),
-        // Mocking imageId as it's required in PostCard, but not implemented in this form.
-        imageId: 'post' + (Math.floor(Math.random() * 3) + 1),
-      });
+      };
+      if (imageUrl) {
+        postData.imageUrl = imageUrl;
+      } else {
+        postData.imageId = 'post' + (Math.floor(Math.random() * 3) + 1);
+      }
+
+      await addDoc(collection(firestore, 'posts'), postData);
       toast({ title: 'Успех!', description: 'Ваш пост был создан.' });
       router.push('/posts');
     } catch (error: any) {
@@ -86,6 +105,15 @@ export default function CreatePostPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
+              <Label htmlFor="cover-image">Главное изображение</Label>
+              <Input id="cover-image" type="file" accept="image/*" onChange={handleImageUpload} />
+              {imageUrl && (
+                <div className="mt-4 relative w-full aspect-video rounded-md overflow-hidden">
+                  <Image src={imageUrl} alt="Предпросмотр изображения" fill className="object-cover" />
+                </div>
+              )}
+            </div>
+             <div className="space-y-2">
               <Label htmlFor="car">Выберите автомобиль</Label>
               <Select onValueChange={setCarId} value={carId}>
                 <SelectTrigger id="car">

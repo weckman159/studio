@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import Image from 'next/image';
 import { useFirestore, useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc, setDoc, serverTimestamp, query } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Car, Post } from '@/lib/data';
 import { setDocumentNonBlocking } from '@/firebase';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 
 export default function EditPostPage() {
@@ -28,6 +30,7 @@ export default function EditPostPage() {
   const [content, setContent] = useState('');
   const [tags, setTags] = useState('');
   const [carId, setCarId] = useState('');
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const postRef = useMemoFirebase(() => {
@@ -50,8 +53,28 @@ export default function EditPostPage() {
       setContent(postData.content);
       setCarId(postData.carId);
       setTags(postData.tags.join(', '));
+
+      if (postData.imageUrl) {
+        setImageUrl(postData.imageUrl);
+      } else if (postData.imageId) {
+        const placeholder = PlaceHolderImages.find(p => p.id === postData.imageId);
+        if (placeholder) {
+          setImageUrl(placeholder.imageUrl);
+        }
+      }
     }
   }, [postData]);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImageUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,13 +88,14 @@ export default function EditPostPage() {
     }
 
     setLoading(true);
-    const updatedData = {
+    const updatedData: Partial<Post> = {
       title,
       content,
       carId,
       userId: user.uid,
       tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag),
-      updatedAt: serverTimestamp(),
+      updatedAt: serverTimestamp() as unknown as string,
+      imageUrl: imageUrl || undefined,
     };
     
     setDocumentNonBlocking(postRef, updatedData, { merge: true });
@@ -109,6 +133,15 @@ export default function EditPostPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="cover-image">Главное изображение</Label>
+              <Input id="cover-image" type="file" accept="image/*" onChange={handleImageUpload} />
+              {imageUrl && (
+                <div className="mt-4 relative w-full aspect-video rounded-md overflow-hidden">
+                  <Image src={imageUrl} alt="Предпросмотр изображения" fill className="object-cover" />
+                </div>
+              )}
+            </div>
             <div className="space-y-2">
               <Label htmlFor="car">Выберите автомобиль</Label>
               <Select onValueChange={setCarId} value={carId}>
