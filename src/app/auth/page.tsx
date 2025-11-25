@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { auth } from "@/lib/firebase/client";
+import { useAuth } from "@/firebase";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -36,12 +36,18 @@ function GoogleIcon() {
 export default function AuthPage() {
   const { toast } = useToast();
   const router = useRouter();
+  const auth = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleAuth = async (isLogin: boolean) => {
     setLoading(true);
+    if (!auth) {
+      toast({ variant: "destructive", title: "Authentication Error", description: "Firebase Auth not initialized" });
+      setLoading(false);
+      return;
+    }
     try {
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
@@ -59,6 +65,11 @@ export default function AuthPage() {
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
+    if (!auth) {
+      toast({ variant: "destructive", title: "Authentication Error", description: "Firebase Auth not initialized" });
+      setLoading(false);
+      return;
+    }
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);

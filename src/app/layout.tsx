@@ -3,10 +3,10 @@ import "./globals.css";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Toaster } from "@/components/ui/toaster";
-import { AuthProvider } from "@/hooks/use-auth";
-import { Sidebar, SidebarContent, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarProvider } from "@/components/ui/sidebar";
 import { CarFront, Home, BookOpen, Users, ShoppingCart, Wrench, Calendar, CheckSquare, Radio } from 'lucide-react';
 import Link from "next/link";
+import { FirebaseClientProvider } from "@/firebase/client-provider";
 
 export const metadata: Metadata = {
   title: "AutoSphere",
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 
 const navLinks = [
   { href: '/', label: 'Главная', icon: Home },
-  { href: '/journals', label: 'Журналы', icon: BookOpen },
+  { href: '/posts', label: 'Журналы', icon: BookOpen },
   { href: '/communities', label: 'Сообщества', icon: Users },
   { href: '/marketplace', label: 'Маркетплейс', icon: ShoppingCart },
   { href: '/workshops', label: 'Мастерские', icon: Wrench },
@@ -41,7 +41,7 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <AuthProvider>
+        <FirebaseClientProvider>
           <SidebarProvider>
             <Sidebar>
                 <SidebarHeader>
@@ -72,7 +72,7 @@ export default function RootLayout({
               <Toaster />
             </SidebarInset>
           </SidebarProvider>
-        </AuthProvider>
+        </FirebaseClientProvider>
       </body>
     </html>
   );

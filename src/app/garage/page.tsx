@@ -1,20 +1,23 @@
 'use client';
 
-import { useState } from 'react';
 import { GarageCard } from "@/components/GarageCard";
 import { Button } from "@/components/ui/button";
-import { cars, users } from "@/lib/data";
-import { useAuth } from "@/hooks/use-auth";
+import { useUser, useCollection, useFirestore } from "@/firebase";
+import { collection, query, where } from 'firebase/firestore';
+import { Car, User } from '@/lib/data';
+import { users } from '@/lib/data';
 import { Plus } from "lucide-react";
 import Link from 'next/link';
 
 export default function GaragePage() {
-  const { user, loading } = useAuth();
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
   
-  // For demonstration, we'll filter cars for the first user if no one is logged in.
-  const userId = user ? user.uid : '1';
-  const userCars = cars.filter(car => car.userId === userId);
-
+  const carsQuery = user && firestore ? query(collection(firestore, 'users', user.uid, 'cars')) : null;
+  const { data: userCars, isLoading: carsLoading } = useCollection<Car>(carsQuery);
+  
+  const loading = isUserLoading || carsLoading;
+  
   if (loading) {
     return <div className="container mx-auto px-4 py-8 text-center">Загрузка...</div>;
   }
@@ -27,6 +30,8 @@ export default function GaragePage() {
       </div>
     );
   }
+  
+  const owner = users.find(u => u.id === user.uid) || users[0]; // fallback for demo
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -37,13 +42,11 @@ export default function GaragePage() {
         </Button>
       </div>
       
-      {userCars.length > 0 ? (
+      {userCars && userCars.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {userCars.map(car => {
-            const owner = users.find(u => u.id === car.userId);
-            if (!owner) return null;
-            return <GarageCard key={car.id} car={car} user={owner} />;
-          })}
+          {userCars.map(car => (
+            <GarageCard key={car.id} car={car} user={owner} />
+          ))}
         </div>
       ) : (
         <div className="text-center py-16 border-2 border-dashed rounded-lg">

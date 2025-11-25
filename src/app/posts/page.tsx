@@ -3,17 +3,21 @@
 import { PostCard } from "@/components/PostCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { posts, users, cars } from "@/lib/data";
-import { useAuth } from "@/hooks/use-auth";
+import { useUser, useCollection, useFirestore } from "@/firebase";
+import { collection, query, where } from 'firebase/firestore';
+import { Post, User, Car } from '@/lib/data';
+import { users, cars } from "@/lib/data"; // for mock user/car data
 import { Plus, Edit, Trash2 } from "lucide-react";
 import Link from 'next/link';
 
 export default function PostsPage() {
-  const { user, loading } = useAuth();
-  
-  // For demonstration, we'll filter posts for the first user if no one is logged in.
-  const userId = user ? user.uid : '1';
-  const userPosts = posts.filter(post => post.userId === userId);
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
+
+  const postsQuery = user && firestore ? query(collection(firestore, 'posts'), where('userId', '==', user.uid)) : null;
+  const { data: userPosts, isLoading: postsLoading } = useCollection<Post>(postsQuery);
+
+  const loading = isUserLoading || postsLoading;
 
   if (loading) {
     return <div className="container mx-auto px-4 py-8 text-center">Загрузка...</div>;
@@ -32,16 +36,18 @@ export default function PostsPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Бортжурналы</h1>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" /> Создать пост
+        <Button asChild>
+          <Link href="/posts/create">
+            <Plus className="mr-2 h-4 w-4" /> Создать пост
+          </Link>
         </Button>
       </div>
 
-      {userPosts.length > 0 ? (
+      {userPosts && userPosts.length > 0 ? (
         <div className="space-y-6">
           {userPosts.map(post => {
-            const postUser = users.find(u => u.id === post.userId);
-            const postCar = cars.find(c => c.id === post.carId);
+            const postUser = users.find(u => u.id === post.userId) || null;
+            const postCar = cars.find(c => c.id === post.carId) || null;
             if (!postUser || !postCar) return null;
             return (
               <Card key={post.id} className="relative group">
@@ -65,8 +71,10 @@ export default function PostsPage() {
             <CardContent>
                 <h2 className="text-xl font-semibold text-muted-foreground">У вас пока нет постов</h2>
                 <p className="text-muted-foreground mt-2">Расскажите о своем автомобиле, поделитесь опытом ремонта или планами на тюнинг.</p>
-                <Button className="mt-4">
+                <Button asChild className="mt-4">
+                  <Link href="/posts/create">
                     <Plus className="mr-2 h-4 w-4" /> Создать первый пост
+                  </Link>
                 </Button>
             </CardContent>
         </Card>

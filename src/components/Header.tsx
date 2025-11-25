@@ -11,23 +11,24 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Settings, User, LogOut } from 'lucide-react';
-import { useAuth } from '@/hooks/use-auth';
-import { auth } from '@/lib/firebase/client';
+import { Settings, User, LogOut, CarFront } from 'lucide-react';
+import { useUser, useAuth } from '@/firebase';
+import { signOut } from 'firebase/auth';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { users } from '@/lib/data';
 import { SidebarTrigger } from './ui/sidebar';
 
 export function Header() {
-  const { user, loading } = useAuth();
+  const { user, isUserLoading } = useUser();
+  const auth = useAuth();
 
-  // Demo data for logged in user's avatar
   const currentUser = user ? users.find(u => u.id === user.uid) || users.find(u => u.id === '1') : null;
   const userAvatar = currentUser ? PlaceHolderImages.find(img => img.id === currentUser.avatarId) : null;
 
-
   const handleLogout = () => {
-    auth.signOut();
+    if (auth) {
+      signOut(auth);
+    }
   };
 
   return (
@@ -35,10 +36,11 @@ export function Header() {
       <div className="container flex h-16 items-center">
         <div className="flex items-center space-x-2 md:hidden">
             <SidebarTrigger />
+            <CarFront className="h-6 w-6 text-primary" />
             <span className="font-bold text-lg">AutoSphere</span>
         </div>
         <div className="flex flex-1 items-center justify-end space-x-4">
-          {loading ? (
+          {isUserLoading ? (
              <div className="h-8 w-20 bg-muted rounded-md animate-pulse" />
           ) : user ? (
             <DropdownMenu>
@@ -66,6 +68,12 @@ export function Header() {
                   <Link href={`/profile/${user.uid}`}>
                     <User className="mr-2 h-4 w-4" />
                     <span>Профиль</span>
+                  </Link>
+                </DropdownMenuItem>
+                 <DropdownMenuItem asChild>
+                  <Link href="/garage">
+                    <CarFront className="mr-2 h-4 w-4" />
+                    <span>Гараж</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>

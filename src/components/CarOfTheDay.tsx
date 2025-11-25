@@ -2,16 +2,15 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
+import { doc, getDoc, updateDoc, increment } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
 import type { Car, User } from '@/lib/data';
 import { cars as mockCars, users as mockUsers } from '@/lib/data';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Award } from 'lucide-react';
-import { Badge } from './ui/badge';
+import { Award, ThumbsUp } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 
 
@@ -24,6 +23,14 @@ export function CarOfTheDay() {
   const [car, setCar] = useState<Car | null>(null);
   const [owner, setOwner] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const firestore = useFirestore();
+
+  const handleVote = async () => {
+    if (!car || !firestore) return;
+    const carRef = doc(firestore, 'cars', car.id);
+    await updateDoc(carRef, { votes: increment(1) });
+    alert('Ваш голос учтён!');
+  };
 
   useEffect(() => {
     const fetchCar = async () => {
@@ -31,8 +38,7 @@ export function CarOfTheDay() {
       try {
         const today = new Date().toISOString().split('T')[0];
         // In a real app, you would fetch from Firestore.
-        // For this demo, we'll simulate a fetch and use mock data.
-        // const featuredRef = doc(db, 'featuredCar', today);
+        // const featuredRef = doc(firestore, 'featured_cars', today);
         // const featuredSnap = await getDoc(featuredRef);
         
         // Mocking the fetch
@@ -59,7 +65,7 @@ export function CarOfTheDay() {
     };
 
     fetchCar();
-  }, []);
+  }, [firestore]);
 
   if (loading) {
     return (
@@ -72,7 +78,8 @@ export function CarOfTheDay() {
           <Skeleton className="h-6 w-3/4 mt-4" />
           <Skeleton className="h-4 w-1/2 mt-2" />
         </CardContent>
-        <CardFooter>
+        <CardFooter className="flex flex-col items-stretch gap-2">
+            <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
         </CardFooter>
       </Card>
@@ -114,9 +121,13 @@ export function CarOfTheDay() {
             </div>
         </div>
       </CardContent>
-      <CardFooter>
+      <CardFooter className="flex flex-col items-stretch gap-2">
         <Button asChild className="w-full">
             <Link href={`/car/${car.id}`}>Посмотреть гараж</Link>
+        </Button>
+        <Button variant="secondary" onClick={handleVote}>
+            <ThumbsUp className="mr-2"/>
+            Голосовать
         </Button>
       </CardFooter>
     </Card>
