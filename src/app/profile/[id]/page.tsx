@@ -1,19 +1,104 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from "next/image";
+import Link from 'next/link';
 import { notFound, useParams } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { GarageCard } from "@/components/GarageCard";
 import { Button } from '@/components/ui/button';
-import { FileText, Award, Car as CarIcon, Edit } from "lucide-react";
+import { FileText, Award, Car as CarIcon, Edit, Users as UsersIcon, Heart, MessageCircle } from "lucide-react";
 import { useUser } from "@/firebase";
 import type { User as UserData, Car, Post } from '@/lib/data';
 import { users, cars, posts } from '@/lib/data';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { PostCard } from '@/components/PostCard';
+
+function CompactPostItem({ post }: { post: Post }) {
+    const postImage = PlaceHolderImages.find((img) => img.id === post.imageId);
+    const car = cars.find(c => c.id === post.carId);
+    const [formattedDate, setFormattedDate] = useState('');
+
+    useEffect(() => {
+        if (post.createdAt) {
+            setFormattedDate(new Date(post.createdAt).toLocaleDateString('ru-RU', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            }));
+        }
+    }, [post.createdAt]);
+
+    if (!car) return null;
+
+    return (
+        <Card className="flex items-start p-4 transition-all hover:bg-muted/50">
+            {postImage && (
+                <Link href={`/posts/${post.id}`} className="mr-4 flex-shrink-0">
+                    <Image
+                        src={postImage.imageUrl}
+                        alt={post.title}
+                        width={128}
+                        height={80}
+                        className="rounded-md object-cover w-32 h-20"
+                        data-ai-hint={postImage.imageHint}
+                    />
+                </Link>
+            )}
+            <div className="flex-grow">
+                <Link href={`/posts/${post.id}`} className="hover:underline">
+                    <h3 className="font-semibold text-lg leading-tight">{post.title}</h3>
+                </Link>
+                <p className="text-sm text-muted-foreground mt-1">
+                    в бортжурнале <Link href={`/car/${car.id}`} className="text-primary hover:underline">{car.brand} {car.model}</Link>
+                </p>
+                <div className="flex items-center justify-between text-sm text-muted-foreground mt-2">
+                    <span>{formattedDate}</span>
+                    <div className="flex items-center gap-4">
+                        <span className="flex items-center gap-1">
+                            <Heart className="w-4 h-4" /> {post.likes}
+                        </span>
+                        <span className="flex items-center gap-1">
+                            <MessageCircle className="w-4 h-4" /> {post.comments}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </Card>
+    )
+}
+
+function CompactGarageCard({ car }: { car: Car }) {
+  const carImage = PlaceHolderImages.find((img) => img.id === car.imageId);
+
+  return (
+    <Card className="flex flex-col overflow-hidden transition-all hover:shadow-lg group">
+        <Link href={`/car/${car.id}`} className="block aspect-video relative">
+          {carImage && (
+            <Image
+              src={carImage.imageUrl}
+              alt={`${car.brand} ${car.model}`}
+              fill
+              className="object-cover"
+              data-ai-hint={carImage.imageHint}
+            />
+          )}
+        </Link>
+        <div className="p-3 flex-1 flex flex-col">
+            <h4 className="font-semibold leading-tight">
+                <Link href={`/car/${car.id}`} className="hover:text-primary transition-colors">
+                    {car.brand} {car.model}
+                </Link>
+            </h4>
+            <p className="text-sm text-muted-foreground">{car.year} год</p>
+            <div className="flex-1" />
+            <Button asChild variant="outline" size="sm" className="w-full mt-2">
+                <Link href={`/car/${car.id}`}>Просмотреть</Link>
+            </Button>
+        </div>
+    </Card>
+  );
+}
 
 
 export default function ProfilePage() {
@@ -23,7 +108,6 @@ export default function ProfilePage() {
   
   const isOwner = authUser && authUser.uid === id;
   
-  // Find user in mock data. If it's the owner's profile, fall back to user '1' for mock data consistency.
   const user = users.find(u => u.id === id) || (isOwner ? users.find(u => u.id === '1') : undefined);
 
   const pageLoading = isAuthUserLoading;
@@ -36,11 +120,11 @@ export default function ProfilePage() {
     notFound();
   }
 
-  // Use the found user's ID for fetching their related data
   const userIdForContent = user.id;
   const userCars = cars.filter(c => c.userId === userIdForContent);
   const userPosts = posts.filter(p => p.userId === userIdForContent);
   const userAvatar = PlaceHolderImages.find((img) => img.id === user.avatarId);
+  const communitiesCount = 3; // Mock value
   
   return (
       <div className="container mx-auto px-4 py-8">
@@ -53,7 +137,7 @@ export default function ProfilePage() {
                 </Avatar>
                 <div>
                   <h1 className="text-3xl font-bold">{user.name}</h1>
-                  <p className="text-muted-foreground mt-1">{user.bio}</p>
+                  <p className="text-muted-foreground mt-1 max-w-xl">{user.bio}</p>
                 </div>
               </div>
               {isOwner && (
@@ -61,16 +145,21 @@ export default function ProfilePage() {
               )}
           </CardHeader>
            <CardContent className="p-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 text-center">
                     <div className="p-4 bg-muted/50 rounded-lg">
                         <FileText className="h-6 w-6 mx-auto text-primary mb-2" />
                         <p className="text-2xl font-bold">{userPosts.length}</p>
-                        <p className="text-sm text-muted-foreground">Посты</p>
+                        <p className="text-sm text-muted-foreground">Мои посты</p>
                     </div>
                     <div className="p-4 bg-muted/50 rounded-lg">
                         <CarIcon className="h-6 w-6 mx-auto text-primary mb-2" />
                         <p className="text-2xl font-bold">{userCars.length}</p>
-                        <p className="text-sm text-muted-foreground">Автомобили</p>
+                        <p className="text-sm text-muted-foreground">Гараж</p>
+                    </div>
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                        <UsersIcon className="h-6 w-6 mx-auto text-primary mb-2" />
+                        <p className="text-2xl font-bold">{communitiesCount}</p>
+                        <p className="text-sm text-muted-foreground">Сообщества</p>
                     </div>
                     <div className="p-4 bg-muted/50 rounded-lg">
                         <Award className="h-6 w-6 mx-auto text-primary mb-2" />
@@ -78,7 +167,7 @@ export default function ProfilePage() {
                         <p className="text-sm text-muted-foreground">Победы "Авто дня"</p>
                     </div>
                      <div className="p-4 bg-muted/50 rounded-lg">
-                        <svg className="h-6 w-6 mx-auto text-primary mb-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                        <Heart className="h-6 w-6 mx-auto text-primary mb-2" />
                         <p className="text-2xl font-bold">{user.stats.likes}</p>
                         <p className="text-sm text-muted-foreground">Лайки</p>
                     </div>
@@ -87,36 +176,30 @@ export default function ProfilePage() {
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-8">
-                <div>
-                  <h2 className="text-2xl font-bold mb-4">Бортжурнал</h2>
-                  {userPosts && userPosts.length > 0 ? (
-                    <div className="space-y-6">
-                      {userPosts.map((post) => {
-                         const postUser = users.find(u => u.id === post.userId);
-                         const postCar = cars.find(c => c.id === post.carId);
-                         if (!postUser || !postCar) return null;
-                         return <PostCard key={post.id} post={post} user={postUser} car={postCar} />
-                      })}
-                    </div>
-                  ) : (
-                     <Card>
-                      <CardContent className="p-6 text-center text-muted-foreground">
-                        <p>У этого пользователя пока нет записей в бортжурнале.</p>
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
+            <div className="lg:col-span-2 space-y-4">
+                <h2 className="text-2xl font-bold">Бортжурнал</h2>
+                {userPosts && userPosts.length > 0 ? (
+                  <div className="space-y-4">
+                    {userPosts.map((post) => (
+                       <CompactPostItem key={post.id} post={post} />
+                    ))}
+                  </div>
+                ) : (
+                   <Card>
+                    <CardContent className="p-6 text-center text-muted-foreground">
+                      <p>У этого пользователя пока нет записей в бортжурнале.</p>
+                    </CardContent>
+                  </Card>
+                )}
             </div>
              <div className="lg:col-span-1">
                  <h2 className="text-2xl font-bold mb-4">Гараж</h2>
                   {userCars && userCars.length > 0 ? (
-                    <div className="space-y-6">
+                    <div className="grid grid-cols-1 gap-4">
                       {userCars.map((car) => (
-                        <GarageCard 
+                        <CompactGarageCard 
                           key={car.id} 
-                          car={car} 
-                          user={user}
+                          car={car}
                         />
                       ))}
                     </div>
