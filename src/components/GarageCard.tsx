@@ -18,6 +18,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 interface GarageCardProps {
   car: Car;
@@ -82,34 +90,34 @@ export function GarageCard({ car, user, onEdit, onDelete, variant = 'default' }:
   }
 
   return (
-     <div className="rounded-lg border bg-card text-card-foreground shadow-sm flex flex-col overflow-hidden transition-all hover:shadow-lg group relative">
+     <Card className="flex flex-col overflow-hidden transition-all hover:shadow-lg group relative">
        {onEdit && onDelete && (
-        <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
+          <Button size="icon" variant="secondary" className="h-8 w-8" onClick={() => onEdit(car)}>
+            <Edit className="h-4 w-4" />
+          </Button>
           <AlertDialog>
-                <Button size="icon" variant="secondary" className="h-8 w-8 mr-1" onClick={() => onEdit(car)}>
-                  <Edit className="h-4 w-4" />
+              <AlertDialogTrigger asChild>
+                  <Button size="icon" variant="destructive" className="h-8 w-8">
+                  <Trash2 className="h-4 w-4" />
                 </Button>
-                <AlertDialogTrigger asChild>
-                   <Button size="icon" variant="destructive" className="h-8 w-8">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                    <AlertDialogTitle>Вы уверены?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        Это действие необратимо. Автомобиль будет удален из вашего гаража.
-                    </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                    <AlertDialogCancel>Отмена</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => onDelete(car.id)}>Удалить</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                  <AlertDialogHeader>
+                  <AlertDialogTitle>Вы уверены?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                      Это действие необратимо. Автомобиль будет удален из вашего гаража.
+                  </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                  <AlertDialogCancel>Отмена</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => onDelete(car.id)}>Удалить</AlertDialogAction>
+                  </AlertDialogFooter>
+              </AlertDialogContent>
           </AlertDialog>
         </div>
       )}
-      <div className="p-0">
+      <CardHeader className="p-0">
         <Link href={`/car/${car.id}`} className="block aspect-video relative">
           {carImage && (
             <Image
@@ -121,21 +129,21 @@ export function GarageCard({ car, user, onEdit, onDelete, variant = 'default' }:
             />
           )}
         </Link>
-      </div>
-      <div className="flex flex-col flex-1 p-4">
-        <div className="text-xl font-semibold">
+      </CardHeader>
+      <CardContent className="flex flex-col flex-1 p-4">
+        <CardTitle className="text-xl">
             <Link href={`/car/${car.id}`} className="hover:text-primary transition-colors">
                 {car.brand} {car.model}
             </Link>
-        </div>
+        </CardTitle>
         <p className="text-sm text-muted-foreground">{car.year} год</p>
         <div className="flex-1" />
-      </div>
-       <div className="flex items-center p-4 pt-0">
+      </CardContent>
+       <CardFooter className="p-4 pt-0">
           <Button asChild variant="outline" className="w-full">
             <Link href={`/car/${car.id}`}>Просмотреть</Link>
           </Button>
-        </div>
-    </div>
+        </CardFooter>
+    </Card>
   );
 }

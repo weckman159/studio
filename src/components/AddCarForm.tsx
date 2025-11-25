@@ -94,15 +94,17 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
       } else {
         // Add new car
         const carsCollection = collection(firestore, 'users', user.uid, 'cars');
-        await addDoc(carsCollection, {
+        const newDoc = await addDoc(carsCollection, {
           ...data,
           userId: user.uid,
           imageId: `car${Math.floor(Math.random() * 3) + 1}`, // Mock image
           createdAt: serverTimestamp(),
         });
+        await setDoc(newDoc, { id: newDoc.id }, { merge: true });
         toast({ title: 'Успех!', description: 'Новый автомобиль добавлен в ваш гараж.' });
       }
       setIsOpen(false);
+      form.reset();
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Ошибка', description: error.message });
     }
@@ -172,6 +174,7 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
               )}
             />
             <DialogFooter>
+               <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Отмена</Button>
               <Button type="submit" disabled={form.formState.isSubmitting}>
                 {form.formState.isSubmitting ? 'Сохранение...' : 'Сохранить'}
               </Button>

@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -17,17 +18,21 @@ import { signOut } from 'firebase/auth';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { users } from '@/lib/data';
 import { SidebarTrigger } from './ui/sidebar';
+import { useToast } from '@/hooks/use-toast';
 
 export function Header() {
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
+  const { toast } = useToast();
 
   const currentUser = user ? users.find(u => u.id === user.uid) || users.find(u => u.id === '1') : null;
   const userAvatar = currentUser ? PlaceHolderImages.find(img => img.id === currentUser.avatarId) : null;
 
   const handleLogout = () => {
     if (auth) {
-      signOut(auth);
+      signOut(auth).then(() => {
+        toast({ title: 'Вы вышли из системы.' });
+      });
     }
   };
 
