@@ -1,23 +1,52 @@
+
 'use client';
 
 import { PostCard } from "@/components/PostCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useUser, useCollection, useFirestore } from "@/firebase";
-import { collection, query, where } from 'firebase/firestore';
-import { Post, User, Car } from '@/lib/data';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { collection, query, where, deleteDoc, doc } from 'firebase/firestore';
+import type { Post } from '@/lib/data';
 import { users, cars } from "@/lib/data"; // for mock user/car data
 import { Plus, Edit, Trash2 } from "lucide-react";
 import Link from 'next/link';
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
 
 export default function PostsPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
 
-  const postsQuery = user && firestore ? query(collection(firestore, 'posts'), where('userId', '==', user.uid)) : null;
+  const postsQuery = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return query(collection(firestore, 'posts'), where('userId', '==', user.uid));
+  }, [user, firestore]);
+  
   const { data: userPosts, isLoading: postsLoading } = useCollection<Post>(postsQuery);
 
   const loading = isUserLoading || postsLoading;
+
+  const handleDelete = async (postId: string) => {
+    if (!firestore) return;
+    try {
+      await deleteDoc(doc(firestore, 'posts', postId));
+      toast({ title: "Успех!", description: "Пост был удален." });
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: "Ошибка", description: "Не удалось удалить пост." });
+    }
+  };
 
   if (loading) {
     return <div className="container mx-auto px-4 py-8 text-center">Загрузка...</div>;
@@ -46,21 +75,37 @@ export default function PostsPage() {
       {userPosts && userPosts.length > 0 ? (
         <div className="space-y-6">
           {userPosts.map(post => {
-            const postUser = users.find(u => u.id === post.userId) || null;
-            const postCar = cars.find(c => c.id === post.carId) || null;
-            if (!postUser || !postCar) return null;
+            const postUser = users.find(u => u.id === post.userId) || users[0];
+            const postCar = cars.find(c => c.id === post.carId) || cars[0];
+            
             return (
               <Card key={post.id} className="relative group">
                 <PostCard post={post} user={postUser} car={postCar} />
                 <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-2">
                   <Button size="icon" variant="outline">
                     <Edit className="h-4 w-4" />
-                    <span className="sr-only">Edit Post</span>
+                    <span className="sr-only">Редактировать пост</span>
                   </Button>
-                  <Button size="icon" variant="destructive">
-                    <Trash2 className="h-4 w-4" />
-                    <span className="sr-only">Delete Post</span>
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                       <Button size="icon" variant="destructive">
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Удалить пост</span>
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Вы абсолютно уверены?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Это действие невозможно отменить. Пост будет удален навсегда.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Отмена</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDelete(post.id)}>Да, удалить</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </Card>
             );
@@ -82,3 +127,4 @@ export default function PostsPage() {
     </div>
   );
 }
+

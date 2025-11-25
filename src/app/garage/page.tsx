@@ -1,10 +1,11 @@
+
 'use client';
 
 import { GarageCard } from "@/components/GarageCard";
 import { Button } from "@/components/ui/button";
-import { useUser, useCollection, useFirestore } from "@/firebase";
-import { collection, query, where } from 'firebase/firestore';
-import { Car, User } from '@/lib/data';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { collection, query } from 'firebase/firestore';
+import type { Car, User } from '@/lib/data';
 import { users } from '@/lib/data';
 import { Plus } from "lucide-react";
 import Link from 'next/link';
@@ -12,8 +13,12 @@ import Link from 'next/link';
 export default function GaragePage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
-  
-  const carsQuery = user && firestore ? query(collection(firestore, 'users', user.uid, 'cars')) : null;
+
+  const carsQuery = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return query(collection(firestore, 'users', user.uid, 'cars'));
+  }, [user, firestore]);
+
   const { data: userCars, isLoading: carsLoading } = useCollection<Car>(carsQuery);
   
   const loading = isUserLoading || carsLoading;
@@ -31,7 +36,8 @@ export default function GaragePage() {
     );
   }
   
-  const owner = users.find(u => u.id === user.uid) || users[0]; // fallback for demo
+  // Demo user data, replace with actual user profile fetch if available
+  const owner = users.find(u => u.id === user.uid) || { ...users[0], id: user.uid, name: user.email || 'Пользователь' };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -45,7 +51,7 @@ export default function GaragePage() {
       {userCars && userCars.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {userCars.map(car => (
-            <GarageCard key={car.id} car={car} user={owner} />
+            <GarageCard key={car.id} car={car} user={owner as User} />
           ))}
         </div>
       ) : (

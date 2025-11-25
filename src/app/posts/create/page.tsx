@@ -1,9 +1,10 @@
+
 'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useFirestore, useUser } from '@/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, addDoc, serverTimestamp, query, where } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -11,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { cars } from '@/lib/data'; // Assuming you have user's cars available
+import type { Car } from '@/lib/data';
 
 export default function CreatePostPage() {
   const router = useRouter();
@@ -24,8 +25,13 @@ export default function CreatePostPage() {
   const [tags, setTags] = useState('');
   const [carId, setCarId] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  const userCarsQuery = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return query(collection(firestore, 'users', user.uid, 'cars'));
+  }, [user, firestore]);
 
-  const userCars = cars.filter(car => car.userId === user?.uid);
+  const { data: userCars, isLoading: carsLoading } = useCollection<Car>(userCarsQuery);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,7 +40,7 @@ export default function CreatePostPage() {
       return;
     }
     if (!title || !content || !carId) {
-      toast({ variant: 'destructive', title: 'Ошибка', description: 'Пожалуйста, заполните все поля.' });
+      toast({ variant: 'destructive', title: 'Ошибка', description: 'Пожалуйста, заполните все обязательные поля.' });
       return;
     }
 
@@ -49,6 +55,8 @@ export default function CreatePostPage() {
         likes: 0,
         comments: 0,
         createdAt: serverTimestamp(),
+        // Mocking imageId as it's required in PostCard, but not implemented in this form.
+        imageId: 'post' + (Math.floor(Math.random() * 3) + 1),
       });
       toast({ title: 'Успех!', description: 'Ваш пост был создан.' });
       router.push('/posts');
@@ -59,7 +67,7 @@ export default function CreatePostPage() {
     }
   };
 
-  if (isUserLoading) {
+  if (isUserLoading || carsLoading) {
     return <div className="container mx-auto px-4 py-8 text-center">Загрузка...</div>;
   }
 
@@ -84,9 +92,13 @@ export default function CreatePostPage() {
                   <SelectValue placeholder="Ваш автомобиль" />
                 </SelectTrigger>
                 <SelectContent>
-                  {userCars.map(car => (
-                    <SelectItem key={car.id} value={car.id}>{car.brand} {car.model}</SelectItem>
-                  ))}
+                  {userCars && userCars.length > 0 ? (
+                    userCars.map(car => (
+                      <SelectItem key={car.id} value={car.id}>{car.brand} {car.model}</SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="disabled" disabled>У вас нет автомобилей</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -102,7 +114,7 @@ export default function CreatePostPage() {
               <Label htmlFor="tags">Теги (через запятую)</Label>
               <Input id="tags" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="тюнинг, ремонт, jdm" />
             </div>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || !carId}>
               {loading ? 'Публикация...' : 'Опубликовать'}
             </Button>
           </form>
