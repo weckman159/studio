@@ -1,5 +1,9 @@
+
+'use client';
+
 import Link from "next/link";
 import Image from "next/image";
+import { useEffect, useState } from 'react';
 import type { Post, User, Car } from "@/lib/data";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import {
@@ -22,6 +26,14 @@ interface PostCardProps {
 export function PostCard({ post, user, car }: PostCardProps) {
   const postImage = PlaceHolderImages.find((img) => img.id === post.imageId);
   const userAvatar = PlaceHolderImages.find((img) => img.id === user.avatarId);
+  const [formattedDate, setFormattedDate] = useState('');
+
+  useEffect(() => {
+    // Safely format the date on the client side to avoid hydration mismatch
+    if (post.createdAt) {
+      setFormattedDate(new Date(post.createdAt).toLocaleDateString());
+    }
+  }, [post.createdAt]);
 
   return (
     <Card className="overflow-hidden">
@@ -75,7 +87,7 @@ export function PostCard({ post, user, car }: PostCardProps) {
             {post.comments}
           </Button>
         </div>
-        <p className="text-sm text-muted-foreground">{new Date(post.createdAt).toLocaleDateString()}</p>
+        <p className="text-sm text-muted-foreground">{formattedDate}</p>
       </CardFooter>
     </Card>
   );

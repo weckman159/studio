@@ -5,8 +5,9 @@ import { PostCard } from "@/components/PostCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, where, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, where, doc } from 'firebase/firestore';
 import type { Post, User, Car } from '@/lib/data';
+import { cars, users } from "@/lib/data";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import Link from 'next/link';
 import { useToast } from "@/hooks/use-toast";
@@ -72,9 +73,11 @@ export default function PostsPage() {
       {userPosts && userPosts.length > 0 ? (
         <div className="space-y-6">
           {userPosts.map(post => {
-            const postUser = { id: post.userId } as User;
-            const postCar = { id: post.carId } as Car;
+            const postUser = users.find((u) => u.id === post.userId) || users[0];
+            const postCar = cars.find((c) => c.id === post.carId) || cars[0];
             
+            if (!postUser || !postCar) return null;
+
             return (
               <Card key={post.id} className="relative group">
                 <PostCard post={post} user={postUser} car={postCar} />
