@@ -53,7 +53,7 @@ function CompactPostItem({ post }: { post: Post }) {
                 </Link>
             )}
             <div className="flex-grow">
-                <Link href={`/posts/${post.id}`} className="hover:underline">
+                <Link href={`/car/${post.carId}?postId=${post.id}`} className="hover:underline">
                     <h3 className="font-semibold text-lg leading-tight">{post.title}</h3>
                 </Link>
                 <p className="text-sm text-muted-foreground mt-1">
@@ -84,6 +84,7 @@ export default function ProfilePage() {
   
   const isOwner = authUser && authUser.uid === id;
   
+  // Find user by ID, if it's the owner, fallback to mock user '1'
   const initialUser = users.find(u => u.id === id) || (isOwner ? users.find(u => u.id === '1') : undefined);
   
   const [user, setUser] = useState<UserData | undefined>(initialUser);
@@ -102,8 +103,12 @@ export default function ProfilePage() {
 
 
   useEffect(() => {
-    setUser(initialUser);
-  }, [initialUser?.id]);
+    if (isOwner && !initialUser) {
+        setUser(users.find(u => u.id === '1'));
+    } else {
+        setUser(initialUser);
+    }
+  }, [id, isOwner, initialUser]);
 
   const pageLoading = isAuthUserLoading || carsLoading;
   

@@ -31,7 +31,7 @@ export function PostCard({ post, user, car }: PostCardProps) {
   useEffect(() => {
     // Safely format the date on the client side to avoid hydration mismatch
     if (post.createdAt) {
-      setFormattedDate(new Date(post.createdAt).toLocaleDateString());
+      setFormattedDate(new Date(post.createdAt).toLocaleDateString('ru-RU'));
     }
   }, [post.createdAt]);
 

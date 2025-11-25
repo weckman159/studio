@@ -100,7 +100,7 @@ export function CarOfTheDay() {
       </CardHeader>
       <CardContent className="p-0">
         {carImage && (
-            <div className="relative aspect-video">
+            <Link href={`/car/${car.id}`} className="relative aspect-video block">
                 <Image 
                     src={carImage.imageUrl} 
                     alt={`${car.brand} ${car.model}`}
@@ -108,7 +108,7 @@ export function CarOfTheDay() {
                     className="object-cover"
                     data-ai-hint={carImage.imageHint}
                 />
-            </div>
+            </Link>
         )}
         <div className="p-4">
             <h3 className="text-xl font-bold">{car.brand} {car.model}</h3>
@@ -123,7 +123,7 @@ export function CarOfTheDay() {
       </CardContent>
       <CardFooter className="flex flex-col items-stretch gap-2">
         <Button asChild className="w-full">
-            <Link href={`/car/${car.id}`}>Посмотреть гараж</Link>
+            <Link href={`/car/${car.id}`}>Перейти к авто</Link>
         </Button>
         <Button variant="secondary" onClick={handleVote}>
             <ThumbsUp className="mr-2"/>

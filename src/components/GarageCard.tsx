@@ -52,28 +52,30 @@ export function GarageCard({ car, user, onEdit, onDelete, variant = 'default' }:
                 <p className="text-sm text-muted-foreground">{car.year}</p>
             </div>
             {onEdit && onDelete && (
-                 <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                       <Button size="icon" variant="ghost" className="h-8 w-8 flex-shrink-0">
-                         <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </AlertDialogTrigger>
-                     <Button size="icon" variant="ghost" className="h-8 w-8 flex-shrink-0" onClick={() => onEdit(car)}>
+                 <div className="flex items-center">
+                    <Button size="icon" variant="ghost" className="h-8 w-8 flex-shrink-0" onClick={() => onEdit(car)}>
                         <Edit className="h-4 w-4" />
                     </Button>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                        <AlertDialogTitle>Вы уверены?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Это действие необратимо. Автомобиль будет удален из вашего гаража.
-                        </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                        <AlertDialogCancel>Отмена</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => onDelete(car.id)}>Удалить</AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
+                     <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                           <Button size="icon" variant="ghost" className="h-8 w-8 flex-shrink-0">
+                             <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                            <AlertDialogTitle>Вы уверены?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Это действие необратимо. Автомобиль будет удален из вашего гаража.
+                            </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                            <AlertDialogCancel>Отмена</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => onDelete(car.id)}>Удалить</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                 </div>
             )}
         </div>
     )
