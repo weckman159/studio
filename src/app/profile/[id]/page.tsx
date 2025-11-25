@@ -3,63 +3,33 @@
 
 import { useState } from 'react';
 import Image from "next/image";
-import { notFound, useRouter, useParams } from "next/navigation";
+import { notFound, useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { GarageCard } from "@/components/GarageCard";
 import { Button } from '@/components/ui/button';
-import { FileText, Heart, Award, Plus } from "lucide-react";
-import { useDoc, useCollection, useUser, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection, query, where, doc, deleteDoc } from 'firebase/firestore';
-import type { User as UserData, Car } from '@/lib/data';
-import { AddCarForm } from '@/components/AddCarForm';
-import { useToast } from "@/hooks/use-toast";
+import { FileText, Award, Car as CarIcon, Edit } from "lucide-react";
+import { useUser } from "@/firebase";
+import type { User as UserData, Car, Post } from '@/lib/data';
+import { users, cars, posts } from '@/lib/data';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { PostCard } from '@/components/PostCard';
+
 
 export default function ProfilePage() {
   const params = useParams();
   const id = params.id as string;
   const { user: authUser, isUserLoading: isAuthUserLoading } = useUser();
-  const firestore = useFirestore();
-  const { toast } = useToast();
-  const router = useRouter();
-
-  const [isAddCarOpen, setAddCarOpen] = useState(false);
-  const [editingCar, setEditingCar] = useState<Car | null>(null);
-
-  const userRef = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return doc(firestore, 'users', id);
-  }, [firestore, id]);
   
-  const { data: user, isLoading: isUserLoading } = useDoc<UserData>(userRef);
-
-  const userCarsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'users', id, 'cars'));
-  }, [firestore, id]);
-
-  const { data: userCars, isLoading: carsLoading } = useCollection<Car>(userCarsQuery);
-
+  // MOCK DATA USAGE
+  const user = users.find(u => u.id === id);
+  const userCars = cars.filter(c => c.userId === id);
+  const userPosts = posts.filter(p => p.userId === id);
+  const pageLoading = isAuthUserLoading;
+  // END MOCK DATA USAGE
+  
   const userAvatar = user ? PlaceHolderImages.find((img) => img.id === user.avatarId) : null;
   const isOwner = authUser && authUser.uid === id;
-
-  const handleEdit = (car: Car) => {
-    setEditingCar(car);
-    setAddCarOpen(true);
-  };
-  
-  const handleDelete = async (carId: string) => {
-    if (!authUser || !firestore) return;
-    try {
-      await deleteDoc(doc(firestore, 'users', authUser.uid, 'cars', carId));
-      toast({ title: "Успех!", description: "Автомобиль был удален." });
-    } catch (error: any) {
-       toast({ variant: 'destructive', title: "Ошибка", description: "Не удалось удалить автомобиль." });
-    }
-  };
-
-  const pageLoading = isUserLoading || isAuthUserLoading || carsLoading;
   
   if (pageLoading) {
     return <div className="container mx-auto px-4 py-8 text-center">Загрузка профиля...</div>;
@@ -70,93 +40,92 @@ export default function ProfilePage() {
   }
 
   return (
-    <>
-      {isOwner && (
-        <AddCarForm 
-          isOpen={isAddCarOpen} 
-          setIsOpen={(open) => {
-            if (!open) {
-              setEditingCar(null);
-            }
-            setAddCarOpen(open);
-          }}
-          carToEdit={editingCar}
-        />
-      )}
       <div className="container mx-auto px-4 py-8">
-        <Card className="mb-8">
-          <CardContent className="p-6 flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6">
-            <Avatar className="h-24 w-24">
-              {userAvatar && <AvatarImage src={userAvatar.imageUrl} alt={user.name} data-ai-hint={userAvatar.imageHint} />}
-              <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-            </Avatar>
-            <div>
-              <h1 className="text-3xl font-bold">{user.name}</h1>
-              <p className="text-muted-foreground mt-1">{user.bio}</p>
-            </div>
-          </CardContent>
+        <Card className="mb-8 overflow-hidden">
+          <CardHeader className="bg-muted/30 p-6 flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0">
+             <div className="flex items-center space-x-6">
+                <Avatar className="h-24 w-24 border-4 border-background">
+                  {userAvatar && <AvatarImage src={userAvatar.imageUrl} alt={user.name} data-ai-hint={userAvatar.imageHint} />}
+                  <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <h1 className="text-3xl font-bold">{user.name}</h1>
+                  <p className="text-muted-foreground mt-1">{user.bio}</p>
+                </div>
+              </div>
+              {isOwner && (
+                 <Button variant="outline"><Edit className="mr-2 h-4 w-4"/> Редактировать профиль</Button>
+              )}
+          </CardHeader>
+           <CardContent className="p-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                        <FileText className="h-6 w-6 mx-auto text-primary mb-2" />
+                        <p className="text-2xl font-bold">{userPosts.length}</p>
+                        <p className="text-sm text-muted-foreground">Посты</p>
+                    </div>
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                        <CarIcon className="h-6 w-6 mx-auto text-primary mb-2" />
+                        <p className="text-2xl font-bold">{userCars.length}</p>
+                        <p className="text-sm text-muted-foreground">Автомобили</p>
+                    </div>
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                        <Award className="h-6 w-6 mx-auto text-primary mb-2" />
+                        <p className="text-2xl font-bold">{user.stats.wins}</p>
+                        <p className="text-sm text-muted-foreground">Победы "Авто дня"</p>
+                    </div>
+                     <div className="p-4 bg-muted/50 rounded-lg">
+                        <svg className="h-6 w-6 mx-auto text-primary mb-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                        <p className="text-2xl font-bold">{user.stats.likes}</p>
+                        <p className="text-sm text-muted-foreground">Лайки</p>
+                    </div>
+                </div>
+           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Посты</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{user.stats.posts}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Лайки</CardTitle>
-              <Heart className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{user.stats.likes}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Победы "Авто дня"</CardTitle>
-              <Award className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{user.stats.wins}</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold">Гараж пользователя</h2>
-            {isOwner && (
-              <Button onClick={() => setAddCarOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" /> Добавить авто
-              </Button>
-            )}
-          </div>
-          {userCars && userCars.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {userCars.map((car) => (
-                <GarageCard 
-                  key={car.id} 
-                  car={car} 
-                  user={user}
-                  onEdit={isOwner ? handleEdit : undefined}
-                  onDelete={isOwner ? handleDelete : undefined}
-                />
-              ))}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 space-y-8">
+                <div>
+                  <h2 className="text-2xl font-bold mb-4">Бортжурнал</h2>
+                  {userPosts && userPosts.length > 0 ? (
+                    <div className="space-y-6">
+                      {userPosts.map((post) => {
+                         const postUser = users.find(u => u.id === post.userId);
+                         const postCar = cars.find(c => c.id === post.carId);
+                         if (!postUser || !postCar) return null;
+                         return <PostCard key={post.id} post={post} user={postUser} car={postCar} />
+                      })}
+                    </div>
+                  ) : (
+                     <Card>
+                      <CardContent className="p-6 text-center text-muted-foreground">
+                        <p>У этого пользователя пока нет записей в бортжурнале.</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
             </div>
-          ) : (
-             <Card>
-              <CardContent className="p-6 text-center text-muted-foreground">
-                <p>У этого пользователя пока нет автомобилей в гараже.</p>
-              </CardContent>
-            </Card>
-          )}
+             <div className="lg:col-span-1">
+                 <h2 className="text-2xl font-bold mb-4">Гараж</h2>
+                  {userCars && userCars.length > 0 ? (
+                    <div className="space-y-6">
+                      {userCars.map((car) => (
+                        <GarageCard 
+                          key={car.id} 
+                          car={car} 
+                          user={user}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                     <Card>
+                      <CardContent className="p-6 text-center text-muted-foreground">
+                        <p>У этого пользователя пока нет автомобилей в гараже.</p>
+                      </CardContent>
+                    </Card>
+                  )}
+            </div>
         </div>
       </div>
-    </>
   );
 }
