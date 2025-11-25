@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Car } from '@/lib/data';
-import { Upload } from 'lucide-react';
+import { Upload, X } from 'lucide-react';
 
 export default function CreatePostPage() {
   const router = useRouter();
@@ -26,7 +26,7 @@ export default function CreatePostPage() {
   const [content, setContent] = useState('');
   const [tags, setTags] = useState('');
   const [carId, setCarId] = useState('');
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   
   const userCarsQuery = useMemoFirebase(() => {
@@ -37,15 +37,25 @@ export default function CreatePostPage() {
   const { data: userCars, isLoading: carsLoading } = useCollection<Car>(userCarsQuery);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImageUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    const files = e.target.files;
+    if (files) {
+      const newUrls: string[] = [];
+      Array.from(files).forEach(file => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          newUrls.push(reader.result as string);
+          if (newUrls.length === files.length) {
+            setImageUrls(prev => [...prev, ...newUrls]);
+          }
+        };
+        reader.readAsDataURL(file);
+      });
     }
   };
+  
+  const removeImage = (index: number) => {
+    setImageUrls(prev => prev.filter((_, i) => i !== index));
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,14 +79,10 @@ export default function CreatePostPage() {
         likes: 0,
         comments: 0,
         createdAt: serverTimestamp(),
+        // We won't save image URLs to avoid Firestore size limits for now.
+        // Instead we assign multiple placeholder image IDs.
+        imageIds: imageUrls.length > 0 ? Array.from({length: imageUrls.length}, () => `post${Math.floor(Math.random() * 3) + 1}`) : [`post${Math.floor(Math.random() * 3) + 1}`],
       };
-      // The imageUrl is a data URI, which is too large for Firestore.
-      // We will not save it, and the app will use a placeholder instead.
-      // if (imageUrl) {
-      //   postData.imageUrl = imageUrl;
-      // } else {
-      postData.imageId = 'post' + (Math.floor(Math.random() * 3) + 1);
-      // }
 
       await addDoc(collection(firestore, 'posts'), postData);
       toast({ title: 'Успех!', description: 'Ваш пост был создан.' });
@@ -107,13 +113,24 @@ export default function CreatePostPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="cover-image">Главное изображение</Label>
-              <Input id="cover-image" type="file" accept="image/*" onChange={handleImageUpload} />
-              {imageUrl && (
-                <div className="mt-4 relative w-full aspect-video rounded-md overflow-hidden">
-                  <Image src={imageUrl} alt="Предпросмотр изображения" fill className="object-cover" />
-                </div>
-              )}
+              <Label htmlFor="cover-image">Изображения</Label>
+              <Input id="cover-image" type="file" accept="image/*" onChange={handleImageUpload} multiple />
+               <div className="mt-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
+                {imageUrls.map((url, index) => (
+                  <div key={index} className="relative group">
+                    <Image src={url} alt={`Предпросмотр изображения ${index + 1}`} width={150} height={100} className="object-cover rounded-md aspect-video" />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100"
+                      onClick={() => removeImage(index)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </div>
              <div className="space-y-2">
               <Label htmlFor="car">Выберите автомобиль</Label>

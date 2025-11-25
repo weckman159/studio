@@ -19,6 +19,7 @@ import { Heart, MessageCircle, Bookmark } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { CommentSheet } from "./CommentSheet";
 import { useUser } from "@/firebase";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "./ui/carousel";
 
 interface PostCardProps {
   post: Post;
@@ -28,8 +29,24 @@ interface PostCardProps {
 
 export function PostCard({ post, user, car }: PostCardProps) {
   const { user: authUser } = useUser();
-  const postImage = post.imageUrl ? null : PlaceHolderImages.find((img) => img.id === post.imageId);
-  const finalImageUrl = post.imageUrl || postImage?.imageUrl;
+  
+  const getImageUrls = () => {
+    let urls: {url: string, hint: string}[] = [];
+    if(post.imageUrls) {
+       urls = post.imageUrls.map(url => ({url, hint: 'uploaded image'}));
+    } else if (post.imageIds) {
+      post.imageIds.forEach(id => {
+        const placeholder = PlaceHolderImages.find(p => p.id === id);
+        if(placeholder) urls.push({url: placeholder.imageUrl, hint: placeholder.imageHint});
+      });
+    } else if (post.imageId) {
+      const placeholder = PlaceHolderImages.find(p => p.id === post.imageId);
+      if(placeholder) urls.push({url: placeholder.imageUrl, hint: placeholder.imageHint});
+    }
+    return urls;
+  }
+  
+  const finalImageUrls = getImageUrls();
 
   const userAvatar = PlaceHolderImages.find((img) => img.id === user.avatarId);
   const [formattedDate, setFormattedDate] = useState('');
@@ -94,19 +111,35 @@ export function PostCard({ post, user, car }: PostCardProps) {
       </CardHeader>
       <CardContent>
         <h2 className="text-2xl font-bold mb-4">{post.title}</h2>
-        {finalImageUrl && (
-          <Link href={`/car/${car.id}?postId=${post.id}`} className="block">
-            <div className="relative aspect-video mb-4 rounded-lg overflow-hidden">
-              <Image
-                src={finalImageUrl}
-                alt={post.title}
-                fill
-                className="object-cover"
-                data-ai-hint={postImage?.imageHint}
-              />
-            </div>
-          </Link>
+        
+        {finalImageUrls.length > 0 && (
+          <Carousel className="w-full mb-4 rounded-lg overflow-hidden">
+            <CarouselContent>
+              {finalImageUrls.map((img, index) => (
+                <CarouselItem key={index}>
+                   <Link href={`/car/${car.id}?postId=${post.id}`} className="block">
+                      <div className="relative aspect-video">
+                        <Image
+                          src={img.url}
+                          alt={`${post.title} - image ${index + 1}`}
+                          fill
+                          className="object-cover"
+                          data-ai-hint={img.hint}
+                        />
+                      </div>
+                   </Link>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            {finalImageUrls.length > 1 && (
+              <>
+                <CarouselPrevious className="left-2" />
+                <CarouselNext className="right-2" />
+              </>
+            )}
+          </Carousel>
         )}
+
         <p className="text-card-foreground/80 whitespace-pre-line">
           {post.content}
         </p>

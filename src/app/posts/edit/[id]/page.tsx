@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import type { Car, Post } from '@/lib/data';
 import { setDocumentNonBlocking } from '@/firebase';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { X } from 'lucide-react';
 
 
 export default function EditPostPage() {
@@ -30,7 +31,7 @@ export default function EditPostPage() {
   const [content, setContent] = useState('');
   const [tags, setTags] = useState('');
   const [carId, setCarId] = useState('');
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
   const postRef = useMemoFirebase(() => {
@@ -54,27 +55,46 @@ export default function EditPostPage() {
       setCarId(postData.carId);
       setTags(postData.tags.join(', '));
 
-      if (postData.imageUrl) {
-        setImageUrl(postData.imageUrl);
+      const existingImageUrls: string[] = [];
+      if (postData.imageUrls) {
+         existingImageUrls.push(...postData.imageUrls)
+      } else if (postData.imageIds) {
+        postData.imageIds.forEach(id => {
+          const placeholder = PlaceHolderImages.find(p => p.id === id);
+          if (placeholder) {
+            existingImageUrls.push(placeholder.imageUrl);
+          }
+        })
       } else if (postData.imageId) {
         const placeholder = PlaceHolderImages.find(p => p.id === postData.imageId);
         if (placeholder) {
-          setImageUrl(placeholder.imageUrl);
+          existingImageUrls.push(placeholder.imageUrl);
         }
       }
+      setImageUrls(existingImageUrls);
     }
   }, [postData]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImageUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    const files = e.target.files;
+    if (files) {
+      const newUrls: string[] = [];
+      Array.from(files).forEach(file => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          newUrls.push(reader.result as string);
+          if (newUrls.length === files.length) {
+            setImageUrls(prev => [...prev, ...newUrls]);
+          }
+        };
+        reader.readAsDataURL(file);
+      });
     }
   };
+
+  const removeImage = (index: number) => {
+    setImageUrls(prev => prev.filter((_, i) => i !== index));
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,9 +115,8 @@ export default function EditPostPage() {
       userId: user.uid,
       tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag),
       updatedAt: serverTimestamp() as unknown as string,
-      // The imageUrl is a data URI, which is too large for Firestore.
-      // We will not save it, and let the app use a placeholder instead.
-      // imageUrl: imageUrl || undefined,
+      // We won't save image URLs to avoid Firestore size limits for now.
+      imageIds: imageUrls.length > 0 ? Array.from({length: imageUrls.length}, () => `post${Math.floor(Math.random() * 3) + 1}`) : [],
     };
     
     setDocumentNonBlocking(postRef, updatedData, { merge: true });
@@ -136,13 +155,24 @@ export default function EditPostPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="cover-image">Главное изображение</Label>
-              <Input id="cover-image" type="file" accept="image/*" onChange={handleImageUpload} />
-              {imageUrl && (
-                <div className="mt-4 relative w-full aspect-video rounded-md overflow-hidden">
-                  <Image src={imageUrl} alt="Предпросмотр изображения" fill className="object-cover" />
-                </div>
-              )}
+              <Label htmlFor="cover-image">Изображения</Label>
+              <Input id="cover-image" type="file" accept="image/*" onChange={handleImageUpload} multiple />
+               <div className="mt-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
+                {imageUrls.map((url, index) => (
+                  <div key={index} className="relative group">
+                    <Image src={url} alt={`Предпросмотр изображения ${index + 1}`} width={150} height={100} className="object-cover rounded-md aspect-video" />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100"
+                      onClick={() => removeImage(index)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="car">Выберите автомобиль</Label>

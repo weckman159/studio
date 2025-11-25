@@ -34,8 +34,10 @@ export interface Post {
   carId: string;
   title: string;
   content: string;
-  imageUrl?: string; // Replaces imageId for direct URL storage
-  imageId?: string; // Keep for fallback or existing data
+  imageUrl?: string;
+  imageUrls?: string[];
+  imageId?: string;
+  imageIds?: string[];
   tags: string[];
   likes: number;
   comments: number;
@@ -111,7 +113,7 @@ export const posts: Post[] = [
     carId: '1',
     title: 'Новая выхлопная система!',
     content: 'Установил полный титановый выхлоп от Akrapovič. Звук просто космос! Машина стала дышать легче, а отстрелы радуют слух. \n\nДальше в планах чип-тюнинг Stage 2.',
-    imageId: 'post1',
+    imageIds: ['post1', 'car1'],
     tags: ['тюнинг', 'ремонт'],
     likes: 152,
     comments: 2,
@@ -135,7 +137,7 @@ export const posts: Post[] = [
     carId: '2',
     title: 'Подготовка к дрифт-сезону',
     content: 'Начинаем готовить Silvia к летнему дрифт-сезону. Полностью перебрали подвеску, установили выворот. \n\nВпереди настройка и первые тесты на треке.',
-    imageId: 'post3',
+    imageIds: ['post3', 'car2'],
     tags: ['тюнинг', 'спорт'],
     likes: 98,
     comments: 0,
