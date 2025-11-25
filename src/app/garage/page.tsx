@@ -10,17 +10,6 @@ import type { Car, User } from '@/lib/data';
 import { Plus } from "lucide-react";
 import Link from 'next/link';
 import { AddCarForm } from '@/components/AddCarForm';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 
 
