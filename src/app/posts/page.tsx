@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where, deleteDoc, doc } from 'firebase/firestore';
-import type { Post } from '@/lib/data';
-import { users, cars } from "@/lib/data"; // for mock user/car data
+import type { Post, User, Car } from '@/lib/data';
 import { Plus, Edit, Trash2 } from "lucide-react";
 import Link from 'next/link';
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +21,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { deleteDocumentNonBlocking } from "@/firebase";
 
 
 export default function PostsPage() {
@@ -40,12 +40,9 @@ export default function PostsPage() {
 
   const handleDelete = async (postId: string) => {
     if (!firestore) return;
-    try {
-      await deleteDoc(doc(firestore, 'posts', postId));
-      toast({ title: "Успех!", description: "Пост был удален." });
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: "Ошибка", description: "Не удалось удалить пост." });
-    }
+    const docRef = doc(firestore, 'posts', postId);
+    deleteDocumentNonBlocking(docRef);
+    toast({ title: "Успех!", description: "Пост был удален." });
   };
 
   if (loading) {
@@ -75,16 +72,18 @@ export default function PostsPage() {
       {userPosts && userPosts.length > 0 ? (
         <div className="space-y-6">
           {userPosts.map(post => {
-            const postUser = users.find(u => u.id === post.userId) || users[0];
-            const postCar = cars.find(c => c.id === post.carId) || cars[0];
+            const postUser = { id: post.userId } as User;
+            const postCar = { id: post.carId } as Car;
             
             return (
               <Card key={post.id} className="relative group">
                 <PostCard post={post} user={postUser} car={postCar} />
                 <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-2">
-                  <Button size="icon" variant="outline">
-                    <Edit className="h-4 w-4" />
-                    <span className="sr-only">Редактировать пост</span>
+                  <Button size="icon" variant="outline" asChild>
+                    <Link href={`/posts/edit/${post.id}`}>
+                      <Edit className="h-4 w-4" />
+                      <span className="sr-only">Редактировать пост</span>
+                    </Link>
                   </Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
@@ -127,4 +126,3 @@ export default function PostsPage() {
     </div>
   );
 }
-
