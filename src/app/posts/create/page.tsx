@@ -70,11 +70,13 @@ export default function CreatePostPage() {
         comments: 0,
         createdAt: serverTimestamp(),
       };
-      if (imageUrl) {
-        postData.imageUrl = imageUrl;
-      } else {
-        postData.imageId = 'post' + (Math.floor(Math.random() * 3) + 1);
-      }
+      // The imageUrl is a data URI, which is too large for Firestore.
+      // We will not save it, and the app will use a placeholder instead.
+      // if (imageUrl) {
+      //   postData.imageUrl = imageUrl;
+      // } else {
+      postData.imageId = 'post' + (Math.floor(Math.random() * 3) + 1);
+      // }
 
       await addDoc(collection(firestore, 'posts'), postData);
       toast({ title: 'Успех!', description: 'Ваш пост был создан.' });

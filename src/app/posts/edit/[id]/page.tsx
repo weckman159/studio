@@ -95,7 +95,9 @@ export default function EditPostPage() {
       userId: user.uid,
       tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag),
       updatedAt: serverTimestamp() as unknown as string,
-      imageUrl: imageUrl || undefined,
+      // The imageUrl is a data URI, which is too large for Firestore.
+      // We will not save it, and let the app use a placeholder instead.
+      // imageUrl: imageUrl || undefined,
     };
     
     setDocumentNonBlocking(postRef, updatedData, { merge: true });
