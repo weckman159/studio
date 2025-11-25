@@ -21,15 +21,12 @@ export default function ProfilePage() {
   const id = params.id as string;
   const { user: authUser, isUserLoading: isAuthUserLoading } = useUser();
   
-  // MOCK DATA USAGE
-  const user = users.find(u => u.id === id);
-  const userCars = cars.filter(c => c.userId === id);
-  const userPosts = posts.filter(p => p.userId === id);
-  const pageLoading = isAuthUserLoading;
-  // END MOCK DATA USAGE
-  
-  const userAvatar = user ? PlaceHolderImages.find((img) => img.id === user.avatarId) : null;
   const isOwner = authUser && authUser.uid === id;
+  
+  // Find user in mock data. If it's the owner's profile, fall back to user '1' for mock data consistency.
+  const user = users.find(u => u.id === id) || (isOwner ? users.find(u => u.id === '1') : undefined);
+
+  const pageLoading = isAuthUserLoading;
   
   if (pageLoading) {
     return <div className="container mx-auto px-4 py-8 text-center">Загрузка профиля...</div>;
@@ -39,6 +36,12 @@ export default function ProfilePage() {
     notFound();
   }
 
+  // Use the found user's ID for fetching their related data
+  const userIdForContent = user.id;
+  const userCars = cars.filter(c => c.userId === userIdForContent);
+  const userPosts = posts.filter(p => p.userId === userIdForContent);
+  const userAvatar = PlaceHolderImages.find((img) => img.id === user.avatarId);
+  
   return (
       <div className="container mx-auto px-4 py-8">
         <Card className="mb-8 overflow-hidden">
