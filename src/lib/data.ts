@@ -4,6 +4,8 @@ export interface User {
   email: string;
   avatarId: string;
   bio: string;
+  nickname?: string;
+  currentCarIds?: string[];
   stats: {
     posts: number;
     likes: number;
@@ -42,6 +44,8 @@ export const users: User[] = [
     email: 'alex@example.com',
     avatarId: 'avatar1',
     bio: 'Люблю скорость и тюнинг. Владелец нескольких интересных проектов.',
+    nickname: 'ANovikov',
+    currentCarIds: ['1'],
     stats: { posts: 12, likes: 345, wins: 2 },
   },
   {

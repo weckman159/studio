@@ -13,32 +13,36 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import type { User } from '@/lib/data';
+import type { User, Car } from '@/lib/data';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { Checkbox } from './ui/checkbox';
+import { ScrollArea } from './ui/scroll-area';
 
 interface EditProfileModalProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   user: User;
+  userCars: Car[];
   onSave: (updatedUser: User) => void;
 }
 
-export function EditProfileModal({ isOpen, setIsOpen, user, onSave }: EditProfileModalProps) {
+export function EditProfileModal({ isOpen, setIsOpen, user, userCars, onSave }: EditProfileModalProps) {
   const { toast } = useToast();
   const [name, setName] = useState(user.name);
-  const [bio, setBio] = useState(user.bio);
+  const [nickname, setNickname] = useState(user.nickname || '');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [currentCarIds, setCurrentCarIds] = useState<string[]>(user.currentCarIds || []);
 
   useEffect(() => {
     if (user) {
       setName(user.name);
-      setBio(user.bio);
+      setNickname(user.nickname || '');
       const userAvatar = PlaceHolderImages.find(img => img.id === user.avatarId);
       setAvatarUrl(userAvatar?.imageUrl || '');
+      setCurrentCarIds(user.currentCarIds || []);
     }
   }, [user, isOpen]);
 
@@ -50,20 +54,22 @@ export function EditProfileModal({ isOpen, setIsOpen, user, onSave }: EditProfil
     }
   };
   
+  const handleCarSelection = (carId: string) => {
+    setCurrentCarIds(prev => 
+      prev.includes(carId) 
+        ? prev.filter(id => id !== carId) 
+        : [...prev, carId]
+    );
+  };
+  
   const handleSaveChanges = () => {
-    // In a real app, you'd handle file upload to a storage service (like Firebase Storage)
-    // and get a new URL. For this mock, we'll just use the local object URL if a new file was selected.
-    
-    // Also, you'd update the user document in Firestore. Here we just update the local state.
-    const updatedUser = {
+    const updatedUser: User = {
         ...user,
         name,
-        bio,
-        // The avatarId would be updated with a real ID after upload.
-        // For now, we're not changing it.
+        nickname,
+        currentCarIds,
     };
     
-    // We are not actually changing the image in the mock data, just displaying the preview.
     onSave(updatedUser);
     toast({ title: "Профиль обновлен", description: "Ваши изменения были сохранены." });
     setIsOpen(false);
@@ -71,14 +77,14 @@ export function EditProfileModal({ isOpen, setIsOpen, user, onSave }: EditProfil
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Редактировать профиль</DialogTitle>
           <DialogDescription>
             Внесите изменения в свой профиль. Нажмите "Сохранить", когда закончите.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
+        <div className="grid gap-6 py-4">
           <div className="flex items-center gap-4">
             <Avatar className="h-20 w-20">
                 <AvatarImage src={avatarUrl} alt={name} />
@@ -89,17 +95,34 @@ export function EditProfileModal({ isOpen, setIsOpen, user, onSave }: EditProfil
                 <Input id="picture" type="file" onChange={handleAvatarChange} accept="image/*" />
             </div>
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">
-              Имя
-            </Label>
-            <Input id="name" value={name} onChange={e => setName(e.target.value)} className="col-span-3" />
+          <div className="space-y-2">
+            <Label htmlFor="name">Имя</Label>
+            <Input id="name" value={name} onChange={e => setName(e.target.value)} />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="bio" className="text-right">
-              О себе
-            </Label>
-            <Textarea id="bio" value={bio} onChange={e => setBio(e.target.value)} className="col-span-3" />
+          <div className="space-y-2">
+            <Label htmlFor="nickname">Псевдоним (ник)</Label>
+            <Input id="nickname" value={nickname} onChange={e => setNickname(e.target.value)} placeholder="Ваш никнейм" />
+          </div>
+          <div className="space-y-2">
+            <Label>Мое текущее авто</Label>
+            <ScrollArea className="h-32 w-full rounded-md border p-4">
+              <div className="space-y-2">
+                {userCars && userCars.length > 0 ? (
+                  userCars.map(car => (
+                    <div key={car.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`car-${car.id}`}
+                        checked={currentCarIds.includes(car.id)}
+                        onCheckedChange={() => handleCarSelection(car.id)}
+                      />
+                      <Label htmlFor={`car-${car.id}`} className="font-normal">{car.brand} {car.model}</Label>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">В вашем гараже нет автомобилей.</p>
+                )}
+              </div>
+            </ScrollArea>
           </div>
         </div>
         <DialogFooter>

@@ -8,7 +8,7 @@ import { notFound, useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from '@/components/ui/button';
-import { FileText, Award, Car as CarIcon, Edit, Users as UsersIcon, Heart, MessageCircle, Plus } from "lucide-react";
+import { FileText, Award, Car as CarIcon, Edit, Users as UsersIcon, Heart, MessageCircle, Plus, AtSign } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import type { User as UserData, Car, Post } from '@/lib/data';
 import { users, cars as mockCars, posts } from '@/lib/data';
@@ -18,6 +18,7 @@ import { AddCarForm } from '@/components/AddCarForm';
 import { GarageCard } from '@/components/GarageCard';
 import { collection, query, where, doc, deleteDoc } from 'firebase/firestore';
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from '@/components/ui/badge';
 
 
 function CompactPostItem({ post }: { post: Post }) {
@@ -97,6 +98,7 @@ export default function ProfilePage() {
 
   const { data: userCars, isLoading: carsLoading } = useCollection<Car>(carsQuery);
   const userPosts = posts.filter(p => p.userId === id);
+  const currentCars = userCars?.filter(car => user?.currentCarIds?.includes(car.id)) || [];
 
 
   useEffect(() => {
@@ -146,13 +148,19 @@ export default function ProfilePage() {
         isOpen={isEditModalOpen}
         setIsOpen={setEditModalOpen}
         user={user}
+        userCars={userCars || []}
         onSave={handleProfileSave}
       />
-      <AddCarForm
-        isOpen={isCarModalOpen}
-        setIsOpen={setCarModalOpen}
-        carToEdit={editingCar}
-      />
+      {userCars && (
+        <AddCarForm
+          isOpen={isCarModalOpen}
+          setIsOpen={(open) => {
+            if (!open) setEditingCar(null);
+            setCarModalOpen(open);
+          }}
+          carToEdit={editingCar}
+        />
+      )}
 
       <div className="container mx-auto px-4 py-8">
         <Card className="mb-8 overflow-hidden">
@@ -163,8 +171,16 @@ export default function ProfilePage() {
                   <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <h1 className="text-3xl font-bold">{user.name}</h1>
+                  <div className='flex items-center gap-3'>
+                    <h1 className="text-3xl font-bold">{user.name}</h1>
+                    {user.nickname && <Badge variant="secondary" className="text-lg"><AtSign className="h-4 w-4 mr-1"/>{user.nickname}</Badge>}
+                  </div>
                   <p className="text-muted-foreground mt-1 max-w-xl">{user.bio}</p>
+                   {currentCars.length > 0 && (
+                    <div className="mt-2 text-sm text-muted-foreground">
+                      Сейчас на: {currentCars.map(car => `${car.brand} ${car.model}`).join(', ')}
+                    </div>
+                  )}
                 </div>
               </div>
               {isOwner && (
