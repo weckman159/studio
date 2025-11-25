@@ -10,11 +10,17 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Car } from '@/lib/data';
 import { Upload, X } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
+const CKEditorWrapper = dynamic(() => import('@/components/CKEditorWrapper'), {
+  ssr: false,
+  loading: () => <p>Загрузка редактора...</p>
+});
+
 
 export default function CreatePostPage() {
   const router = useRouter();
@@ -155,7 +161,7 @@ export default function CreatePostPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="content">Содержание</Label>
-              <Textarea id="content" value={content} onChange={(e) => setContent(e.target.value)} placeholder="Расскажите подробнее..." required rows={10} />
+               <CKEditorWrapper initialData={content} onChange={setContent} />
             </div>
              <div className="space-y-2">
               <Label htmlFor="tags">Теги (через запятую)</Label>

@@ -140,9 +140,10 @@ export function PostCard({ post, user, car }: PostCardProps) {
           </Carousel>
         )}
 
-        <p className="text-card-foreground/80 whitespace-pre-line">
-          {post.content}
-        </p>
+        <div 
+          className="text-card-foreground/80 whitespace-pre-line prose dark:prose-invert max-w-none"
+          dangerouslySetInnerHTML={{ __html: post.content }}
+        />
         <div className="flex flex-wrap gap-2 mt-4">
             {post.tags.map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
         </div>
