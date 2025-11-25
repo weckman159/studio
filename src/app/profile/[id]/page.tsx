@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -8,10 +9,10 @@ import { notFound, useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from '@/components/ui/button';
-import { FileText, Award, Car as CarIcon, Edit, Users as UsersIcon, Heart, MessageCircle, Plus, AtSign } from "lucide-react";
+import { FileText, Award, Car as CarIcon, Edit, Users as UsersIcon, Heart, MessageCircle, Plus, AtSign, Bookmark, UserCheck, UserPlus } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import type { User as UserData, Car, Post } from '@/lib/data';
-import { users, cars as mockCars, posts } from '@/lib/data';
+import { users, cars as mockCars, posts as mockPosts } from '@/lib/data';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { EditProfileModal } from '@/components/EditProfileModal';
 import { AddCarForm } from '@/components/AddCarForm';
@@ -19,6 +20,9 @@ import { GarageCard } from '@/components/GarageCard';
 import { collection, query, where, doc, deleteDoc } from 'firebase/firestore';
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PostCard } from '@/components/PostCard';
+import { UserListDialog } from '@/components/UserListDialog';
 
 
 function CompactPostItem({ post }: { post: Post }) {
@@ -28,11 +32,14 @@ function CompactPostItem({ post }: { post: Post }) {
 
     useEffect(() => {
         if (post.createdAt) {
-            setFormattedDate(new Date(post.createdAt).toLocaleDateString('ru-RU', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            }));
+            const date = new Date(post.createdAt);
+            if (!isNaN(date.getTime())) {
+                setFormattedDate(date.toLocaleDateString('ru-RU', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                }));
+            }
         }
     }, [post.createdAt]);
 
@@ -88,8 +95,11 @@ export default function ProfilePage() {
   const initialUser = users.find(u => u.id === id) || (isOwner ? users.find(u => u.id === '1') : undefined);
   
   const [user, setUser] = useState<UserData | undefined>(initialUser);
+  const [isSubscribed, setIsSubscribed] = useState(false);
   const [isEditModalOpen, setEditModalOpen] = useState(false);
   const [isCarModalOpen, setCarModalOpen] = useState(false);
+  const [isFollowersModalOpen, setFollowersModalOpen] = useState(false);
+  const [isFollowingModalOpen, setFollowingModalOpen] = useState(false);
   const [editingCar, setEditingCar] = useState<Car | null>(null);
 
   const carsQuery = useMemoFirebase(() => {
@@ -98,17 +108,19 @@ export default function ProfilePage() {
   }, [id, firestore]);
 
   const { data: userCars, isLoading: carsLoading } = useCollection<Car>(carsQuery);
-  const userPosts = posts.filter(p => p.userId === id);
+  const userPosts = mockPosts.filter(p => p.userId === id);
+  const favoritePosts = mockPosts.filter(p => ['1', '3'].includes(p.id)); // Mock favorites
   const currentCars = userCars?.filter(car => user?.currentCarIds?.includes(car.id)) || [];
 
-
   useEffect(() => {
-    if (isOwner && !initialUser) {
-        setUser(users.find(u => u.id === '1'));
+    if (isOwner && authUser && !users.find(u => u.id === authUser.uid)) {
+        const ownerUser = users.find(u => u.id === '1');
+        if (ownerUser) setUser({...ownerUser, id: authUser.uid});
     } else {
-        setUser(initialUser);
+        const foundUser = users.find(u => u.id === id);
+        setUser(foundUser);
     }
-  }, [id, isOwner, initialUser]);
+  }, [id, isOwner, authUser]);
 
   const pageLoading = isAuthUserLoading || carsLoading;
   
@@ -133,6 +145,21 @@ export default function ProfilePage() {
     setEditingCar(null);
     setCarModalOpen(true);
   }
+  
+  const handleSubscribe = () => {
+      if (!authUser) return;
+      setIsSubscribed(!isSubscribed);
+      setUser(prevUser => {
+          if (!prevUser) return prevUser;
+          return {
+              ...prevUser,
+              stats: {
+                  ...prevUser.stats,
+                  followers: prevUser.stats.followers + (isSubscribed ? -1 : 1),
+              }
+          }
+      })
+  }
 
   const handleDeleteCar = async (carId: string) => {
     if (!authUser || !firestore) return;
@@ -145,7 +172,6 @@ export default function ProfilePage() {
   };
 
   const userAvatar = PlaceHolderImages.find((img) => img.id === user.avatarId);
-  const communitiesCount = 3; // Mock value
   
   return (
       <>
@@ -166,10 +192,12 @@ export default function ProfilePage() {
           carToEdit={editingCar}
         />
       )}
+      <UserListDialog isOpen={isFollowersModalOpen} onOpenChange={setFollowersModalOpen} title="Подписчики" users={users} />
+      <UserListDialog isOpen={isFollowingModalOpen} onOpenChange={setFollowingModalOpen} title="Подписки" users={users.slice(1)} />
 
       <div className="container mx-auto px-4 py-8">
         <Card className="mb-8 overflow-hidden">
-          <CardHeader className="bg-muted/30 p-6 flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0">
+          <CardHeader className="bg-muted/30 p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
              <div className="flex items-center space-x-6">
                 <Avatar className="h-24 w-24 border-4 border-background">
                   {userAvatar && <AvatarImage src={userAvatar.imageUrl} alt={user.name} data-ai-hint={userAvatar.imageHint} />}
@@ -188,31 +216,38 @@ export default function ProfilePage() {
                   )}
                 </div>
               </div>
-              {isOwner && (
-                 <Button variant="outline" onClick={() => setEditModalOpen(true)}><Edit className="mr-2 h-4 w-4"/> Редактировать профиль</Button>
-              )}
+              <div className="flex-shrink-0">
+                {isOwner ? (
+                    <Button variant="outline" onClick={() => setEditModalOpen(true)}><Edit className="mr-2 h-4 w-4"/> Редактировать профиль</Button>
+                ) : (
+                    <Button onClick={handleSubscribe}>
+                        {isSubscribed ? <UserCheck className="mr-2 h-4 w-4"/> : <UserPlus className="mr-2 h-4 w-4"/>}
+                        {isSubscribed ? 'Вы подписаны' : 'Подписаться'}
+                    </Button>
+                )}
+              </div>
           </CardHeader>
            <CardContent className="p-6">
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 text-center">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
                     <div className="p-4 bg-muted/50 rounded-lg">
                         <FileText className="h-6 w-6 mx-auto text-primary mb-2" />
                         <p className="text-2xl font-bold">{userPosts.length}</p>
-                        <p className="text-sm text-muted-foreground">Мои посты</p>
+                        <p className="text-sm text-muted-foreground">Посты</p>
                     </div>
-                    <div className="p-4 bg-muted/50 rounded-lg">
-                        <CarIcon className="h-6 w-6 mx-auto text-primary mb-2" />
-                        <p className="text-2xl font-bold">{userCars?.length || 0}</p>
-                        <p className="text-sm text-muted-foreground">Гараж</p>
-                    </div>
-                    <div className="p-4 bg-muted/50 rounded-lg">
+                    <button onClick={() => setFollowersModalOpen(true)} className="p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
                         <UsersIcon className="h-6 w-6 mx-auto text-primary mb-2" />
-                        <p className="text-2xl font-bold">{communitiesCount}</p>
-                        <p className="text-sm text-muted-foreground">Сообщества</p>
-                    </div>
+                        <p className="text-2xl font-bold">{user.stats.followers}</p>
+                        <p className="text-sm text-muted-foreground">Подписчики</p>
+                    </button>
+                    <button onClick={() => setFollowingModalOpen(true)} className="p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                        <UserCheck className="h-6 w-6 mx-auto text-primary mb-2" />
+                        <p className="text-2xl font-bold">{user.stats.following}</p>
+                        <p className="text-sm text-muted-foreground">Подписки</p>
+                    </button>
                     <div className="p-4 bg-muted/50 rounded-lg">
                         <Award className="h-6 w-6 mx-auto text-primary mb-2" />
                         <p className="text-2xl font-bold">{user.stats.wins}</p>
-                        <p className="text-sm text-muted-foreground">Победы "Авто дня"</p>
+                        <p className="text-sm text-muted-foreground">Победы</p>
                     </div>
                      <div className="p-4 bg-muted/50 rounded-lg">
                         <Heart className="h-6 w-6 mx-auto text-primary mb-2" />
@@ -222,11 +257,16 @@ export default function ProfilePage() {
                 </div>
            </CardContent>
         </Card>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-4">
-                <h2 className="text-2xl font-bold">Бортжурнал</h2>
-                {userPosts && userPosts.length > 0 ? (
+        
+        <Tabs defaultValue="posts">
+            <TabsList className="mb-6">
+              <TabsTrigger value="posts"><FileText className="w-4 h-4 mr-2" />Бортжурнал</TabsTrigger>
+              <TabsTrigger value="garage"><CarIcon className="w-4 h-4 mr-2" />Гараж</TabsTrigger>
+              <TabsTrigger value="favorites"><Bookmark className="w-4 h-4 mr-2" />Избранное</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="posts">
+                 {userPosts && userPosts.length > 0 ? (
                   <div className="space-y-4">
                     {userPosts.map((post) => (
                        <CompactPostItem key={post.id} post={post} />
@@ -239,41 +279,57 @@ export default function ProfilePage() {
                     </CardContent>
                   </Card>
                 )}
-            </div>
-             <div className="lg:col-span-1">
-                 <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-2xl font-bold">Гараж</h2>
+            </TabsContent>
+            
+            <TabsContent value="garage">
+                 <div className="flex justify-end mb-4">
                     {isOwner && (
                         <Button variant="outline" size="sm" onClick={handleAddCar}>
                             <Plus className="h-4 w-4 mr-2"/>
-                            Добавить
+                            Добавить автомобиль
                         </Button>
                     )}
                  </div>
+                 {userCars && userCars.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                    {userCars.map((car) => (
+                        <GarageCard
+                        key={car.id} 
+                        car={car}
+                        user={user}
+                        onEdit={isOwner ? handleEditCar : undefined}
+                        onDelete={isOwner ? handleDeleteCar : undefined}
+                        />
+                    ))}
+                    </div>
+                ) : (
+                    <Card>
+                      <CardContent className="p-10 text-center text-muted-foreground">
+                          <p>В гараже пока нет автомобилей.</p>
+                      </CardContent>
+                    </Card>
+                )}
+            </TabsContent>
+
+            <TabsContent value="favorites">
+              {favoritePosts.length > 0 ? (
+                <div className="space-y-6">
+                  {favoritePosts.map(post => {
+                     const postUser = users.find(u => u.id === post.userId);
+                     const postCar = mockCars.find(c => c.id === post.carId);
+                     if (!postUser || !postCar) return null;
+                     return <PostCard key={post.id} post={post} user={postUser} car={postCar} />
+                  })}
+                </div>
+              ) : (
                  <Card>
-                    <CardContent className="p-2">
-                        {userCars && userCars.length > 0 ? (
-                            <div className="space-y-1">
-                            {userCars.map((car) => (
-                                <GarageCard
-                                key={car.id} 
-                                car={car}
-                                user={user}
-                                variant="compact"
-                                onEdit={isOwner ? handleEditCar : undefined}
-                                onDelete={isOwner ? handleDeleteCar : undefined}
-                                />
-                            ))}
-                            </div>
-                        ) : (
-                            <div className="p-6 text-center text-muted-foreground">
-                                <p>В гараже пока нет автомобилей.</p>
-                            </div>
-                        )}
+                    <CardContent className="p-10 text-center text-muted-foreground">
+                      <p>Пользователь еще не добавлял посты в избранное.</p>
                     </CardContent>
-                 </Card>
-            </div>
-        </div>
+                  </Card>
+              )}
+            </TabsContent>
+        </Tabs>
       </div>
       </>
   );

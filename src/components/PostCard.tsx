@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Link from "next/link";
@@ -14,8 +15,10 @@ import {
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Heart, MessageCircle } from "lucide-react";
+import { Heart, MessageCircle, Bookmark } from "lucide-react";
 import { Badge } from "./ui/badge";
+import { CommentSheet } from "./CommentSheet";
+import { useUser } from "@/firebase";
 
 interface PostCardProps {
   post: Post;
@@ -24,20 +27,51 @@ interface PostCardProps {
 }
 
 export function PostCard({ post, user, car }: PostCardProps) {
+  const { user: authUser } = useUser();
   const postImage = post.imageUrl ? null : PlaceHolderImages.find((img) => img.id === post.imageId);
   const finalImageUrl = post.imageUrl || postImage?.imageUrl;
 
   const userAvatar = PlaceHolderImages.find((img) => img.id === user.avatarId);
   const [formattedDate, setFormattedDate] = useState('');
+  const [isCommentSheetOpen, setCommentSheetOpen] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(post.likes);
+  const [isFavorited, setIsFavorited] = useState(false);
 
   useEffect(() => {
     // Safely format the date on the client side to avoid hydration mismatch
     if (post.createdAt) {
-      setFormattedDate(new Date(post.createdAt).toLocaleDateString('ru-RU'));
+       const date = new Date(post.createdAt);
+       if (!isNaN(date.getTime())) {
+          setFormattedDate(date.toLocaleDateString('ru-RU', {
+             year: 'numeric',
+             month: 'long',
+             day: 'numeric'
+          }));
+       }
     }
   }, [post.createdAt]);
 
+  const handleLike = () => {
+    if(!authUser) return;
+    setIsLiked(!isLiked);
+    setLikeCount(prev => isLiked ? prev - 1 : prev + 1);
+    // Here you would typically call a function to update the backend
+  };
+
+  const handleFavorite = () => {
+    if(!authUser) return;
+    setIsFavorited(!isFavorited);
+    // Here you would typically call a function to update the backend
+  };
+
   return (
+    <>
+    <CommentSheet 
+        isOpen={isCommentSheetOpen}
+        onOpenChange={setCommentSheetOpen}
+        postId={post.id}
+    />
     <Card className="overflow-hidden">
       <CardHeader>
         <div className="flex items-center space-x-3">
@@ -61,15 +95,17 @@ export function PostCard({ post, user, car }: PostCardProps) {
       <CardContent>
         <h2 className="text-2xl font-bold mb-4">{post.title}</h2>
         {finalImageUrl && (
-          <div className="relative aspect-video mb-4 rounded-lg overflow-hidden">
-            <Image
-              src={finalImageUrl}
-              alt={post.title}
-              fill
-              className="object-cover"
-              data-ai-hint={postImage?.imageHint}
-            />
-          </div>
+          <Link href={`/car/${car.id}?postId=${post.id}`} className="block">
+            <div className="relative aspect-video mb-4 rounded-lg overflow-hidden">
+              <Image
+                src={finalImageUrl}
+                alt={post.title}
+                fill
+                className="object-cover"
+                data-ai-hint={postImage?.imageHint}
+              />
+            </div>
+          </Link>
         )}
         <p className="text-card-foreground/80 whitespace-pre-line">
           {post.content}
@@ -79,18 +115,24 @@ export function PostCard({ post, user, car }: PostCardProps) {
         </div>
       </CardContent>
       <CardFooter className="flex justify-between items-center">
-        <div className="flex space-x-4 text-muted-foreground">
-          <Button variant="ghost" size="sm">
-            <Heart className="mr-2 h-4 w-4" />
-            {post.likes}
+        <div className="flex space-x-1 text-muted-foreground">
+          <Button variant="ghost" size="sm" onClick={handleLike} aria-label="Like post">
+            <Heart className={`mr-2 h-4 w-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
+            {likeCount}
           </Button>
-          <Button variant="ghost" size="sm">
+          <Button variant="ghost" size="sm" onClick={() => setCommentSheetOpen(true)} aria-label="View comments">
             <MessageCircle className="mr-2 h-4 w-4" />
             {post.comments}
           </Button>
         </div>
-        <p className="text-sm text-muted-foreground">{formattedDate}</p>
+        <div className="flex items-center">
+             <Button variant="ghost" size="icon" onClick={handleFavorite} aria-label="Add to favorites">
+                 <Bookmark className={`h-5 w-5 ${isFavorited ? 'fill-primary text-primary' : 'text-muted-foreground'}`} />
+             </Button>
+            {formattedDate && <p className="text-sm text-muted-foreground ml-4">{formattedDate}</p>}
+        </div>
       </CardFooter>
     </Card>
+    </>
   );
 }

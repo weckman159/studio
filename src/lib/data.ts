@@ -1,4 +1,5 @@
 
+
 export interface User {
   id: string;
   name: string;
@@ -11,6 +12,8 @@ export interface User {
     posts: number;
     likes: number;
     wins: number;
+    followers: number;
+    following: number;
   };
 }
 
@@ -37,7 +40,17 @@ export interface Post {
   likes: number;
   comments: number;
   createdAt: string;
+  updatedAt?: string;
 }
+
+export interface Comment {
+    id: string;
+    postId: string;
+    userId: string;
+    text: string;
+    createdAt: string;
+}
+
 
 export const users: User[] = [
   {
@@ -48,7 +61,7 @@ export const users: User[] = [
     bio: 'Люблю скорость и тюнинг. Владелец нескольких интересных проектов.',
     nickname: 'ANovikov',
     currentCarIds: ['1'],
-    stats: { posts: 12, likes: 345, wins: 2 },
+    stats: { posts: 12, likes: 345, wins: 2, followers: 150, following: 42 },
   },
   {
     id: '2',
@@ -56,7 +69,7 @@ export const users: User[] = [
     email: 'elena@example.com',
     avatarId: 'avatar2',
     bio: 'Путешествую на машине по самым красивым местам.',
-    stats: { posts: 5, likes: 189, wins: 1 },
+    stats: { posts: 5, likes: 189, wins: 1, followers: 88, following: 12 },
   },
 ];
 
@@ -101,7 +114,7 @@ export const posts: Post[] = [
     imageId: 'post1',
     tags: ['тюнинг', 'ремонт'],
     likes: 152,
-    comments: 23,
+    comments: 2,
     createdAt: '2024-05-20T10:00:00Z',
   },
   {
@@ -113,7 +126,7 @@ export const posts: Post[] = [
     imageId: 'post2',
     tags: ['путешествия'],
     likes: 210,
-    comments: 45,
+    comments: 1,
     createdAt: '2024-05-18T15:30:00Z',
   },
    {
@@ -125,7 +138,13 @@ export const posts: Post[] = [
     imageId: 'post3',
     tags: ['тюнинг', 'спорт'],
     likes: 98,
-    comments: 12,
+    comments: 0,
     createdAt: '2024-05-15T09:00:00Z',
   },
 ];
+
+export const comments: Comment[] = [
+    { id: '1', postId: '1', userId: '2', text: 'Звук наверное пушка! 🔥', createdAt: '2024-05-20T11:00:00Z' },
+    { id: '2', postId: '1', userId: '1', text: 'Да, очень доволен!', createdAt: '2024-05-20T11:05:00Z' },
+    { id: '3', postId: '2', userId: '1', text: 'Какие красивые места! Тоже мечтаю там побывать.', createdAt: '2024-05-18T16:00:00Z' },
+]
