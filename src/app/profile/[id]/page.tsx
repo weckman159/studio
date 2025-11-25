@@ -8,16 +8,21 @@ import { notFound, useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from '@/components/ui/button';
-import { FileText, Award, Car as CarIcon, Edit, Users as UsersIcon, Heart, MessageCircle } from "lucide-react";
-import { useUser } from "@/firebase";
+import { FileText, Award, Car as CarIcon, Edit, Users as UsersIcon, Heart, MessageCircle, Plus } from "lucide-react";
+import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import type { User as UserData, Car, Post } from '@/lib/data';
-import { users, cars, posts } from '@/lib/data';
+import { users, cars as mockCars, posts } from '@/lib/data';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { EditProfileModal } from '@/components/EditProfileModal';
+import { AddCarForm } from '@/components/AddCarForm';
+import { GarageCard } from '@/components/GarageCard';
+import { collection, query, where, doc, deleteDoc } from 'firebase/firestore';
+import { useToast } from "@/hooks/use-toast";
+
 
 function CompactPostItem({ post }: { post: Post }) {
     const postImage = PlaceHolderImages.find((img) => img.id === post.imageId);
-    const car = cars.find(c => c.id === post.carId);
+    const car = mockCars.find(c => c.id === post.carId);
     const [formattedDate, setFormattedDate] = useState('');
 
     useEffect(() => {
@@ -35,7 +40,7 @@ function CompactPostItem({ post }: { post: Post }) {
     return (
         <Card className="flex items-start p-4 transition-all hover:bg-muted/50">
             {postImage && (
-                <Link href={`/posts/${post.id}`} className="mr-4 flex-shrink-0">
+                <Link href={`/car/${car.id}`} className="mr-4 flex-shrink-0">
                     <Image
                         src={postImage.imageUrl}
                         alt={post.title}
@@ -69,43 +74,12 @@ function CompactPostItem({ post }: { post: Post }) {
     )
 }
 
-function CompactGarageCard({ car }: { car: Car }) {
-  const carImage = PlaceHolderImages.find((img) => img.id === car.imageId);
-
-  return (
-    <Card className="flex flex-col overflow-hidden transition-all hover:shadow-lg group">
-        <Link href={`/car/${car.id}`} className="block aspect-video relative">
-          {carImage && (
-            <Image
-              src={carImage.imageUrl}
-              alt={`${car.brand} ${car.model}`}
-              fill
-              className="object-cover"
-              data-ai-hint={carImage.imageHint}
-            />
-          )}
-        </Link>
-        <div className="p-3 flex-1 flex flex-col">
-            <h4 className="font-semibold leading-tight">
-                <Link href={`/car/${car.id}`} className="hover:text-primary transition-colors">
-                    {car.brand} {car.model}
-                </Link>
-            </h4>
-            <p className="text-sm text-muted-foreground">{car.year} год</p>
-            <div className="flex-1" />
-            <Button asChild variant="outline" size="sm" className="w-full mt-2">
-                <Link href={`/car/${car.id}`}>Просмотреть</Link>
-            </Button>
-        </div>
-    </Card>
-  );
-}
-
-
 export default function ProfilePage() {
   const params = useParams();
   const id = params.id as string;
   const { user: authUser, isUserLoading: isAuthUserLoading } = useUser();
+  const firestore = useFirestore();
+  const { toast } = useToast();
   
   const isOwner = authUser && authUser.uid === id;
   
@@ -113,16 +87,25 @@ export default function ProfilePage() {
   
   const [user, setUser] = useState<UserData | undefined>(initialUser);
   const [isEditModalOpen, setEditModalOpen] = useState(false);
+  const [isCarModalOpen, setCarModalOpen] = useState(false);
+  const [editingCar, setEditingCar] = useState<Car | null>(null);
+
+  const carsQuery = useMemoFirebase(() => {
+    if (!id || !firestore) return null;
+    return query(collection(firestore, 'users', id, 'cars'));
+  }, [id, firestore]);
+
+  const { data: userCars, isLoading: carsLoading } = useCollection<Car>(carsQuery);
+  const userPosts = posts.filter(p => p.userId === id);
+
 
   useEffect(() => {
-    // If the user data changes (e.g. from an edit), we update the state
     setUser(initialUser);
   }, [initialUser?.id]);
 
-
-  const pageLoading = isAuthUserLoading;
+  const pageLoading = isAuthUserLoading || carsLoading;
   
-  if (pageLoading) {
+  if (pageLoading && !user) {
     return <div className="container mx-auto px-4 py-8 text-center">Загрузка профиля...</div>;
   }
 
@@ -134,9 +117,26 @@ export default function ProfilePage() {
     setUser(updatedUser);
   };
 
-  const userIdForContent = user.id;
-  const userCars = cars.filter(c => c.userId === userIdForContent);
-  const userPosts = posts.filter(p => p.userId === userIdForContent);
+  const handleEditCar = (car: Car) => {
+    setEditingCar(car);
+    setCarModalOpen(true);
+  };
+
+  const handleAddCar = () => {
+    setEditingCar(null);
+    setCarModalOpen(true);
+  }
+
+  const handleDeleteCar = async (carId: string) => {
+    if (!authUser || !firestore) return;
+    try {
+      await deleteDoc(doc(firestore, 'users', authUser.uid, 'cars', carId));
+      toast({ title: "Успех!", description: "Автомобиль был удален." });
+    } catch (error: any) {
+       toast({ variant: 'destructive', title: "Ошибка", description: "Не удалось удалить автомобиль." });
+    }
+  };
+
   const userAvatar = PlaceHolderImages.find((img) => img.id === user.avatarId);
   const communitiesCount = 3; // Mock value
   
@@ -148,6 +148,12 @@ export default function ProfilePage() {
         user={user}
         onSave={handleProfileSave}
       />
+      <AddCarForm
+        isOpen={isCarModalOpen}
+        setIsOpen={setCarModalOpen}
+        carToEdit={editingCar}
+      />
+
       <div className="container mx-auto px-4 py-8">
         <Card className="mb-8 overflow-hidden">
           <CardHeader className="bg-muted/30 p-6 flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0">
@@ -174,7 +180,7 @@ export default function ProfilePage() {
                     </div>
                     <div className="p-4 bg-muted/50 rounded-lg">
                         <CarIcon className="h-6 w-6 mx-auto text-primary mb-2" />
-                        <p className="text-2xl font-bold">{userCars.length}</p>
+                        <p className="text-2xl font-bold">{userCars?.length || 0}</p>
                         <p className="text-sm text-muted-foreground">Гараж</p>
                     </div>
                     <div className="p-4 bg-muted/50 rounded-lg">
@@ -214,23 +220,37 @@ export default function ProfilePage() {
                 )}
             </div>
              <div className="lg:col-span-1">
-                 <h2 className="text-2xl font-bold mb-4">Гараж</h2>
-                  {userCars && userCars.length > 0 ? (
-                    <div className="grid grid-cols-1 gap-4">
-                      {userCars.map((car) => (
-                        <CompactGarageCard 
-                          key={car.id} 
-                          car={car}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                     <Card>
-                      <CardContent className="p-6 text-center text-muted-foreground">
-                        <p>У этого пользователя пока нет автомобилей в гараже.</p>
-                      </CardContent>
-                    </Card>
-                  )}
+                 <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-2xl font-bold">Гараж</h2>
+                    {isOwner && (
+                        <Button variant="outline" size="sm" onClick={handleAddCar}>
+                            <Plus className="h-4 w-4 mr-2"/>
+                            Добавить
+                        </Button>
+                    )}
+                 </div>
+                 <Card>
+                    <CardContent className="p-2">
+                        {userCars && userCars.length > 0 ? (
+                            <div className="space-y-1">
+                            {userCars.map((car) => (
+                                <GarageCard
+                                key={car.id} 
+                                car={car}
+                                user={user}
+                                variant="compact"
+                                onEdit={isOwner ? handleEditCar : undefined}
+                                onDelete={isOwner ? handleDeleteCar : undefined}
+                                />
+                            ))}
+                            </div>
+                        ) : (
+                            <div className="p-6 text-center text-muted-foreground">
+                                <p>В гараже пока нет автомобилей.</p>
+                            </div>
+                        )}
+                    </CardContent>
+                 </Card>
             </div>
         </div>
       </div>

@@ -43,6 +43,11 @@ export default function GaragePage() {
        toast({ variant: 'destructive', title: "Ошибка", description: "Не удалось удалить автомобиль." });
     }
   };
+
+  const handleOpenAddCar = () => {
+    setEditingCar(null);
+    setAddCarOpen(true);
+  };
   
   if (loading) {
     return <div className="container mx-auto px-4 py-8 text-center">Загрузка...</div>;
@@ -72,7 +77,7 @@ export default function GaragePage() {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Мой гараж</h1>
-        <Button onClick={() => setAddCarOpen(true)}>
+        <Button onClick={handleOpenAddCar}>
           <Plus className="mr-2 h-4 w-4" /> Добавить авто
         </Button>
       </div>
@@ -87,7 +92,7 @@ export default function GaragePage() {
         <div className="text-center py-16 border-2 border-dashed rounded-lg">
           <h2 className="text-xl font-semibold text-muted-foreground">Ваш гараж пуст</h2>
           <p className="text-muted-foreground mt-2">Начните с добавления вашего первого автомобиля.</p>
-          <Button className="mt-4" onClick={() => setAddCarOpen(true)}>
+          <Button className="mt-4" onClick={handleOpenAddCar}>
             <Plus className="mr-2 h-4 w-4" /> Добавить авто
           </Button>
         </div>
