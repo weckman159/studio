@@ -12,18 +12,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Settings, User, LogOut, CarFront } from 'lucide-react';
+import { Settings, User, LogOut, CarFront, Menu } from 'lucide-react';
 import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { users } from '@/lib/data';
-import { SidebarTrigger } from './ui/sidebar';
+import { SidebarTrigger, useSidebar } from './ui/sidebar';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 export function Header() {
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
   const { toast } = useToast();
+  const { toggleSidebar } = useSidebar();
+
 
   const currentUser = user ? users.find(u => u.id === user.uid) || users.find(u => u.id === '1') : null;
   const userAvatar = currentUser ? PlaceHolderImages.find(img => img.id === currentUser.avatarId) : null;
@@ -37,12 +40,13 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-30 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
         <div className="flex items-center space-x-2 md:hidden">
-            <SidebarTrigger />
-            <CarFront className="h-6 w-6 text-primary" />
-            <span className="font-bold text-lg">AutoSphere</span>
+            <Button variant="ghost" size="icon" onClick={toggleSidebar}>
+              <Menu className="h-6 w-6" />
+              <span className="sr-only">Toggle Sidebar</span>
+            </Button>
         </div>
         <div className="flex flex-1 items-center justify-end space-x-4">
           {isUserLoading ? (

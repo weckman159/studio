@@ -7,6 +7,7 @@ import { Sidebar, SidebarContent, SidebarHeader, SidebarInset, SidebarMenu, Side
 import { CarFront, Home, BookOpen, Users, ShoppingCart, Wrench, Calendar, CheckSquare, Radio } from 'lucide-react';
 import Link from "next/link";
 import { FirebaseClientProvider } from "@/firebase/client-provider";
+import { CarOfTheDay } from "@/components/CarOfTheDay";
 
 export const metadata: Metadata = {
   title: "AutoSphere",
@@ -43,34 +44,49 @@ export default function RootLayout({
       <body className="font-body antialiased">
         <FirebaseClientProvider>
           <SidebarProvider>
-            <Sidebar>
-                <SidebarHeader>
-                    <div className="flex items-center space-x-2">
-                     <CarFront className="h-6 w-6 text-primary" />
-                     <span className="font-bold text-lg">AutoSphere</span>
+            <div className="relative flex min-h-screen">
+              <Sidebar>
+                  <SidebarHeader>
+                      <div className="flex items-center space-x-2">
+                       <CarFront className="h-6 w-6 text-primary" />
+                       <span className="font-bold text-lg">AutoSphere</span>
+                      </div>
+                  </SidebarHeader>
+                  <SidebarContent>
+                      <SidebarMenu>
+                          {navLinks.map(link => (
+                              <SidebarMenuItem key={link.href}>
+                                  <SidebarMenuButton asChild>
+                                      <Link href={link.href}>
+                                          <link.icon />
+                                          <span>{link.label}</span>
+                                      </Link>
+                                  </SidebarMenuButton>
+                              </SidebarMenuItem>
+                          ))}
+                      </SidebarMenu>
+                  </SidebarContent>
+              </Sidebar>
+              <div className="flex flex-col flex-1">
+                <Header />
+                <main className="flex-1">
+                  <div className="container mx-auto px-4 py-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                      <div className="lg:col-span-3">
+                        {children}
+                      </div>
+                      <aside className="lg:col-span-1">
+                        <div className="sticky top-24 space-y-6">
+                           <CarOfTheDay />
+                        </div>
+                      </aside>
                     </div>
-                </SidebarHeader>
-                <SidebarContent>
-                    <SidebarMenu>
-                        {navLinks.map(link => (
-                            <SidebarMenuItem key={link.href}>
-                                <SidebarMenuButton asChild>
-                                    <Link href={link.href}>
-                                        <link.icon />
-                                        <span>{link.label}</span>
-                                    </Link>
-                                </SidebarMenuButton>
-                            </SidebarMenuItem>
-                        ))}
-                    </SidebarMenu>
-                </SidebarContent>
-            </Sidebar>
-            <SidebarInset>
-              <Header />
-              <main className="flex-1">{children}</main>
-              <Footer />
-              <Toaster />
-            </SidebarInset>
+                  </div>
+                </main>
+                <Footer />
+              </div>
+            </div>
+            <Toaster />
           </SidebarProvider>
         </FirebaseClientProvider>
       </body>
