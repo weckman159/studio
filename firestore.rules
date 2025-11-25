@@ -1,0 +1,133 @@
+/**
+ * Core Philosophy: This ruleset enforces a strict user-ownership model designed for an auto community application.
+ * Users have full control over their own profile and garage data, while community content like posts and comments
+ * is publicly readable but can only be modified by the original author. This approach ensures data integrity
+ * and user privacy while allowing for an open, browsable community feed.
+ *
+ * Data Structure:
+ * - /users/{userId}: Stores public user profiles. Each user manages their own document.
+ * - /users/{userId}/cars/{carId}: A subcollection for a user's "garage". Access is strictly limited to the parent user.
+ * - /posts/{postId}: A top-level collection for all user-generated posts. Publicly readable.
+ * - /comments/{commentId}: A top-level collection for all comments on posts. Publicly readable.
+ * - /featured_cars/{date}: A read-only collection for the "Car of the Day," presumed to be managed by a backend process.
+ *
+ * Key Security Decisions:
+ * - User Privacy: Listing all users via a collection query (`/users`) is explicitly disallowed to prevent data scraping.
+ * - Path-Based Ownership: The `/users/{userId}` tree uses the document path as the primary source of truth for ownership, making rules simple and fast.
+ * - Denormalized Ownership: For top-level collections like `/posts` and `/comments`, a `userId` field is stored on each document. This allows for efficient ownership checks on writes without needing extra database reads.
+ * - Secure Defaults: The `/featured_cars` collection is read-only for clients, ensuring this curated content cannot be tampered with. The default posture for any unspecified path is to deny all access.
+ *
+ * Denormalization for Authorization: To ensure performant and simple authorization checks, ownership data is denormalized.
+ * For example, each document in `/posts` and `/comments` contains a `userId` field. This allows rules to grant write
+ * access by simply checking `resource.data.userId` against the user's auth UID, avoiding slow and costly `get()` calls.
+ * Similarly, documents within a user's private space (e.g., `/users/{userId}/cars/{carId}`) contain a `userId` field
+ * to enforce relational integrity with the document's path.
+ *
+ * Structural Segregation: The data model separates user-private data (like their garage in a subcollection) from
+ * public community content (`/posts`). This separation makes it safe and efficient to allow broad `list` operations
+ * on public collections while tightly restricting access to private ones.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions for reusable logic
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Checks if the requesting user's UID matches the provided userId
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    /**
+     * @description
+     *   Manages user profiles. Users can create their own profile, update their own data, and delete
+     *   their own account. Profile information is publicly readable (get), but the entire user list cannot be queried.
+     * @path /users/{userId}
+     * @allow (get) Any user, signed in or not, retrieving a specific user's profile.
+     * @allow (create) A new user creating their own profile document, where `{userId}` matches their auth UID.
+     * @deny (list) Any user attempting to query the entire `/users` collection.
+     * @deny (update) A user trying to modify another user's profile.
+     * @principle Enforces self-service profile management and protects user privacy by disabling collection listing.
+     */
+    match /users/{userId} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isOwner(userId) && resource != null && request.resource.data.id == resource.data.id;
+      allow delete: if isOwner(userId) && resource != null;
+
+      /**
+       * @description
+       *   Manages cars in a user's garage. Only the owner of the garage can add, view, update, or remove their own cars.
+       * @path /users/{userId}/cars/{carId}
+       * @allow (create) An authenticated user adding a car to their own garage.
+       * @allow (list) An authenticated user listing all cars in their own garage.
+       * @deny (get) A user trying to view a specific car in someone else's garage.
+       * @deny (update) A user trying to modify a car in someone else's garage.
+       * @principle Restricts access to a user's own data tree using path-based ownership.
+       */
+      match /cars/{carId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.userId == userId;
+        allow update: if isOwner(userId) && resource != null && request.resource.data.userId == resource.data.userId;
+        allow delete: if isOwner(userId) && resource != null;
+      }
+    }
+
+    /**
+     * @description
+     *   Manages community posts. All posts are public and can be read by anyone.
+     *   Only authenticated users can create posts, and they can only modify or delete their own.
+     * @path /posts/{postId}
+     * @allow (list) Any user, signed in or not, listing all posts in the community feed.
+     * @allow (create) A signed-in user creating a new post, where the post's `userId` field matches their auth UID.
+     * @deny (update) A user trying to edit a post that was created by another user.
+     * @deny (delete) A user trying to delete someone else's post.
+     * @principle Implements a "Public Read, Owner-Only Write" pattern using a denormalized `userId` field for authorization.
+     */
+    match /posts/{postId} {
+      allow get, list: if true;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if resource != null && isOwner(resource.data.userId) && request.resource.data.userId == resource.data.userId;
+      allow delete: if resource != null && isOwner(resource.data.userId);
+    }
+
+    /**
+     * @description
+     *   Manages comments on posts. All comments are public. Authenticated users can
+     *   create comments and can only modify or delete their own.
+     * @path /comments/{commentId}
+     * @allow (get) Any user reading a specific comment.
+     * @allow (create) A signed-in user adding a comment to a post.
+     * @deny (update) A user trying to edit a comment left by someone else.
+     * @deny (delete) An unauthenticated user trying to delete a comment.
+     * @principle Implements a "Public Read, Owner-Only Write" pattern, ensuring users can only manage their own contributions.
+     */
+    match /comments/{commentId} {
+      allow get, list: if true;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if resource != null && isOwner(resource.data.userId) && request.resource.data.userId == resource.data.userId;
+      allow delete: if resource != null && isOwner(resource.data.userId);
+    }
+
+    /**
+     * @description
+     *   Stores the "Car of the Day." This data is public and read-only for all clients.
+     *   It is assumed that an admin or a backend Cloud Function is responsible for writing to this collection.
+     * @path /featured_cars/{date}
+     * @allow (get) Any user, signed in or not, viewing the featured car for a specific date.
+     * @deny (create) Any client attempting to create a new "Car of the Day" document.
+     * @deny (update) Any client attempting to change the featured car.
+     * @principle Protects curated, high-importance data by making it read-only for clients.
+     */
+    match /featured_cars/{date} {
+      allow get, list: if true;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}
