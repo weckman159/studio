@@ -13,6 +13,7 @@ import { useUser } from "@/firebase";
 import type { User as UserData, Car, Post } from '@/lib/data';
 import { users, cars, posts } from '@/lib/data';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { EditProfileModal } from '@/components/EditProfileModal';
 
 function CompactPostItem({ post }: { post: Post }) {
     const postImage = PlaceHolderImages.find((img) => img.id === post.imageId);
@@ -108,7 +109,16 @@ export default function ProfilePage() {
   
   const isOwner = authUser && authUser.uid === id;
   
-  const user = users.find(u => u.id === id) || (isOwner ? users.find(u => u.id === '1') : undefined);
+  const initialUser = users.find(u => u.id === id) || (isOwner ? users.find(u => u.id === '1') : undefined);
+  
+  const [user, setUser] = useState<UserData | undefined>(initialUser);
+  const [isEditModalOpen, setEditModalOpen] = useState(false);
+
+  useEffect(() => {
+    // If the user data changes (e.g. from an edit), we update the state
+    setUser(initialUser);
+  }, [initialUser?.id]);
+
 
   const pageLoading = isAuthUserLoading;
   
@@ -119,6 +129,10 @@ export default function ProfilePage() {
   if (!user) {
     notFound();
   }
+  
+  const handleProfileSave = (updatedUser: UserData) => {
+    setUser(updatedUser);
+  };
 
   const userIdForContent = user.id;
   const userCars = cars.filter(c => c.userId === userIdForContent);
@@ -127,6 +141,13 @@ export default function ProfilePage() {
   const communitiesCount = 3; // Mock value
   
   return (
+      <>
+      <EditProfileModal 
+        isOpen={isEditModalOpen}
+        setIsOpen={setEditModalOpen}
+        user={user}
+        onSave={handleProfileSave}
+      />
       <div className="container mx-auto px-4 py-8">
         <Card className="mb-8 overflow-hidden">
           <CardHeader className="bg-muted/30 p-6 flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0">
@@ -141,7 +162,7 @@ export default function ProfilePage() {
                 </div>
               </div>
               {isOwner && (
-                 <Button variant="outline"><Edit className="mr-2 h-4 w-4"/> Редактировать профиль</Button>
+                 <Button variant="outline" onClick={() => setEditModalOpen(true)}><Edit className="mr-2 h-4 w-4"/> Редактировать профиль</Button>
               )}
           </CardHeader>
            <CardContent className="p-6">
@@ -213,5 +234,6 @@ export default function ProfilePage() {
             </div>
         </div>
       </div>
+      </>
   );
 }
