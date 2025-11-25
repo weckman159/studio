@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -157,6 +158,10 @@
           "type": "number",
           "description": "The year the car was manufactured."
         },
+        "engine": {
+          "type": "string",
+          "description": "The engine specification of the car."
+        },
         "photo": {
           "type": "string",
           "description": "URL of the car's photo.",
@@ -168,7 +173,8 @@
         "userId",
         "brand",
         "model",
-        "year"
+        "year",
+        "engine"
       ]
     },
     "FeaturedCar": {
@@ -290,6 +296,6 @@
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to support the AutoSphere application, focusing on posts, user garages, car profiles, and a featured 'Car of the Day'. It prioritizes authorization independence by storing ownership information directly within documents, avoiding the need for complex `get()` calls in security rules. Segregation ensures each collection has a consistent security posture. The structure uses path-based ownership for user-owned data and membership maps where collaboration is required.\n\n*   `/users/{userId}`: Stores user profiles. Path-based ownership is used, making security rules straightforward.\n*   `/users/{userId}/cars/{carId}`: Stores car information owned by users. This hierarchical structure simplifies ownership-based access control.\n*   `/posts/{postId}`: Stores posts. The `userId` field within each document enables filtering posts by owner.\n*   `/comments/{commentId}`:  Stores comments. The `postId` and `userId` enable filtering and associating comments with posts and users.\n*   `/featured_cars/{date}`: Stores the 'Car of the Day', with fields for `carId` and `userId` to link back to the car and its owner.\n\nThis design achieves authorization independence through denormalization by including the `userId` in the `posts`, `comments` and `featured_cars` collections.\n\nThe structure also supports the required QAPs. The segregation of data into separate collections (`users`, `posts`, `cars`, `comments`, `featured_cars`) ensures that `list` operations can be secured appropriately. Path-based ownership ensures that listing cars for a specific user is secure and efficient. The inclusion of `userId` within the `posts` and `comments` collections also means list operations can be constrained and secured based on user identity."
+    "reasoning": "The Firestore structure is designed to support the AutoSphere application, focusing on posts, user garages, car profiles, and a featured 'Car of the Day'. It prioritizes authorization independence by storing ownership information directly within documents, avoiding the need for complex `get()` calls in security rules. Segregation ensures each collection has a consistent security posture. The structure uses path-based ownership for user-owned data and membership maps where collaboration is required.\\n\\n*   `/users/{userId}`: Stores user profiles. Path-based ownership is used, making security rules straightforward.\\n*   `/users/{userId}/cars/{carId}`: Stores car information owned by users. This hierarchical structure simplifies ownership-based access control.\\n*   `/posts/{postId}`: Stores posts. The `userId` field within each document enables filtering posts by owner.\\n*   `/comments/{commentId}`:  Stores comments. The `postId` and `userId` enable filtering and associating comments with posts and users.\\n*   `/featured_cars/{date}`: Stores the 'Car of the Day', with fields for `carId` and `userId` to link back to the car and its owner.\\n\\nThis design achieves authorization independence through denormalization by including the `userId` in the `posts`, `comments` and `featured_cars` collections.\\n\\nThe structure also supports the required QAPs. The segregation of data into separate collections (`users`, `posts`, `cars`, `comments`, `featured_cars`) ensures that `list` operations can be secured appropriately. Path-based ownership ensures that listing cars for a specific user is secure and efficient. The inclusion of `userId` within the `posts` and `comments` collections also means list operations can be constrained and secured based on user identity."
   }
 }

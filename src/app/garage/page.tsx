@@ -1,18 +1,35 @@
 
 'use client';
 
+import { useState } from 'react';
 import { GarageCard } from "@/components/GarageCard";
 import { Button } from "@/components/ui/button";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query } from 'firebase/firestore';
+import { collection, query, doc, deleteDoc } from 'firebase/firestore';
 import type { Car, User } from '@/lib/data';
-import { users } from '@/lib/data';
 import { Plus } from "lucide-react";
 import Link from 'next/link';
+import { AddCarForm } from '@/components/AddCarForm';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
+
 
 export default function GaragePage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
+  const [isAddCarOpen, setAddCarOpen] = useState(false);
+  const [editingCar, setEditingCar] = useState<Car | null>(null);
 
   const carsQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
@@ -22,6 +39,21 @@ export default function GaragePage() {
   const { data: userCars, isLoading: carsLoading } = useCollection<Car>(carsQuery);
   
   const loading = isUserLoading || carsLoading;
+
+  const handleEdit = (car: Car) => {
+    setEditingCar(car);
+    setAddCarOpen(true);
+  };
+  
+  const handleDelete = async (carId: string) => {
+    if (!user || !firestore) return;
+    try {
+      await deleteDoc(doc(firestore, 'users', user.uid, 'cars', carId));
+      toast({ title: "Успех!", description: "Автомобиль был удален." });
+    } catch (error: any) {
+       toast({ variant: 'destructive', title: "Ошибка", description: "Не удалось удалить автомобиль." });
+    }
+  };
   
   if (loading) {
     return <div className="container mx-auto px-4 py-8 text-center">Загрузка...</div>;
@@ -35,15 +67,23 @@ export default function GaragePage() {
       </div>
     );
   }
-  
-  // Demo user data, replace with actual user profile fetch if available
-  const owner = users.find(u => u.id === user.uid) || { ...users[0], id: user.uid, name: user.email || 'Пользователь' };
 
   return (
+    <>
+    <AddCarForm 
+      isOpen={isAddCarOpen} 
+      setIsOpen={(open) => {
+        if (!open) {
+          setEditingCar(null);
+        }
+        setAddCarOpen(open);
+      }}
+      carToEdit={editingCar}
+    />
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Мой гараж</h1>
-        <Button>
+        <Button onClick={() => setAddCarOpen(true)}>
           <Plus className="mr-2 h-4 w-4" /> Добавить авто
         </Button>
       </div>
@@ -51,18 +91,19 @@ export default function GaragePage() {
       {userCars && userCars.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {userCars.map(car => (
-            <GarageCard key={car.id} car={car} user={owner as User} />
+            <GarageCard key={car.id} car={car} user={user as unknown as User} onEdit={handleEdit} onDelete={() => handleDelete(car.id)}/>
           ))}
         </div>
       ) : (
         <div className="text-center py-16 border-2 border-dashed rounded-lg">
           <h2 className="text-xl font-semibold text-muted-foreground">Ваш гараж пуст</h2>
           <p className="text-muted-foreground mt-2">Начните с добавления вашего первого автомобиля.</p>
-          <Button className="mt-4">
+          <Button className="mt-4" onClick={() => setAddCarOpen(true)}>
             <Plus className="mr-2 h-4 w-4" /> Добавить авто
           </Button>
         </div>
       )}
     </div>
+    </>
   );
 }
