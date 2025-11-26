@@ -1,3 +1,4 @@
+
 // src/app/posts/page.tsx
 // Лента пользовательских постов: публикации блогов, вопросы и фотоотчёты
 // Поиск, фильтрация по типу поста (обсуждение, отчет, отзыв)
@@ -17,21 +18,11 @@ import { users, cars } from '@/lib/data'; // Using mock users/cars for now
 import { PostCard } from '@/components/PostCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
-
-// Типы постов для фильтрации
-const postTypes = [
-  'Все',
-  'Блог',
-  'Фотоотчет',
-  'Вопрос',
-  'Мой опыт',
-  'Обзор'
-];
+import { PostFilters } from '@/components/PostFilters';
 
 export default function PostsPage() {
   const firestore = useFirestore();
   const [posts, setPosts] = useState<PostData[]>([]);
-  const [filteredPosts, setFilteredPosts] = useState<PostData[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState('Все');
   const [loading, setLoading] = useState(true);
@@ -53,7 +44,6 @@ export default function PostsPage() {
           ...doc.data()
         } as PostData));
         setPosts(data);
-        setFilteredPosts(data);
       } catch (e) {
         console.error('Ошибка загрузки постов:', e);
       } finally {
@@ -64,25 +54,12 @@ export default function PostsPage() {
   }, [firestore]);
 
   // Фильтрация постов
-  useEffect(() => {
-    let result = [...posts];
-
-    // Фильтр по типу
-    if (selectedType !== 'Все') {
-      result = result.filter(p => p.type === selectedType);
-    }
-
-    // Поиск
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(p =>
-        p.title.toLowerCase().includes(q) ||
-        p.content.toLowerCase().includes(q)
-      );
-    }
-
-    setFilteredPosts(result);
-  }, [posts, selectedType, searchQuery]);
+  const filteredPosts = posts
+    .filter(p => selectedType === 'Все' || p.type === selectedType)
+    .filter(p => 
+      p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.content.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
 
   return (
@@ -103,30 +80,15 @@ export default function PostsPage() {
         </Link>
       </div>
       {/* Поиск/фильтр */}
-      <div className="mb-8 space-y-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
-          <Input
-            type="text"
-            placeholder="Поиск по заголовку или содержимому"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="pl-10 h-12"
-          />
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {postTypes.map(type => (
-            <Button
-              key={type}
-              variant={selectedType === type ? 'default' : 'outline'}
-              onClick={() => setSelectedType(type)}
-              size="sm"
-            >
-              {type}
-            </Button>
-          ))}
-        </div>
+      <div className="mb-8">
+        <PostFilters
+          activeType={selectedType}
+          onTypeChange={setSelectedType}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+        />
       </div>
+      
       {/* Лента постов */}
       {loading ? (
         <div className="space-y-6">

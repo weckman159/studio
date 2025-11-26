@@ -7,12 +7,18 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Toaster } from "@/components/ui/toaster";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarProvider, SidebarSeparator } from "@/components/ui/sidebar";
-import { CarFront, Home, BookOpen, Users, ShoppingCart, Wrench, Calendar, Newspaper, BarChartHorizontal, Info, MessageSquare } from 'lucide-react';
+import { CarFront, Home, BookOpen, Users, ShoppingCart, Wrench, Calendar, Newspaper, BarChartHorizontal, Info, MessageSquare, Shield } from 'lucide-react';
 import Link from "next/link";
 import { FirebaseClientProvider } from "@/firebase/client-provider";
 import { CarOfTheDay } from "@/components/CarOfTheDay";
 import { useActivePath } from "@/hooks/use-active-path";
 import { ThemeProvider } from "next-themes";
+import { useUser, useFirestore } from '@/firebase';
+import type { User as UserData } from '@/lib/data';
+import { useEffect, useState } from "react";
+import { doc, getDoc } from "firebase/firestore";
+import { users } from '@/lib/data';
+
 
 const navLinks = [
   { href: '/', label: 'Главная', icon: Home },
@@ -21,11 +27,8 @@ const navLinks = [
   { href: '/marketplace', label: 'Маркетплейс', icon: ShoppingCart },
   { href: '/workshops', label: 'Мастерские', icon: Wrench },
   { href: '/events', label: 'События', icon: Calendar },
-];
-
-const secondaryNavLinks = [
-    { href: '/voting', label: 'Голосования', icon: BarChartHorizontal },
-    { href: '/news', label: 'Новости', icon: Newspaper },
+  { href: '/voting', label: 'Голосования', icon: BarChartHorizontal },
+  { href: '/news', label: 'Новости', icon: Newspaper },
 ];
 
 const footerNavLinks = [
@@ -35,6 +38,33 @@ const footerNavLinks = [
 
 function AppSidebar() {
   const checkActivePath = useActivePath();
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const [profile, setProfile] = useState<UserData | null>(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+        if (user && firestore) {
+            try {
+                const docRef = doc(firestore, 'users', user.uid);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    setProfile({ id: docSnap.id, ...docSnap.data() } as UserData);
+                } else {
+                    const mockUser = users.find(u => u.id === user.uid);
+                    setProfile(mockUser || null);
+                }
+            } catch (error) {
+                console.error("Error fetching user profile:", error);
+                const mockUser = users.find(u => u.id === user.uid);
+                setProfile(mockUser || null);
+            }
+        } else {
+            setProfile(null);
+        }
+    };
+    fetchProfile();
+  }, [user, firestore]);
 
   return (
       <Sidebar>
@@ -56,19 +86,16 @@ function AppSidebar() {
                           </SidebarMenuButton>
                       </SidebarMenuItem>
                   ))}
-              </SidebarMenu>
-              <SidebarSeparator />
-               <SidebarMenu>
-                  {secondaryNavLinks.map(link => (
-                      <SidebarMenuItem key={link.href}>
-                          <SidebarMenuButton asChild isActive={checkActivePath(link.href)}>
-                              <Link href={link.href}>
-                                  <link.icon />
-                                  <span className="group-data-[collapsible=icon]:hidden">{link.label}</span>
-                              </Link>
-                          </SidebarMenuButton>
-                      </SidebarMenuItem>
-                  ))}
+                  {profile?.role === 'admin' && (
+                    <SidebarMenuItem>
+                        <SidebarMenuButton asChild isActive={checkActivePath('/admin')}>
+                            <Link href="/admin">
+                                <Shield />
+                                <span className="group-data-[collapsible=icon]:hidden">Админка</span>
+                            </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
               </SidebarMenu>
           </SidebarContent>
            <SidebarContent className="p-2 mt-auto">
@@ -96,10 +123,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="ru" suppressHydrationWarning>
       <head>
         <title>AutoSphere</title>
-        <meta name="description" content="A community for car enthusiasts" />
+        <meta name="description" content="Сообщество для автолюбителей" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
@@ -120,19 +147,8 @@ export default function RootLayout({
                 <AppSidebar />
                 <div className="flex flex-col flex-1">
                   <Header />
-                  <main className="flex-1">
-                    <div className="container mx-auto px-4 py-8">
-                      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                        <div className="lg:col-span-3">
-                          {children}
-                        </div>
-                        <aside className="lg:col-span-1">
-                          <div className="sticky top-24 space-y-6">
-                            <CarOfTheDay />
-                          </div>
-                        </aside>
-                      </div>
-                    </div>
+                  <main className="flex-1 container mx-auto px-4 py-8">
+                     {children}
                   </main>
                   <Footer />
                 </div>
