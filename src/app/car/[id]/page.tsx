@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PostCard } from "@/components/PostCard";
-import { Award, Calendar, Wrench, Car as CarIcon } from "lucide-react";
+import { Award, Calendar, Wrench, Car as CarIcon, ImageIcon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 export default function CarProfilePage({ params }: { params: { id: string } }) {
@@ -26,12 +26,14 @@ export default function CarProfilePage({ params }: { params: { id: string } }) {
   } else {
     // If car not found in mock data, it's likely a Firestore ID.
     // Use a placeholder car to render the page structure and avoid a 404 error.
-    car = { ...cars[0], id: params.id, brand: 'Загрузка данных...', model: '' };
+    car = { ...cars[0], id: params.id, brand: 'Загрузка данных...', model: '', photos: [] };
     pageTitle = `Автомобиль ${params.id}`;
   }
 
-  const carImage = car.photoUrl || PlaceHolderImages.find((img) => img.id === car.imageId)?.imageUrl;
-  const carImageHint = car.photoUrl ? "user uploaded car" : PlaceHolderImages.find((img) => img.id === car.imageId)?.imageHint;
+  const mainImage = car.photoUrl || car.photos?.[0] || PlaceHolderImages.find((img) => img.id === car.imageId)?.imageUrl;
+  const mainImageHint = car.photoUrl ? "user uploaded car" : PlaceHolderImages.find((img) => img.id === car.imageId)?.imageHint;
+  const galleryImages = car.photos || (car.imageId ? [PlaceHolderImages.find(img => img.id === car.imageId)!.imageUrl] : []);
+
 
   const owner = users.find((u) => u.id === car.userId);
   const relatedPosts = posts.filter((p) => p.carId === car.id);
@@ -40,17 +42,17 @@ export default function CarProfilePage({ params }: { params: { id: string } }) {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <div className="md:col-span-2">
+        <div className="md:col-span-2 space-y-8">
           <Card className="overflow-hidden">
             <CardHeader className="p-0">
                <div className="relative aspect-video bg-muted">
-                  {carImage ? (
+                  {mainImage ? (
                     <Image
-                      src={carImage}
+                      src={mainImage}
                       alt={pageTitle}
                       fill
                       className="object-cover"
-                      data-ai-hint={carImageHint}
+                      data-ai-hint={mainImageHint}
                     />
                   ) : (
                      <div className="flex items-center justify-center h-full">
@@ -77,8 +79,29 @@ export default function CarProfilePage({ params }: { params: { id: string } }) {
                  )}
             </CardContent>
           </Card>
+          
+           {galleryImages.length > 0 && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center"><ImageIcon className="mr-2 h-5 w-5"/>Галерея</CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                       {galleryImages.map((imgUrl, index) => (
+                           <div key={index} className="relative aspect-square bg-muted rounded-lg overflow-hidden">
+                               <Image 
+                                 src={imgUrl}
+                                 alt={`${pageTitle} gallery image ${index + 1}`}
+                                 fill
+                                 className="object-cover"
+                               />
+                           </div>
+                       ))}
+                    </CardContent>
+                </Card>
+           )}
 
-           <div className="mt-8">
+
+           <div>
                 <h2 className="text-2xl font-bold mb-4">История постов</h2>
                 <div className="space-y-6">
                  {relatedPosts.length > 0 ? (

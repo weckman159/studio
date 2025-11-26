@@ -28,8 +28,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import type { Car } from '@/lib/data';
-import { SingleImageUpload } from './ImageUpload';
-import { extractPathFromURL } from '@/lib/storage';
+import { MultipleImageUpload } from './ImageUpload';
 
 
 const carFormSchema = z.object({
@@ -38,7 +37,7 @@ const carFormSchema = z.object({
   year: z.coerce.number().min(1900, { message: 'Неверный год' }).max(new Date().getFullYear() + 1, { message: 'Неверный год'}),
   engine: z.string().min(1, { message: 'Двигатель обязателен'}),
   description: z.string().optional(),
-  photoUrl: z.string().optional(),
+  photos: z.array(z.string()).optional().default([]),
 });
 
 type CarFormValues = z.infer<typeof carFormSchema>;
@@ -62,7 +61,7 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
       year: undefined,
       engine: '',
       description: '',
-      photoUrl: '',
+      photos: [],
     },
   });
   
@@ -77,10 +76,10 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
                 year: carToEdit.year,
                 engine: carToEdit.engine,
                 description: carToEdit.description || '',
-                photoUrl: carToEdit.photoUrl || '',
+                photos: carToEdit.photos || [],
             });
         } else {
-            form.reset({ brand: '', model: '', year: undefined, engine: '', description: '', photoUrl: '' });
+            form.reset({ brand: '', model: '', year: undefined, engine: '', description: '', photos: [] });
         }
     }
   }, [carToEdit, isOpen, form]);
@@ -92,11 +91,11 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
     }
 
     try {
-      const carData = {
+      const carData: Omit<Car, 'imageId'> = {
         ...data,
         id: carId,
         userId: user.uid,
-        photoPath: data.photoUrl ? extractPathFromURL(data.photoUrl) : '',
+        photoUrl: data.photos?.[0] || '', // Main photo is the first one
       };
 
       const carRef = doc(firestore, 'users', user.uid, 'cars', carId);
@@ -132,17 +131,18 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
             
             <FormField
               control={form.control}
-              name="photoUrl"
+              name="photos"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Фотография</FormLabel>
+                  <FormLabel>Фотографии (первое фото будет главным)</FormLabel>
                   <FormControl>
-                    <SingleImageUpload
+                    <MultipleImageUpload
                         storagePath="cars"
                         entityId={carId}
                         value={field.value}
-                        onChange={field.onChange}
+                        onChange={(urls) => field.onChange(urls as string[])}
                         disabled={form.formState.isSubmitting}
+                        maxFiles={10}
                     />
                   </FormControl>
                   <FormMessage />

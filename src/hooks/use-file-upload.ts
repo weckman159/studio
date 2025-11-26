@@ -168,9 +168,9 @@ export const useAvatarUpload = () => {
 /**
  * Хук для загрузки фото автомобилей
  */
-export const useCarPhotoUpload = () => {
+export const useCarPhotosUpload = () => {
   return useFileUpload({
-    maxFiles: 1,
+    maxFiles: 10,
     maxSizeInMB: 5
   });
 };

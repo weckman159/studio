@@ -36,7 +36,7 @@ interface GarageCardProps {
 }
 
 export function GarageCard({ car, user, onEdit, onDelete, variant = 'default' }: GarageCardProps) {
-  const carImage = car.photoUrl || PlaceHolderImages.find((img) => img.id === car.imageId)?.imageUrl;
+  const carImage = car.photoUrl || car.photos?.[0] || PlaceHolderImages.find((img) => img.id === car.imageId)?.imageUrl;
   const carImageHint = car.photoUrl ? "user uploaded car" : PlaceHolderImages.find((img) => img.id === car.imageId)?.imageHint;
 
 

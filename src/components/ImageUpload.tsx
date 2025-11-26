@@ -42,7 +42,6 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     uploadMultiple,
     remove,
     error,
-    reset,
   } = useFileUpload({
     onSuccess: (results) => {
         const newUrls = results.map(r => r.url);
@@ -131,7 +130,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
 
       {error && <p className="text-sm font-medium text-destructive">{error}</p>}
       
-      {uploading && !multiple && <Progress value={progress} className="w-full" />}
+      {uploading && <Progress value={progress} className="w-full" />}
 
       {previews.length > 0 && (
         <div className={cn(
