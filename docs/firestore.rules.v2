@@ -1,0 +1,177 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    function isDocOwner(resource) {
+      return isSignedIn() && request.auth.uid == resource.data.userId;
+    }
+    
+    function hasValidUserData() {
+      return request.resource.data.keys().hasAll(['email', 'displayName', 'createdAt']);
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      allow read: if true; // Публичные профили
+      allow create: if isOwner(userId) && hasValidUserData();
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+    
+    // Posts collection
+    match /posts/{postId} {
+      allow read: if true; // Публичные посты
+      allow create: if isSignedIn() && 
+                       request.resource.data.userId == request.auth.uid &&
+                       request.resource.data.keys().hasAll(['title', 'content', 'userId', 'createdAt']);
+      allow update: if isDocOwner(resource);
+      allow delete: if isDocOwner(resource);
+      
+      // Subcollection: Likes
+      match /likes/{likeId} {
+        allow read: if true;
+        allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+        allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+      }
+      
+      // Subcollection: Comments
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if isSignedIn() && 
+                         request.resource.data.userId == request.auth.uid &&
+                         request.resource.data.keys().hasAll(['text', 'userId', 'createdAt']);
+        allow update: if isDocOwner(resource);
+        allow delete: if isDocOwner(resource);
+      }
+    }
+    
+    // Cars collection
+    match /cars/{carId} {
+      allow read: if true; // Публичные автомобили
+      allow create: if isSignedIn() && 
+                       request.resource.data.userId == request.auth.uid &&
+                       request.resource.data.keys().hasAll(['make', 'model', 'year', 'userId', 'createdAt']);
+      allow update: if isDocOwner(resource);
+      allow delete: if isDocOwner(resource);
+    }
+    
+    // Communities collection
+    match /communities/{communityId} {
+      allow read: if true;
+      allow create: if isSignedIn() &&
+                       request.resource.data.creatorId == request.auth.uid;
+      allow update: if isSignedIn() && 
+                       (resource.data.creatorId == request.auth.uid || 
+                        resource.data.moderators.hasAny([request.auth.uid]));
+      allow delete: if isSignedIn() && resource.data.creatorId == request.auth.uid;
+      
+      // Subcollection: Members
+      match /members/{memberId} {
+        allow read: if true;
+        allow create: if isSignedIn() && memberId == request.auth.uid;
+        allow delete: if isSignedIn() && memberId == request.auth.uid;
+      }
+    }
+    
+    // Marketplace listings
+    match /listings/{listingId} {
+      allow read: if true;
+      allow create: if isSignedIn() && 
+                       request.resource.data.sellerId == request.auth.uid &&
+                       request.resource.data.keys().hasAll(['title', 'price', 'sellerId', 'createdAt']);
+      allow update: if isDocOwner(resource);
+      allow delete: if isDocOwner(resource);
+    }
+    
+    // Workshops collection
+    match /workshops/{workshopId} {
+      allow read: if true;
+      allow create: if isSignedIn() && 
+                       request.resource.data.ownerId == request.auth.uid;
+      allow update: if isDocOwner(resource);
+      allow delete: if isDocOwner(resource);
+      
+      // Subcollection: Reviews
+      match /reviews/{reviewId} {
+        allow read: if true;
+        allow create: if isSignedIn() && 
+                         request.resource.data.userId == request.auth.uid;
+        allow update: if isDocOwner(resource);
+        allow delete: if isDocOwner(resource);
+      }
+    }
+    
+    // Events collection
+    match /events/{eventId} {
+      allow read: if true;
+      allow create: if isSignedIn() && 
+                       request.resource.data.creatorId == request.auth.uid;
+      allow update: if isDocOwner(resource);
+      allow delete: if isDocOwner(resource);
+      
+      // Subcollection: Participants
+      match /participants/{participantId} {
+        allow read: if true;
+        allow create: if isSignedIn() && participantId == request.auth.uid;
+        allow delete: if isSignedIn() && participantId == request.auth.uid;
+      }
+    }
+    
+    // News collection
+    match /news/{newsId} {
+      allow read: if true;
+      allow create: if isSignedIn() && 
+                       request.resource.data.authorId == request.auth.uid;
+      allow update: if isSignedIn() && 
+                       resource.data.authorId == request.auth.uid;
+      allow delete: if isSignedIn() && 
+                       resource.data.authorId == request.auth.uid;
+    }
+    
+    // Notifications collection
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn() && resource.data.recipientId == request.auth.uid;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && resource.data.recipientId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.recipientId == request.auth.uid;
+    }
+    
+    // Favorites collection (user-specific)
+    match /users/{userId}/favorites/{favoriteId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+    
+    // Following collection (user-specific)
+    match /users/{userId}/following/{followingId} {
+      allow read: if true; // Можно видеть кого юзер фолловит
+      allow create: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+    
+    // Followers collection (user-specific)
+    match /users/{userId}/followers/{followerId} {
+      allow read: if true; // Можно видеть кто фолловит юзера
+      allow create: if isSignedIn();
+      allow delete: if isSignedIn() && followerId == request.auth.uid;
+    }
+    
+    // Car of the Day voting
+    match /voting/{votingId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+    }
+  }
+}
