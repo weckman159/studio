@@ -17,13 +17,12 @@ export const metadata: Metadata = {
 const navLinks = [
   { href: '/', label: 'Главная', icon: Home },
   { href: '/posts', label: 'Журналы', icon: BookOpen },
-  // Hiding links to non-existent pages to fix 404 errors as per the audit
-  // { href: '/communities', label: 'Сообщества', icon: Users },
-  // { href: '/marketplace', label: 'Маркетплейс', icon: ShoppingCart },
-  // { href: '/workshops', label: 'Мастерские', icon: Wrench },
-  // { href: '/events', label: 'События', icon: Calendar },
+  { href: '/communities', label: 'Сообщества', icon: Users },
+  { href: '/marketplace', label: 'Маркетплейс', icon: ShoppingCart },
+  { href: '/workshops', label: 'Мастерские', icon: Wrench },
+  { href: '/events', label: 'События', icon: Calendar },
   { href: '/voting', label: 'Голосование', icon: CheckSquare },
-  // { href: '/news', label: 'Автоновости', icon: Radio },
+  { href: '/news', label: 'Автоновости', icon: Radio },
 ];
 
 
