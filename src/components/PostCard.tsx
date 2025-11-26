@@ -124,25 +124,29 @@ export function PostCard({ post, user, car }: PostCardProps) {
         </CardTitle>
         {post.type && <Badge variant="outline" className="w-fit mt-1">{post.type}</Badge>}
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex gap-4">
          {mainImage && (
-            <Link href={`/posts/${post.id}`} className="block mb-4 aspect-video relative rounded-lg overflow-hidden bg-muted">
-                <Image
-                    src={mainImage}
-                    alt={post.title}
-                    fill
-                    className="object-cover"
-                />
+            <Link href={`/posts/${post.id}`} className="block flex-shrink-0">
+                <div className="relative w-32 h-24 sm:w-48 sm:h-32 rounded-lg overflow-hidden bg-muted">
+                    <Image
+                        src={mainImage}
+                        alt={post.title}
+                        fill
+                        className="object-cover"
+                    />
+                </div>
             </Link>
         )}
-        <div 
-          className="text-card-foreground/80 line-clamp-2 text-sm"
-        >{post.content.replace(/<[^>]*>?/gm, '')}</div>
-        {post.tags && (
-            <div className="flex flex-wrap gap-2 mt-4">
-                {post.tags.map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
-            </div>
-        )}
+        <div className="flex flex-col">
+            <div 
+              className="text-card-foreground/80 line-clamp-3 text-sm flex-grow"
+            >{post.content.replace(/<[^>]*>?/gm, '')}</div>
+            {post.tags && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                    {post.tags.map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
+                </div>
+            )}
+        </div>
       </CardContent>
       <CardFooter className="flex justify-between items-center">
         <div className="flex space-x-1 text-muted-foreground">
@@ -165,5 +169,3 @@ export function PostCard({ post, user, car }: PostCardProps) {
     </>
   );
 }
-
-    
