@@ -89,8 +89,7 @@ service cloud.firestore {
     /**
      * @description Manages all posts for the main feed.
      * @path /posts/{postId}
-     * @allow (list) Any user, including anonymous, can read all posts.
-     * @allow (get) Any user, including anonymous, can read a single post.
+     * @allow (list, get) Any user, including anonymous, can read all posts.
      * @allow (create) An authenticated user can create a post.
      * @allow (update, delete) Only the author of the post can update or delete it.
      */
@@ -328,3 +327,5 @@ service cloud.firestore {
     }
   }
 }
+
+    
