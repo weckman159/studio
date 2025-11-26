@@ -76,11 +76,9 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             onFilesSelected?.(newLocalFiles);
         }
     } else {
-        try {
-            await deleteFile(urlToRemove);
-        } catch (error) {
-            console.error("Failed to delete file from storage:", error);
-        }
+        // This is a remote URL, we should not delete it from storage here
+        // as it might be associated with other entities. 
+        // The parent component is responsible for deleting from storage.
     }
     
     const finalUrls = newPreviews.filter(url => !url.startsWith('blob:'));

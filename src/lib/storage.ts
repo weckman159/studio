@@ -1,4 +1,3 @@
-
 // src/lib/storage.ts
 'use client';
 
@@ -10,7 +9,10 @@ import {
   uploadBytesResumable,
   UploadTaskSnapshot 
 } from 'firebase/storage';
-import { useStorage } from '@/firebase'; // Use hook to get storage instance
+import { getStorage } from 'firebase/storage';
+import { initializeFirebase } from '@/firebase/index';
+
+const { storage } = initializeFirebase();
 
 /**
  * Типы путей для Storage
@@ -141,7 +143,6 @@ export const uploadFile = async (
   options: UploadOptions = {}
 ): Promise<UploadResult> => {
   const { onProgress, maxSizeInMB = 5 } = options;
-  const storage = useStorage(); // Get storage instance via hook
 
   try {
     // Валидация
@@ -195,7 +196,6 @@ export const uploadFile = async (
  * Удаление файла из Storage по URL
  */
 export const deleteFile = async (fileUrl: string): Promise<void> => {
-    const storage = useStorage();
     if (!fileUrl.includes('firebasestorage.googleapis.com')) {
         // Not a firebase storage URL, probably a blob URL for preview. Ignore.
         return;

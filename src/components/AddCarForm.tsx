@@ -30,6 +30,7 @@ import { Textarea } from '@/components/ui/textarea';
 import type { Car } from '@/lib/data';
 import { MultipleImageUpload } from './ImageUpload';
 import { useCarPhotosUpload } from '@/hooks/use-file-upload';
+import { deleteFile } from '@/lib/storage';
 
 
 const carFormSchema = z.object({
@@ -55,6 +56,7 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
 
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [filesToUpload, setFilesToUpload] = useState<File[]>([]);
+  const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
   
   const { uploadFiles, uploading, progress, error: uploadError } = useCarPhotosUpload();
 
@@ -88,8 +90,15 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
             setImageUrls([]);
         }
         setFilesToUpload([]);
+        setImagesToDelete([]);
     }
   }, [carToEdit, isOpen, form]);
+
+  const handleImageChange = (newUrls: string[]) => {
+    const removedUrls = imageUrls.filter(url => !newUrls.includes(url) && !url.startsWith('blob:'));
+    setImagesToDelete(prev => [...prev, ...removedUrls]);
+    setImageUrls(newUrls);
+  }
   
   const onSubmit = async (data: CarFormValues) => {
     if (!user || !firestore) {
@@ -100,35 +109,40 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
     try {
       const carRef = doc(firestore, 'users', user.uid, 'cars', carId);
 
+      // 1. Delete images marked for deletion
+      for (const url of imagesToDelete) {
+        await deleteFile(url);
+      }
+      
+      // 2. Upload new files
+      let newImageUrls: string[] = [];
+      if (filesToUpload.length > 0) {
+        const uploadedImages = await uploadFiles(filesToUpload, 'cars', carId);
+        newImageUrls = uploadedImages.map(img => img.url);
+      }
+
+      const existingImageUrls = imageUrls.filter(url => !url.startsWith('blob:'));
+      const finalImageUrls = [...existingImageUrls, ...newImageUrls];
+
       if (carToEdit) {
-        await updateDoc(carRef, data);
-        toast({ title: 'Успех!', description: 'Данные автомобиля обновлены.' });
+        // 3a. Update existing car
+        await updateDoc(carRef, {
+            ...data,
+            photos: finalImageUrls,
+            photoUrl: finalImageUrls[0] || carToEdit.photoUrl || '', // Keep old main photo if no new ones
+            updatedAt: serverTimestamp(),
+        });
       } else {
-        const carData: Omit<Car, 'imageId' | 'photoUrl'> & { createdAt: any } = {
+        // 3b. Create new car
+        const carData: Omit<Car, 'imageId'> & { createdAt: any } = {
           ...data,
           id: carId,
           userId: user.uid,
-          photos: [],
+          photos: finalImageUrls,
+          photoUrl: finalImageUrls[0] || '',
           createdAt: serverTimestamp(),
         };
         await setDoc(carRef, carData);
-      }
-      
-      if(filesToUpload.length > 0) {
-        const uploadedImages = await uploadFiles(filesToUpload, 'cars', carId);
-        const newImageUrls = uploadedImages.map(img => img.url);
-        const finalImageUrls = [...imageUrls, ...newImageUrls];
-
-        await updateDoc(carRef, {
-            photos: finalImageUrls,
-            photoUrl: finalImageUrls[0] || '',
-        });
-      } else if (carToEdit) {
-        // Handle case where images might have been removed but none added
-        await updateDoc(carRef, {
-            photos: imageUrls,
-            photoUrl: imageUrls[0] || '',
-        });
       }
       
       toast({ title: 'Успех!', description: carToEdit ? 'Автомобиль обновлен.' : 'Автомобиль добавлен.' });
@@ -155,7 +169,7 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
               <FormControl>
                 <MultipleImageUpload
                     value={imageUrls}
-                    onChange={(urls) => setImageUrls(urls as string[])}
+                    onChange={(urls) => handleImageChange(urls as string[])}
                     onFilesSelected={setFilesToUpload}
                     uploading={uploading}
                     progress={progress}
