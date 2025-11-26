@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Search, Newspaper, Calendar, ExternalLink, RefreshCw } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Интерфейс автоновости
 // Gemini: структура новости, загруженной из внешнего источника
@@ -172,11 +173,27 @@ export default function AutoNewsFeedPage() {
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center min-h-[300px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Загрузка автоновостей...</p>
-          </div>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+            <div>
+                <Skeleton className="h-10 w-64 mb-2" />
+                <Skeleton className="h-4 w-96" />
+            </div>
+            <Skeleton className="h-12 w-36" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+                <Card key={i}>
+                    <Skeleton className="aspect-video w-full rounded-t-lg" />
+                    <CardHeader>
+                        <Skeleton className="h-4 w-24 mb-2" />
+                        <Skeleton className="h-6 w-full mb-1" />
+                        <Skeleton className="h-4 w-3/4" />
+                    </CardHeader>
+                    <CardContent>
+                        <Skeleton className="h-4 w-1/2" />
+                    </CardContent>
+                </Card>
+            ))}
         </div>
       </div>
     );

@@ -367,6 +367,24 @@
         "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the feedback was submitted." }
       },
       "required": ["id", "msg", "createdAt"]
+    },
+    "AutoNews": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AutoNews",
+      "type": "object",
+      "description": "Represents an aggregated news item from an external source.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the news item." },
+        "title": { "type": "string", "description": "The headline of the news article." },
+        "description": { "type": "string", "description": "A short summary or excerpt of the news." },
+        "imageUrl": { "type": "string", "format": "uri", "description": "URL of the main image for the news article." },
+        "source": { "type": "string", "description": "The original source of the news (e.g., 'Autoweek.ru')." },
+        "sourceUrl": { "type": "string", "format": "uri", "description": "The URL to the original article." },
+        "category": { "type": "string", "description": "The category of the news (e.g., 'New Models', 'Motorsport')." },
+        "publishedAt": { "type": "string", "format": "date-time", "description": "The original publication date of the article." },
+        "fetchedAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the news was fetched into our system." }
+      },
+      "required": ["id", "title", "description", "source", "sourceUrl", "publishedAt", "fetchedAt"]
     }
   },
   "auth": {
@@ -584,8 +602,24 @@
             }
           ]
         }
+      },
+      {
+        "path": "/autoNews/{newsId}",
+        "definition": {
+          "entityName": "AutoNews",
+          "schema": {
+            "$ref": "#/backend/entities/AutoNews"
+          },
+          "description": "Stores aggregated news items from external sources.",
+          "params": [
+            {
+              "name": "newsId",
+              "description": "The unique identifier for the news item."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "The Firestore data structure is designed to support the features of the AutoSphere application, focusing on user profiles, car management, posts, and community interaction. Key considerations include authorization independence, data consistency, and efficient querying. The structure leverages path-based ownership for user-specific data and denormalization where needed for authorization.\n\n*   **Users Collection:** Stores user profiles with basic information (name, email, profile visibility). Profile visibility settings are duplicated to the `users` collection to avoid a `get()` call to the `/userSettings/{userId}` collection.\n*   **Cars Collection:** Stores car information, using a subcollection under each user to ensure easy management and querying of a user's cars.\n*   **Posts Collection:** Stores user-generated posts. Posts are stored in a subcollection under each user.\n*   **Comments Collection:** Stores comments related to each post, located as a subcollection under the post.\n*   **FeaturedCars Collection:** Stores the 'Car of the Day' information, keyed by date.  It includes references to the car and user.\n*   **UserSettings Collection:** Stores user-specific settings for notifications and privacy.\n\nThis structure ensures Authorization Independence by:\n\n*   Storing ownership information directly within each document (e.g., `userId` in `cars`, `posts`, and `comments`).\n*   Duplicating profile visibility settings from `userSettings` to the `users` collection.\n\nThis approach avoids the need for complex `get()` calls in security rules and enables atomic operations.\n\nQAPs (Rules are not Filters) are supported by:\n\n*   Structural Segregation:  Data with different access control needs (e.g., public vs. private profiles) are stored in separate collections or subcollections (e.g., user profiles vs. user settings).\n*   Path-Based Ownership: Using paths like `/users/{userId}/cars/{carId}` provides inherent ownership context, simplifying security rules for listing and accessing user-owned resources."
+    "reasoning": "The Firestore data structure is designed to support the features of the AutoSphere application, focusing on user profiles, car management, posts, and community interaction. Key considerations include authorization independence, data consistency, and efficient querying. The structure leverages path-based ownership for user-specific data and denormalization where needed for authorization.\n\n*   **Users Collection:** Stores user profiles with basic information (name, email, profile visibility). Profile visibility settings are duplicated to the `users` collection to avoid a `get()` call to the `/userSettings/{userId}` collection.\n*   **Cars Collection:** Stores car information, using a subcollection under each user to ensure easy management and querying of a user's cars.\n*   **Posts Collection:** Stores user-generated posts. Posts are stored in a subcollection under each user.\n*   **Comments Collection:** Stores comments related to each post, located as a subcollection under the post.\n*   **FeaturedCars Collection:** Stores the 'Car of the Day' information, keyed by date.  It includes references to the car and user.\n*   **UserSettings Collection:** Stores user-specific settings for notifications and privacy.\n*   **AutoNews Collection:** A root collection for storing news articles aggregated from various external sources. This is a read-heavy collection, ideal for SSG/ISR, with updates handled by a backend process.\n\nThis structure ensures Authorization Independence by:\n\n*   Storing ownership information directly within each document (e.g., `userId` in `cars`, `posts`, and `comments`).\n*   Duplicating profile visibility settings from `userSettings` to the `users` collection.\n\nThis approach avoids the need for complex `get()` calls in security rules and enables atomic operations.\n\nQAPs (Rules are not Filters) are supported by:\n\n*   Structural Segregation:  Data with different access control needs (e.g., public vs. private profiles) are stored in separate collections or subcollections (e.g., user profiles vs. user settings).\n*   Path-Based Ownership: Using paths like `/users/{userId}/cars/{carId}` provides inherent ownership context, simplifying security rules for listing and accessing user-owned resources."
   }
 }
