@@ -227,6 +227,22 @@ service cloud.firestore {
         allow update: if isSignedIn(); 
         allow delete: if false;
     }
+
+    // ------------------------------------------------------------------------
+    // Collection: workshops
+    // ------------------------------------------------------------------------
+
+    /**
+     * @description Stores car workshop information.
+     * @path /workshops/{workshopId}
+     * @allow (read) Any user can read workshop data.
+     * @deny (write) Data is managed by a trusted backend function, not by clients.
+     * @principle Publicly readable, but write access is restricted to backend services.
+     */
+    match /workshops/{workshopId} {
+      allow read: if true;
+      allow write: if false;
+    }
   }
 }
     

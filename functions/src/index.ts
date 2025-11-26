@@ -1,6 +1,7 @@
 
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
+import fetch from 'node-fetch';
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -383,6 +384,66 @@ export const onUserUpdated = functions.firestore
       console.error('Error in onUserUpdated:', error);
     }
   });
+
+// ===========================
+// Автозагрузка мастерских
+// ===========================
+const GOOGLE_PLACES_API_KEY = functions.config().google_places?.api_key;
+
+export const fetchWorkshops = functions.pubsub
+  .schedule('every 12 hours')
+  .onRun(async (context) => {
+    if (!GOOGLE_PLACES_API_KEY) {
+      console.log('Google Places API key is not configured. Skipping fetchWorkshops.');
+      return null;
+    }
+
+    const CITIES = [
+      { name: 'Москва', lat: 55.7558, lng: 37.6173 },
+      { name: 'Санкт-Петербург', lat: 59.9343, lng: 30.3351 },
+      { name: 'Казань', lat: 55.7904, lng: 49.1140 }
+    ];
+
+    for (const city of CITIES) {
+      const radius = 20000; // 20km
+      const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${city.lat},${city.lng}&radius=${radius}&type=car_repair&language=ru&key=${GOOGLE_PLACES_API_KEY}`;
+
+      try {
+        const res = await fetch(url);
+        const json: any = await res.json();
+
+        if (json.results) {
+            for (const item of json.results) {
+                const wsId = item.place_id;
+                if (!wsId) continue;
+                
+                const docRef = db.collection('workshops').doc(wsId);
+                const specialty = item.types.includes('car_repair') ? 'Мультибренд' : '';
+                const addr = item.vicinity || item.formatted_address || '';
+                const name = item.name || 'Мастерская';
+                const imageUrl = item.photos?.[0]
+                  ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${item.photos[0].photo_reference}&key=${GOOGLE_PLACES_API_KEY}` : '';
+
+                await docRef.set({
+                  name,
+                  city: city.name,
+                  address: addr,
+                  specialization: specialty,
+                  rating: item.rating || 0,
+                  reviewsCount: item.user_ratings_total || 0,
+                  imageUrl,
+                  source: 'Google Places',
+                  updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+            }
+        }
+      } catch (err) {
+        console.error(`Ошибка автозагрузки мастерских для ${city.name}:`, err);
+      }
+    }
+    return null;
+  });
+
 
 // ===========================
 // Утилиты

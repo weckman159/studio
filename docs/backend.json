@@ -285,6 +285,25 @@
         "totalVotes",
         "createdAt"
       ]
+    },
+    "Workshop": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Workshop",
+      "type": "object",
+      "description": "Represents a car repair workshop or service center.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the workshop (from Google Places ID)." },
+        "name": { "type": "string", "description": "Name of the workshop." },
+        "address": { "type": "string", "description": "Full address of the workshop." },
+        "city": { "type": "string", "description": "City where the workshop is located." },
+        "specialization": { "type": "string", "description": "Specialization of the workshop (e.g., 'Multi-brand', 'Tuning')." },
+        "rating": { "type": "number", "description": "Rating from Google Places (1-5)." },
+        "reviewsCount": { "type": "number", "description": "Number of reviews on Google Places." },
+        "imageUrl": { "type": "string", "format": "uri", "description": "URL of the workshop's photo." },
+        "source": { "type": "string", "description": "Data source (e.g., 'Google Places')." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Timestamp of the last update." }
+      },
+      "required": ["id", "name", "address", "city"]
     }
   },
   "auth": {
@@ -419,6 +438,22 @@
             {
               "name": "votingId",
               "description": "The unique identifier of the voting poll."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/workshops/{workshopId}",
+        "definition": {
+          "entityName": "Workshop",
+          "schema": {
+            "$ref": "#/backend/entities/Workshop"
+          },
+          "description": "Stores car workshop information, automatically fetched from Google Places API.",
+          "params": [
+            {
+              "name": "workshopId",
+              "description": "The unique identifier of the workshop (Google Places ID)."
             }
           ]
         }
