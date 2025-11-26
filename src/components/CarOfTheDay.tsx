@@ -1,3 +1,4 @@
+
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -92,44 +93,47 @@ export function CarOfTheDay() {
   const ownerAvatar = PlaceHolderImages.find(img => img.id === owner.avatarId);
 
   return (
-    <Card className="overflow-hidden border-2 border-primary/50 shadow-lg shadow-primary/20">
-      <CardHeader>
-        <CardTitle className="flex items-center text-primary">
-            <Award className="mr-2 h-6 w-6"/>Автомобиль дня
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-0">
-        {carImage && (
-            <Link href={`/car/${car.id}`} className="relative aspect-video block">
-                <Image 
-                    src={carImage.imageUrl} 
-                    alt={`${car.brand} ${car.model}`}
-                    fill
-                    className="object-cover"
-                    data-ai-hint={carImage.imageHint}
-                />
-            </Link>
-        )}
-        <div className="p-4">
-            <h3 className="text-xl font-bold">{car.brand} {car.model}</h3>
-            <div className="flex items-center mt-2">
-                <Avatar className="h-6 w-6 mr-2">
-                    {ownerAvatar && <AvatarImage src={ownerAvatar.imageUrl} data-ai-hint={ownerAvatar.imageHint}/>}
-                    <AvatarFallback>{owner.name.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <span className="text-sm text-muted-foreground">Владелец: {owner.name}</span>
-            </div>
-        </div>
-      </CardContent>
-      <CardFooter className="flex flex-col items-stretch gap-2">
-        <Button asChild className="w-full">
-            <Link href={`/car/${car.id}`}>Перейти к авто</Link>
-        </Button>
-        <Button variant="secondary" onClick={handleVote}>
-            <ThumbsUp className="mr-2"/>
-            Голосовать
-        </Button>
-      </CardFooter>
+    <Card className="overflow-hidden relative group">
+       <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/70 to-blue-600/70 rounded-lg blur-md opacity-50 group-hover:opacity-80 group-hover:blur-lg transition duration-500"></div>
+      <div className="relative bg-card">
+        <CardHeader>
+          <CardTitle className="flex items-center text-primary">
+              <Award className="mr-2 h-6 w-6"/>Автомобиль дня
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {carImage && (
+              <Link href={`/car/${car.id}`} className="relative aspect-video block">
+                  <Image 
+                      src={carImage.imageUrl} 
+                      alt={`${car.brand} ${car.model}`}
+                      fill
+                      className="object-cover"
+                      data-ai-hint={carImage.imageHint}
+                  />
+              </Link>
+          )}
+          <div className="p-4">
+              <h3 className="text-xl font-bold">{car.brand} {car.model}</h3>
+              <div className="flex items-center mt-2">
+                  <Avatar className="h-6 w-6 mr-2">
+                      {ownerAvatar && <AvatarImage src={ownerAvatar.imageUrl} data-ai-hint={ownerAvatar.imageHint}/>}
+                      <AvatarFallback>{owner.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm text-muted-foreground">Владелец: {owner.name}</span>
+              </div>
+          </div>
+        </CardContent>
+        <CardFooter className="flex flex-col items-stretch gap-2">
+          <Button asChild className="w-full">
+              <Link href={`/car/${car.id}`}>Перейти к авто</Link>
+          </Button>
+          <Button variant="secondary" onClick={handleVote}>
+              <ThumbsUp className="mr-2"/>
+              Голосовать
+          </Button>
+        </CardFooter>
+      </div>
     </Card>
   );
 }
