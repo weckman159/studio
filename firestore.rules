@@ -1,5 +1,4 @@
 
-
 rules_version = '2';
 
 /**
@@ -15,8 +14,7 @@ rules_version = '2';
  * @section Data Structure
  * - /users/{userId}: Public-facing user profile data.
  * - /users/{userId}/cars/{carId}: Private collection of a user's cars.
- * - /users/{userId}/posts/{postId}: Collection of a user's posts.
- * - /users/{userId}/posts/{postId}/comments/{commentId}: Comments on posts.
+ * - /posts/{postId}: Root collection for all posts, publicly readable.
  * - /userSettings/{userId}: Strictly private user settings (notifications, privacy).
  * - /featuredCars/{date}: Public, read-only data for the 'Car of the Day'.
  *
@@ -80,7 +78,7 @@ service cloud.firestore {
      * Checks ownership of a document via a 'userId' field inside the document data.
      */
     function isDocumentOwner(doc) {
-      return isSignedIn() && request.auth.uid == doc.userId;
+      return isSignedIn() && request.auth.uid == doc.authorId;
     }
 
     // ------------------------------------------------------------------------
@@ -94,7 +92,7 @@ service cloud.firestore {
      * @allow (update, delete) Only the author of the post can update or delete it.
      */
     match /posts/{postId} {
-      allow read: if true;
+      allow get, list: if true;
       allow create: if isSignedIn() && isRequestingUser('authorId');
       allow update, delete: if isSignedIn() && isDocumentOwner(resource.data);
     }
@@ -143,11 +141,11 @@ service cloud.firestore {
     }
 
     // ------------------------------------------------------------------------
-    // Subcollection: posts (Deprecated - use root /posts)
+    // Subcollection: posts (user-specific)
     // ------------------------------------------------------------------------
 
     /**
-     * @description Manages user-generated posts.
+     * @description Manages user-generated posts within a user's profile.
      * @path /users/{userId}/posts/{postId}
      * @allow (list) Any signed-in user lists posts from a public user profile.
      * @allow (create) An authenticated user creates a new post.
@@ -164,7 +162,7 @@ service cloud.firestore {
     }
 
     // ------------------------------------------------------------------------
-    // Subcollection: comments
+    // Subcollection: comments (on user posts)
     // ------------------------------------------------------------------------
 
     /**
@@ -328,5 +326,4 @@ service cloud.firestore {
   }
 }
 
-    
     
