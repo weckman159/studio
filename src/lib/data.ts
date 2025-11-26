@@ -3,6 +3,7 @@
 export interface User {
   id: string;
   name: string;
+  age?: number;
   displayName?: string; // from firebase auth
   role?: 'admin' | 'user';
   email?: string;
@@ -19,6 +20,8 @@ export interface User {
     wins?: number;
     followers?: number;
     following?: number;
+    drive?: number;
+    reposts?: number;
   };
 }
 
@@ -117,22 +120,27 @@ export const users: User[] = [
   {
     id: '1',
     name: 'Alexey Novikov',
+    age: 34,
     email: 'alex@example.com',
     photoURL: 'https://images.unsplash.com/photo-1607031542107-f6f46b5d54e9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxtYW4lMjBwb3J0cmFpdHxlbnwwfHx8fDE3NjM5MjU3NzF8MA&ixlib=rb-4.1.0&q=80&w=1080',
     bio: 'Люблю скорость и тюнинг. Владелец нескольких интересных проектов.',
     nickname: 'ANovikov',
     role: 'admin',
+    location: 'Москва',
     currentCarIds: ['1'],
-    stats: { posts: 12, likes: 345, wins: 2, followers: 150, following: 42 },
+    stats: { posts: 12, likes: 345, wins: 2, followers: 150, following: 42, drive: 85, reposts: 18 },
   },
   {
     id: '2',
     name: 'Elena Petrova',
+    age: 28,
     email: 'elena@example.com',
     photoURL: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8d29tYW4lMjBwb3J0cmFpdHxlbnwwfHx8fDE3NjM5NTk2MjN8MA&ixlib=rb-4.1.0&q=80&w=1080',
     bio: 'Путешествую на машине по самым красивым местам.',
+    nickname: 'LenaOnWheels',
     role: 'user',
-    stats: { posts: 5, likes: 189, wins: 1, followers: 88, following: 12 },
+    location: 'Санкт-Петербург',
+    stats: { posts: 5, likes: 189, wins: 1, followers: 88, following: 12, drive: 42, reposts: 3 },
   },
 ];
 

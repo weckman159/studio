@@ -9,7 +9,7 @@ import { notFound, useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from '@/components/ui/button';
-import { FileText, Award, Car as CarIcon, Edit3, Users as UsersIcon, Heart, MessageCircle, Plus, AtSign, Bookmark, UserCheck, UserPlus, MapPin, Calendar, AlertCircle } from "lucide-react";
+import { FileText, Award, Car as CarIcon, Edit3, Users as UsersIcon, Heart, MessageCircle, Plus, AtSign, Bookmark, UserCheck, UserPlus, MapPin, Calendar, AlertCircle, Repeat2 } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import type { User as UserData, Car, Post } from '@/lib/data';
 import { users, cars as mockCars, posts as mockPosts } from '@/lib/data';
@@ -24,61 +24,6 @@ import { PostCard } from '@/components/PostCard';
 import { UserListDialog } from '@/components/UserListDialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-
-function CompactPostItem({ post }: { post: Post }) {
-    const car = mockCars.find(c => c.id === post.carId);
-    const [formattedDate, setFormattedDate] = useState('');
-
-    useEffect(() => {
-        if (post.createdAt) {
-            const date = new Date(post.createdAt);
-            if (!isNaN(date.getTime())) {
-                setFormattedDate(date.toLocaleDateString('ru-RU', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                }));
-            }
-        }
-    }, [post.createdAt]);
-
-    if (!car) return null;
-
-    return (
-        <Card className="flex items-start p-4 transition-all hover:bg-muted/50">
-            {post.imageUrl && (
-                <Link href={`/car/${car.id}`} className="mr-4 flex-shrink-0">
-                    <Image
-                        src={post.imageUrl}
-                        alt={post.title}
-                        width={128}
-                        height={80}
-                        className="rounded-md object-cover w-32 h-20"
-                    />
-                </Link>
-            )}
-            <div className="flex-grow">
-                <Link href={`/car/${post.carId}?postId=${post.id}`} className="hover:underline">
-                    <h3 className="font-semibold text-lg leading-tight">{post.title}</h3>
-                </Link>
-                <p className="text-sm text-muted-foreground mt-1">
-                    в бортжурнале <Link href={`/car/${car.id}`} className="text-primary hover:underline">{car.brand} {car.model}</Link>
-                </p>
-                <div className="flex items-center justify-between text-sm text-muted-foreground mt-2">
-                    <span>{formattedDate}</span>
-                    <div className="flex items-center gap-4">
-                        <span className="flex items-center gap-1">
-                            <Heart className="w-4 h-4" /> {post.likesCount}
-                        </span>
-                        <span className="flex items-center gap-1">
-                            <MessageCircle className="w-4 h-4" /> {post.commentsCount}
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </Card>
-    )
-}
 
 export default function ProfilePage() {
   const params = useParams();
@@ -114,7 +59,6 @@ export default function ProfilePage() {
         if (userDoc.exists()) {
             setUser({ id: userDoc.id, ...userDoc.data() } as UserData);
         } else {
-            // Try to find in mock data as a fallback for demo
             const mockUser = users.find(u => u.id === id);
             setUser(mockUser);
             if(!mockUser) notFound();
@@ -183,15 +127,9 @@ export default function ProfilePage() {
     }
   };
 
-  const formatDate = (timestamp: any) => {
-    if (!timestamp) return '';
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return new Intl.DateTimeFormat('ru-RU', {
-      month: 'long',
-      year: 'numeric'
-    }).format(date);
-  };
-  
+  const currentCarName = userCars && userCars.length > 0 ? `${userCars[0].brand} ${userCars[0].model}` : 'пока нет';
+  const otherCars = userCars ? userCars.slice(1) : [];
+
   return (
       <>
       <EditProfileModal 
@@ -213,83 +151,104 @@ export default function ProfilePage() {
       <UserListDialog isOpen={isFollowersModalOpen} onOpenChange={setFollowersModalOpen} title="Подписчики" users={users} />
       <UserListDialog isOpen={isFollowingModalOpen} onOpenChange={setFollowingModalOpen} title="Подписки" users={users.slice(1)} />
 
-      <div className="container mx-auto px-4 py-8">
-        <Card className="mb-8">
-          <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row gap-6">
-              <Avatar className="h-32 w-32">
-                {user.photoURL && <AvatarImage src={user.photoURL} alt={user.name} />}
-                <AvatarFallback className="text-4xl">{user.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-
-              <div className="flex-1">
-                <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <div className='flex items-center gap-3'>
-                        <h1 className="text-3xl font-bold">{user.name}</h1>
-                        {user.nickname && <Badge variant="secondary" className="text-lg"><AtSign className="h-4 w-4 mr-1"/>{user.nickname}</Badge>}
-                      </div>
-                      {user.location && (
-                        <div className="flex items-center gap-2 text-muted-foreground mt-2">
-                          <MapPin className="h-4 w-4" />
-                          <span>{user.location}</span>
-                        </div>
-                      )}
-                      {user.createdAt && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                          <Calendar className="h-4 w-4" />
-                          <span>На платформе с {formatDate(user.createdAt)}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex gap-2">
-                      {isOwner ? (
-                        <Button variant="outline" onClick={() => setEditModalOpen(true)}>
-                          <Edit3 className="mr-2 h-4 w-4" />
-                          Редактировать
-                        </Button>
-                      ) : (
-                        <>
-                          {authUser && (
-                             <Button onClick={handleSubscribe}>
-                                {isSubscribed ? <UserCheck className="mr-2 h-4 w-4"/> : <UserPlus className="mr-2 h-4 w-4"/>}
-                                {isSubscribed ? 'Вы подписаны' : 'Подписаться'}
-                            </Button>
-                          )}
-                        </>
-                      )}
-                    </div>
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        {/* Шапка профиля */}
+        <div className="flex flex-col sm:flex-row gap-6 items-start mb-6">
+          <Avatar className="h-32 w-32 border-4 border-background shadow-md">
+            <AvatarImage src={user.photoURL} />
+            <AvatarFallback className="text-4xl">{user.name[0]}</AvatarFallback>
+          </Avatar>
+          <div className="flex-1">
+            <h1 className="text-3xl font-bold">{user.name}, {user.age}</h1>
+            <p className="text-muted-foreground">
+              Я езжу на <b>{currentCarName}</b>
+            </p>
+            <p className="text-sm text-muted-foreground">{user.location}</p>
+            
+            {/* Статистика */}
+            <div className="flex gap-4 mt-4">
+              <div className="flex flex-col items-center">
+                <div className="rounded-full border-4 border-primary/80 h-20 w-20 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold">{user.stats?.drive || 0}</div>
+                    <div className="text-xs">драйв</div>
+                  </div>
                 </div>
-
-                {user.bio && (
-                  <p className="text-muted-foreground mb-4">{user.bio}</p>
-                )}
-                
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center p-3 bg-muted rounded-lg">
-                    <div className="text-2xl font-bold">{userCars?.length || 0}</div>
-                    <p className="text-sm text-muted-foreground">Автомобилей</p>
+              </div>
+              <button onClick={() => setFollowersModalOpen(true)} className="flex flex-col items-center">
+                <div className="rounded-full border-4 border-border h-20 w-20 flex items-center justify-center hover:border-primary/50 transition-colors">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold">{user.stats?.followers || 0}</div>
+                    <div className="text-xs">читают</div>
                   </div>
-                  <div className="text-center p-3 bg-muted rounded-lg">
+                </div>
+              </button>
+              <div className="flex flex-col items-center">
+                <div className="rounded-full border-4 border-border h-20 w-20 flex items-center justify-center">
+                  <div className="text-center">
                     <div className="text-2xl font-bold">{userPosts.length}</div>
-                    <p className="text-sm text-muted-foreground">Постов</p>
+                    <div className="text-xs">записей</div>
                   </div>
-                  <button onClick={() => setFollowersModalOpen(true)} className="text-center p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
-                      <div className="text-2xl font-bold">{user.stats?.followers || 0}</div>
-                      <p className="text-sm text-muted-foreground">Подписчики</p>
-                  </button>
-                  <button onClick={() => setFollowingModalOpen(true)} className="text-center p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
-                      <div className="text-2xl font-bold">{user.stats?.following || 0}</div>
-                      <p className="text-sm text-muted-foreground">Подписки</p>
-                  </button>
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+
+            {/* Кнопки */}
+            <div className="flex gap-2 mt-4">
+               {isOwner ? (
+                  <Button variant="outline" onClick={() => setEditModalOpen(true)}>
+                    <Edit3 className="mr-2 h-4 w-4" />
+                    Редактировать
+                  </Button>
+                ) : (
+                  <>
+                    {authUser && (
+                        <Button onClick={handleSubscribe}>
+                          {isSubscribed ? <UserCheck className="mr-2 h-4 w-4"/> : <UserPlus className="mr-2 h-4 w-4"/>}
+                          {isSubscribed ? 'Вы подписаны' : 'Подписаться'}
+                      </Button>
+                    )}
+                     <Button variant="outline">Сообщение</Button>
+                  </>
+                )}
+            </div>
+          </div>
+        </div>
+
+        {/* Гараж (dropdown) */}
+        {userCars && userCars.length > 0 && (
+          <details className="mb-6 bg-muted rounded-lg p-4">
+            <summary className="font-semibold cursor-pointer">
+              {currentCarName} ▼
+            </summary>
+            <ul className="mt-2 ml-4 space-y-1 text-sm list-disc list-inside">
+              {otherCars.map((car) => (
+                 <li key={car.id} className="hover:underline cursor-pointer">
+                   <Link href={`/car/${car.id}`}>{car.brand} {car.model}</Link>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
         
-        <Tabs defaultValue="posts">
+        {/* Активность */}
+        <div className="flex gap-6 mb-8 text-sm text-muted-foreground border-b pb-4">
+          <div className="flex items-center gap-1">
+            <Heart className="h-4 w-4" /> {user.stats?.likes || 0}
+          </div>
+          <div className="flex items-center gap-1">
+            <MessageCircle className="h-4 w-4" /> {userPosts.reduce((sum, p) => sum + p.commentsCount, 0)}
+          </div>
+          <div className="flex items-center gap-1">
+            <Repeat2 className="h-4 w-4" /> {user.stats?.reposts || 0}
+          </div>
+          <div className="flex items-center gap-1">
+            <Bookmark className="h-4 w-4" /> {favoritePosts.length}
+          </div>
+        </div>
+
+        
+        <Tabs defaultValue="posts" className="w-full">
             <TabsList className="mb-6 grid w-full grid-cols-3">
               <TabsTrigger value="posts"><FileText className="w-4 h-4 mr-2" />Бортжурнал</TabsTrigger>
               <TabsTrigger value="garage"><CarIcon className="w-4 h-4 mr-2" />Гараж</TabsTrigger>
@@ -370,4 +329,3 @@ export default function ProfilePage() {
       </>
   );
 }
-
