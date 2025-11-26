@@ -85,19 +85,45 @@
     display: flex;
     flex-direction: column;
   }
+  /* CKEditor Dark Theme */
+  .dark .ck.ck-editor__main > .ck-editor__editable,
+  .dark .ck-editor__editable.ck-focused {
+    @apply bg-card text-foreground border-border !important;
+  }
+
+  .dark .ck.ck-toolbar {
+    @apply bg-muted border-border !important;
+  }
+
+  .dark .ck.ck-button,
+  .dark .ck.ck-button.ck-on,
+  .dark .ck.ck-button.ck-disabled:hover {
+    @apply text-foreground !important;
+  }
+  
+  .dark .ck.ck-button:not(.ck-disabled):hover,
+  .dark .ck.ck-button.ck-on {
+    @apply bg-accent text-accent-foreground !important;
+  }
+
+  .dark .ck.ck-button .ck-icon {
+     @apply text-foreground;
+  }
+
+  .dark .ck.ck-button:not(.ck-disabled):hover .ck-icon,
+  .dark .ck.ck-button.ck-on .ck-icon {
+    @apply text-accent-foreground;
+  }
+
+  .dark .ck.ck-dropdown .ck-dropdown__arrow {
+      @apply text-foreground;
+  }
+  
+  .dark .ck.ck-input {
+      @apply bg-input text-foreground;
+  }
+
   .ck-editor__editable_inline {
-      @apply min-h-[200px] bg-card text-card-foreground;
-  }
-  .ck.ck-editor__main>.ck-editor__editable {
-      @apply bg-card text-card-foreground !important;
-  }
-  .ck.ck-toolbar {
-    @apply bg-card border-border !important;
-  }
-  .ck.ck-button.ck-on, .ck.ck-button:not(.ck-disabled):hover {
-    @apply bg-muted !important;
-  }
-  .dark .ck-button .ck-icon, .dark .ck-button:hover .ck-icon {
-      color: hsl(var(--card-foreground));
+    @apply min-h-[200px];
   }
 }
