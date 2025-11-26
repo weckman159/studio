@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from "@/firebase";
 import type { Car, Post, User } from "@/lib/data";
-import { users, posts as mockPosts } from "@/lib/data";
+import { users, posts as mockPosts, cars as mockCars } from "@/lib/data";
 import {
   Card,
   CardContent,
@@ -20,143 +20,169 @@ import { Separator } from "@/components/ui/separator";
 import { doc, collection, query, where } from 'firebase/firestore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { notFound } from "next/navigation";
+
+
+function CarProfilePageSkeleton() {
+    return (
+        <div className="flex flex-col lg:flex-row gap-8">
+            <aside className="w-full lg:w-64">
+                 <div className="sticky top-24 space-y-2">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                </div>
+            </aside>
+            <div className="flex-1 space-y-8">
+                <Skeleton className="aspect-video w-full" />
+                <div className="space-y-4">
+                    <Skeleton className="h-8 w-1/2" />
+                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <Skeleton className="aspect-square w-full" />
+                        <Skeleton className="aspect-square w-full" />
+                        <Skeleton className="aspect-square w-full" />
+                        <Skeleton className="aspect-square w-full" />
+                    </div>
+                </div>
+                 <div className="space-y-4">
+                    <Skeleton className="h-8 w-1/2" />
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <Skeleton className="h-64 w-full" />
+                        <Skeleton className="h-64 w-full" />
+                        <Skeleton className="h-64 w-full" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}
+
 
 export default function CarProfilePage({ params }: { params: { id: string } }) {
   const firestore = useFirestore();
+  const [car, setCar] = useState<Car | null>(null);
   const [owner, setOwner] = useState<User | null>(null);
-
-  const carQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    // We don't know the user ID, so we can't query the subcollection directly.
-    // This is a limitation we'll have to address later, for now, we find the car in mock data.
-    return null;
-  }, [firestore, params.id]);
-
-  // MOCK DATA LOGIC - to be replaced with a robust Firestore query
-  const car = mockPosts.map(p => {
-    const carData = { ...mockCars.find(c => c.id === p.carId) };
-    if (p.imageIds) {
-      carData.photos = p.imageIds.map(id => {
-        const img = PlaceHolderImages.find(i => i.id === id);
-        return img ? img.imageUrl : '';
-      }).filter(Boolean);
-      carData.photoUrl = carData.photos[0];
-    }
-    return carData as Car;
-  }).find(c => c.id === params.id) || { ...mockCars[0], id: params.id, brand: 'Загрузка данных...', model: '', photos: [] };
-  
-  const relatedPosts = mockPosts.filter((p) => p.carId === car.id);
-  const isLoading = false; // Mock loading state
-  // END MOCK DATA LOGIC
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (car && car.userId) {
-      const ownerData = users.find(u => u.id === car.userId);
-      setOwner(ownerData || null);
-    }
-  }, [car]);
+    if (!params.id || !firestore) return;
 
-  if (isLoading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="space-y-8">
-            <Card>
-                <Skeleton className="aspect-video w-full" />
-                <CardHeader>
-                    <Skeleton className="h-10 w-3/4" />
-                    <Skeleton className="h-6 w-1/2" />
-                </CardHeader>
-            </Card>
-            <Skeleton className="h-10 w-full" />
-             <div className="space-y-6">
-                <Skeleton className="h-64 w-full" />
-                <Skeleton className="h-64 w-full" />
-            </div>
-        </div>
-      </div>
-    )
+    const fetchCarAndOwner = async () => {
+        setLoading(true);
+        // This is a simplified fetch. A real app would need a more complex query
+        // to find a car by its ID across all users.
+        const foundCar = mockCars.find(c => c.id === params.id);
+
+        if (foundCar) {
+            setCar(foundCar);
+            const foundOwner = users.find(u => u.id === foundCar.userId);
+            setOwner(foundOwner || null);
+        } else {
+            notFound();
+        }
+        setLoading(false);
+    };
+
+    fetchCarAndOwner();
+  }, [params.id, firestore]);
+  
+  if (loading) {
+    return <CarProfilePageSkeleton />;
   }
 
   if (!car) {
-    return <div>Автомобиль не найден.</div>;
+    return notFound();
   }
   
-  const pageTitle = car.brand === 'Загрузка данных...' ? `Автомобиль ${params.id}` : `${car.brand} ${car.model}`;
+  const pageTitle = `${car.brand} ${car.model}`;
   const mainImage = car.photoUrl || car.photos?.[0];
-  const isCarOfTheDay = car.isCarOfTheDay;
-
+  const galleryPhotos = car.photos?.slice(0, 4) || [];
+  const relatedPosts = mockPosts.filter(p => p.carId === car.id).slice(0, 3);
+  
+  const navLinks = [
+    { href: '#photos', label: 'Фото' },
+    { href: '#posts', label: 'Новое' },
+    { href: '#specs', label: 'Характеристики' },
+    { href: '#parts', label: 'Запчасти' },
+    { href: '#reviews', label: 'Отзывы владельцев' },
+  ];
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="space-y-8">
-          <Card className="overflow-hidden">
-            <CardHeader className="p-0">
-               <div className="relative aspect-video bg-muted">
-                  {mainImage ? (
-                    <Image
-                      src={mainImage}
-                      alt={pageTitle}
-                      fill
-                      className="object-cover"
-                    />
-                  ) : (
-                     <div className="flex items-center justify-center h-full">
-                       <CarIcon className="w-24 h-24 text-muted-foreground"/>
-                     </div>
-                  )}
-                  {isCarOfTheDay && (
-                     <div className="absolute top-4 right-4">
-                        <Badge variant="destructive" className="text-base font-bold py-2 px-4 shadow-lg animate-pulse">
-                           <Award className="mr-2 h-5 w-5" />
-                           Автомобиль дня
-                        </Badge>
-                     </div>
-                  )}
-                </div>
-            </CardHeader>
-            <CardContent className="p-6">
-                <CardTitle className="text-4xl font-bold">{pageTitle}</CardTitle>
-                {owner && <CardDescription className="text-lg mt-1">Владелец: <Link href={`/profile/${owner.id}`} className="text-primary hover:underline">{owner.name}</Link></CardDescription>}
-                 {car.brand === 'Загрузка данных...' && (
-                   <CardDescription className="text-amber-500 mt-2">
-                     Не удалось загрузить полные данные об автомобиле. Отображается временная информация.
-                   </CardDescription>
-                 )}
-            </CardContent>
-          </Card>
-          
-          <Tabs defaultValue="posts">
-              <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="posts"><FileText className="mr-2 h-4 w-4"/>Бортжурнал</TabsTrigger>
-                  <TabsTrigger value="specs"><Wrench className="mr-2 h-4 w-4"/>Характеристики</TabsTrigger>
-                  <TabsTrigger value="gallery"><GalleryHorizontal className="mr-2 h-4 w-4"/>Галерея</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="posts" className="mt-6">
-                <div className="space-y-6">
-                 {relatedPosts.length > 0 ? (
-                    relatedPosts.map(post => {
-                        const postUser = users.find(u => u.id === post.userId);
-                        if (!postUser || !car) return null;
-                        return <PostCard key={post.id} post={post} user={postUser} car={car} />
-                    })
-                 ) : (
-                    <Card>
-                        <CardContent className="p-10 text-center text-muted-foreground">
-                            <p>У этого автомобиля еще нет постов в бортжурнале.</p>
-                        </CardContent>
-                    </Card>
-                 )}
-                </div>
-              </TabsContent>
+    <div className="flex flex-col lg:flex-row gap-12">
+        {/* Sidebar */}
+        <aside className="w-full lg:w-64">
+            <nav className="sticky top-24 space-y-1">
+                {navLinks.map(link => (
+                     <a key={link.href} href={link.href} className="block px-4 py-2 rounded text-muted-foreground hover:bg-muted hover:text-foreground">
+                        {link.label}
+                    </a>
+                ))}
+            </nav>
+        </aside>
 
-              <TabsContent value="specs" className="mt-6">
-                 <Card>
-                    <CardHeader>
-                        <CardTitle>Характеристики</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="flex items-center">
+        {/* Main Content */}
+        <main className="flex-1 space-y-12">
+             {/* Hero-блок автомобиля */}
+            <div className="relative">
+                <div className="w-full aspect-video relative rounded-lg overflow-hidden bg-muted">
+                    {mainImage && <Image 
+                        src={mainImage} 
+                        alt={pageTitle} 
+                        fill
+                        className="object-cover"
+                    />}
+                </div>
+                <div className="absolute bottom-4 left-4 bg-black/70 text-white px-4 py-2 rounded-lg">
+                    <h1 className="text-2xl font-bold">{pageTitle}</h1>
+                    {owner && <p className="text-sm">Владелец: <Link href={`/profile/${owner.id}`} className="hover:underline">{owner.name}</Link></p>}
+                </div>
+                <Button className="absolute top-4 right-4">Записать в гараж</Button>
+            </div>
+            
+            {/* Галерея фото */}
+            <section id="photos">
+                <h2 className="text-2xl font-bold mb-4">Фото {pageTitle}</h2>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {galleryPhotos.map((photoUrl, i) => (
+                    <div key={i} className="relative aspect-square">
+                        <Image 
+                            src={photoUrl} 
+                            alt={`${pageTitle} photo ${i+1}`}
+                            fill
+                            className="rounded-lg object-cover cursor-pointer hover:opacity-80 transition"
+                        />
+                    </div>
+                    ))}
+                </div>
+                { (car.photos?.length || 0) > 4 && 
+                    <Button variant="link" className="mt-2 px-0">Показать всё →</Button>
+                }
+            </section>
+            
+            {/* Блок постов от владельцев */}
+            <section id="posts">
+                <h2 className="text-2xl font-bold mb-4">Новое от владельцев {pageTitle}</h2>
+                <div className="space-y-6">
+                    {relatedPosts.map(post => {
+                       const postUser = users.find(u => u.id === post.authorId);
+                       const postCar = mockCars.find(c => c.id === post.carId);
+                       if (!postUser || !postCar) return null;
+                       return <PostCard key={post.id} post={post} user={postUser} car={postCar} />
+                    })}
+                </div>
+                {mockPosts.filter(p => p.carId === car.id).length > 3 && 
+                    <Button variant="link" className="mt-2 px-0">Показать всё →</Button>
+                }
+            </section>
+
+            {/* Характеристики */}
+            <section id="specs">
+                <h2 className="text-2xl font-bold mb-4">Характеристики</h2>
+                <Card>
+                    <CardContent className="pt-6 space-y-4">
+                         <div className="flex items-center">
                             <Calendar className="h-5 w-5 mr-3 text-muted-foreground"/>
                             <div>
                                 <p className="text-sm text-muted-foreground">Год выпуска</p>
@@ -171,50 +197,10 @@ export default function CarProfilePage({ params }: { params: { id: string } }) {
                                 <p className="font-semibold">{car.engine}</p>
                             </div>
                         </div>
-                        {car.description && (
-                        <>
-                            <Separator/>
-                            <div>
-                                <p className="text-sm text-muted-foreground mb-1">Описание от владельца</p>
-                                <p className="text-sm whitespace-pre-line">{car.description}</p>
-                            </div>
-                        </>
-                        )}
                     </CardContent>
                 </Card>
-              </TabsContent>
-
-              <TabsContent value="gallery" className="mt-6">
-                 <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center"><ImageIcon className="mr-2 h-5 w-5"/>Галерея</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                       {car.photos && car.photos.length > 0 ? (
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                            {car.photos.map((imgUrl, index) => (
-                                <div key={index} className="relative aspect-square bg-muted rounded-lg overflow-hidden">
-                                    <Image 
-                                        src={imgUrl}
-                                        alt={`${pageTitle} gallery image ${index + 1}`}
-                                        fill
-                                        className="object-cover"
-                                    />
-                                </div>
-                            ))}
-                            </div>
-                       ) : (
-                           <div className="p-10 text-center text-muted-foreground">
-                               <p>Владелец еще не добавил фотографии в галерею.</p>
-                           </div>
-                       )}
-                    </CardContent>
-                </Card>
-              </TabsContent>
-          </Tabs>
-        </div>
+            </section>
+        </main>
     </div>
   );
 }
-
-    
