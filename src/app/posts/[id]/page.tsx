@@ -155,7 +155,8 @@ export default function PostDetailPage() {
     try {
       const q = query(
         collection(firestore, 'comments'),
-        where('postId', '==', postId)
+        where('postId', '==', postId),
+        orderBy('createdAt', 'desc')
       );
       const querySnapshot = await getDocs(q);
       const commentsData: Comment[] = querySnapshot.docs.map(doc => ({
@@ -163,10 +164,6 @@ export default function PostDetailPage() {
         ...doc.data()
       } as Comment));
       
-      // Сортировка на клиенте
-      commentsData.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
-
-
       setComments(commentsData);
     } catch (error) {
       console.error('Ошибка загрузки комментариев:', error);
@@ -485,7 +482,7 @@ export default function PostDetailPage() {
                             {formatDate(comment.createdAt)}
                           </span>
                         </div>
-                        <p className="text-muted-foreground whitespace-pre-line">
+                        <p className="text-muted-foreground whitespace-pre-line break-words">
                           {comment.content}
                         </p>
                       </div>

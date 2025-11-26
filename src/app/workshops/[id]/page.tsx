@@ -1,3 +1,4 @@
+
 // src/app/workshops/[id]/page.tsx
 // Детальная страница мастерской: инфо, отзывы, возможность оставить отзыв, карта
 // Gemini: поддержка как автозагруженных (из интернет-источников), так и пользовательских мастерских
@@ -304,7 +305,7 @@ export default function WorkshopPage() {
                                      />
                                  ))}
                              </div>
-                             <p className="text-muted-foreground">{review.text}</p>
+                             <p className="text-muted-foreground whitespace-pre-line break-words">{review.text}</p>
                         </div>
                      </div>
                 )) : (
@@ -316,5 +317,3 @@ export default function WorkshopPage() {
     </div>
   );
 }
-
-    
