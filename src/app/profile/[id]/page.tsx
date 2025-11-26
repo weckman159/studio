@@ -5,11 +5,11 @@
 import { useState, useEffect } from 'react';
 import Image from "next/image";
 import Link from 'next/link';
-import { notFound, useParams } from "next/navigation";
+import { notFound, useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from '@/components/ui/button';
-import { FileText, Award, Car as CarIcon, Edit, Users as UsersIcon, Heart, MessageCircle, Plus, AtSign, Bookmark, UserCheck, UserPlus } from "lucide-react";
+import { FileText, Award, Car as CarIcon, Edit, Users as UsersIcon, Heart, MessageCircle, Plus, AtSign, Bookmark, UserCheck, UserPlus, MapPin, Calendar } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import type { User as UserData, Car, Post } from '@/lib/data';
 import { users, cars as mockCars, posts as mockPosts } from '@/lib/data';
@@ -70,10 +70,10 @@ function CompactPostItem({ post }: { post: Post }) {
                     <span>{formattedDate}</span>
                     <div className="flex items-center gap-4">
                         <span className="flex items-center gap-1">
-                            <Heart className="w-4 h-4" /> {post.likes}
+                            <Heart className="w-4 h-4" /> {post.likesCount}
                         </span>
                         <span className="flex items-center gap-1">
-                            <MessageCircle className="w-4 h-4" /> {post.comments}
+                            <MessageCircle className="w-4 h-4" /> {post.commentsCount}
                         </span>
                     </div>
                 </div>
@@ -84,6 +84,7 @@ function CompactPostItem({ post }: { post: Post }) {
 
 export default function ProfilePage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
   const { user: authUser, isUserLoading: isAuthUserLoading } = useUser();
   const firestore = useFirestore();
@@ -108,7 +109,7 @@ export default function ProfilePage() {
   }, [id, firestore]);
 
   const { data: userCars, isLoading: carsLoading } = useCollection<Car>(carsQuery);
-  const userPosts = mockPosts.filter(p => p.userId === id);
+  const userPosts = mockPosts.filter(p => p.authorId === id);
   const favoritePosts = mockPosts.filter(p => ['1', '3'].includes(p.id)); // Mock favorites
   const currentCars = userCars?.filter(car => user?.currentCarIds?.includes(car.id)) || [];
 
@@ -172,6 +173,14 @@ export default function ProfilePage() {
   };
 
   const userAvatar = PlaceHolderImages.find((img) => img.id === user.avatarId);
+  const formatDate = (timestamp: any) => {
+    if (!timestamp) return '';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    return new Intl.DateTimeFormat('ru-RU', {
+      month: 'long',
+      year: 'numeric'
+    }).format(date);
+  };
   
   return (
       <>
@@ -196,70 +205,81 @@ export default function ProfilePage() {
       <UserListDialog isOpen={isFollowingModalOpen} onOpenChange={setFollowingModalOpen} title="Подписки" users={users.slice(1)} />
 
       <div className="container mx-auto px-4 py-8">
-        <Card className="mb-8 overflow-hidden">
-          <CardHeader className="bg-muted/30 p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-             <div className="flex items-center space-x-6">
-                <Avatar className="h-24 w-24 border-4 border-background">
-                  {userAvatar && <AvatarImage src={userAvatar.imageUrl} alt={user.name} data-ai-hint={userAvatar.imageHint} />}
-                  <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <div className='flex items-center gap-3'>
-                    <h1 className="text-3xl font-bold">{user.name}</h1>
-                    {user.nickname && <Badge variant="secondary" className="text-lg"><AtSign className="h-4 w-4 mr-1"/>{user.nickname}</Badge>}
-                  </div>
-                  <p className="text-muted-foreground mt-1 max-w-xl">{user.bio}</p>
-                   {currentCars.length > 0 && (
-                    <div className="mt-2 text-sm text-muted-foreground">
-                      Сейчас на: {currentCars.map(car => `${car.brand} ${car.model}`).join(', ')}
+        <Card className="mb-8">
+          <CardContent className="pt-6">
+            <div className="flex flex-col md:flex-row gap-6">
+              <Avatar className="h-32 w-32">
+                {userAvatar && <AvatarImage src={userAvatar.imageUrl} alt={user.name} data-ai-hint={userAvatar.imageHint} />}
+                <AvatarFallback className="text-4xl">{user.name.charAt(0)}</AvatarFallback>
+              </Avatar>
+
+              <div className="flex-1">
+                <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <div className='flex items-center gap-3'>
+                        <h1 className="text-3xl font-bold">{user.name}</h1>
+                        {user.nickname && <Badge variant="secondary" className="text-lg"><AtSign className="h-4 w-4 mr-1"/>{user.nickname}</Badge>}
+                      </div>
+                      {user.location && (
+                        <div className="flex items-center gap-2 text-muted-foreground mt-2">
+                          <MapPin className="h-4 w-4" />
+                          <span>{user.location}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                        <Calendar className="h-4 w-4" />
+                        <span>На платформе с {formatDate(user.createdAt)}</span>
+                      </div>
                     </div>
-                  )}
+
+                    <div className="flex gap-2">
+                      {isOwner ? (
+                        <Button variant="outline" onClick={() => setEditModalOpen(true)}>
+                          <Edit3 className="mr-2 h-4 w-4" />
+                          Редактировать
+                        </Button>
+                      ) : (
+                        <>
+                          {authUser && (
+                             <Button onClick={handleSubscribe}>
+                                {isSubscribed ? <UserCheck className="mr-2 h-4 w-4"/> : <UserPlus className="mr-2 h-4 w-4"/>}
+                                {isSubscribed ? 'Вы подписаны' : 'Подписаться'}
+                            </Button>
+                          )}
+                        </>
+                      )}
+                    </div>
                 </div>
-              </div>
-              <div className="flex-shrink-0">
-                {isOwner ? (
-                    <Button variant="outline" onClick={() => setEditModalOpen(true)}><Edit className="mr-2 h-4 w-4"/> Редактировать профиль</Button>
-                ) : (
-                    <Button onClick={handleSubscribe}>
-                        {isSubscribed ? <UserCheck className="mr-2 h-4 w-4"/> : <UserPlus className="mr-2 h-4 w-4"/>}
-                        {isSubscribed ? 'Вы подписаны' : 'Подписаться'}
-                    </Button>
+
+                {user.bio && (
+                  <p className="text-muted-foreground mb-4">{user.bio}</p>
                 )}
-              </div>
-          </CardHeader>
-           <CardContent className="p-6">
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
-                    <div className="p-4 bg-muted/50 rounded-lg">
-                        <FileText className="h-6 w-6 mx-auto text-primary mb-2" />
-                        <p className="text-2xl font-bold">{userPosts.length}</p>
-                        <p className="text-sm text-muted-foreground">Посты</p>
-                    </div>
-                    <button onClick={() => setFollowersModalOpen(true)} className="p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
-                        <UsersIcon className="h-6 w-6 mx-auto text-primary mb-2" />
-                        <p className="text-2xl font-bold">{user.stats.followers}</p>
-                        <p className="text-sm text-muted-foreground">Подписчики</p>
-                    </button>
-                    <button onClick={() => setFollowingModalOpen(true)} className="p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
-                        <UserCheck className="h-6 w-6 mx-auto text-primary mb-2" />
-                        <p className="text-2xl font-bold">{user.stats.following}</p>
-                        <p className="text-sm text-muted-foreground">Подписки</p>
-                    </button>
-                    <div className="p-4 bg-muted/50 rounded-lg">
-                        <Award className="h-6 w-6 mx-auto text-primary mb-2" />
-                        <p className="text-2xl font-bold">{user.stats.wins}</p>
-                        <p className="text-sm text-muted-foreground">Победы</p>
-                    </div>
-                     <div className="p-4 bg-muted/50 rounded-lg">
-                        <Heart className="h-6 w-6 mx-auto text-primary mb-2" />
-                        <p className="text-2xl font-bold">{user.stats.likes}</p>
-                        <p className="text-sm text-muted-foreground">Лайки</p>
-                    </div>
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center p-3 bg-muted rounded-lg">
+                    <div className="text-2xl font-bold">{userCars?.length || 0}</div>
+                    <p className="text-sm text-muted-foreground">Автомобилей</p>
+                  </div>
+                  <div className="text-center p-3 bg-muted rounded-lg">
+                    <div className="text-2xl font-bold">{userPosts.length}</div>
+                    <p className="text-sm text-muted-foreground">Постов</p>
+                  </div>
+                  <button onClick={() => setFollowersModalOpen(true)} className="text-center p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
+                      <div className="text-2xl font-bold">{user.stats.followers}</div>
+                      <p className="text-sm text-muted-foreground">Подписчики</p>
+                  </button>
+                  <button onClick={() => setFollowingModalOpen(true)} className="text-center p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
+                      <div className="text-2xl font-bold">{user.stats.following}</div>
+                      <p className="text-sm text-muted-foreground">Подписки</p>
+                  </button>
                 </div>
-           </CardContent>
+              </div>
+            </div>
+          </CardContent>
         </Card>
         
         <Tabs defaultValue="posts">
-            <TabsList className="mb-6">
+            <TabsList className="mb-6 grid w-full grid-cols-3">
               <TabsTrigger value="posts"><FileText className="w-4 h-4 mr-2" />Бортжурнал</TabsTrigger>
               <TabsTrigger value="garage"><CarIcon className="w-4 h-4 mr-2" />Гараж</TabsTrigger>
               <TabsTrigger value="favorites"><Bookmark className="w-4 h-4 mr-2" />Избранное</TabsTrigger>
@@ -274,8 +294,9 @@ export default function ProfilePage() {
                   </div>
                 ) : (
                    <Card>
-                    <CardContent className="p-6 text-center text-muted-foreground">
+                    <CardContent className="p-10 text-center text-muted-foreground">
                       <p>У этого пользователя пока нет записей в бортжурнале.</p>
+                       {isOwner && <Button onClick={() => router.push('/posts/create')} className="mt-4">Создать пост</Button>}
                     </CardContent>
                   </Card>
                 )}
@@ -306,6 +327,7 @@ export default function ProfilePage() {
                     <Card>
                       <CardContent className="p-10 text-center text-muted-foreground">
                           <p>В гараже пока нет автомобилей.</p>
+                          {isOwner && <Button onClick={handleAddCar} className="mt-4">Добавить автомобиль</Button>}
                       </CardContent>
                     </Card>
                 )}
@@ -315,7 +337,7 @@ export default function ProfilePage() {
               {favoritePosts.length > 0 ? (
                 <div className="space-y-6">
                   {favoritePosts.map(post => {
-                     const postUser = users.find(u => u.id === post.userId);
+                     const postUser = users.find(u => u.id === post.authorId);
                      const postCar = mockCars.find(c => c.id === post.carId);
                      if (!postUser || !postCar) return null;
                      return <PostCard key={post.id} post={post} user={postUser} car={postCar} />
@@ -334,3 +356,5 @@ export default function ProfilePage() {
       </>
   );
 }
+
+    
