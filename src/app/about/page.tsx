@@ -26,11 +26,7 @@ export default function AboutPage() {
         
         <div className="pt-8">
             <h2 className="text-2xl font-semibold mb-3">Наши партнеры</h2>
-            <ul className="list-disc pl-6 space-y-2">
-            <li>ООО «СуперМотор» — надежный поставщик автозапчастей</li>
-            <li>РФО «Драйв» — региональный фонд поддержки водителей</li>
-            <li>CarValley — федеральная сеть сервисов</li>
-            </ul>
+            <p>Команда проекта открыта для сотрудничества с сервисами, клубами, дилерами — <Link className="text-primary hover:underline" href="/partners">см. всех партнеров</Link>.</p>
         </div>
 
         <div className="pt-8">

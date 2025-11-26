@@ -4,7 +4,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Toaster } from "@/components/ui/toaster";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarProvider } from "@/components/ui/sidebar";
-import { CarFront, Home, BookOpen, Users, ShoppingCart, Wrench, Calendar, CheckSquare, Radio } from 'lucide-react';
+import { CarFront, Home, BookOpen, Users, ShoppingCart, Wrench, Calendar, CheckSquare, Radio, HeartHandshake } from 'lucide-react';
 import Link from "next/link";
 import { FirebaseClientProvider } from "@/firebase/client-provider";
 import { CarOfTheDay } from "@/components/CarOfTheDay";
@@ -23,6 +23,7 @@ const navLinks = [
   { href: '/events', label: 'События', icon: Calendar },
   { href: '/voting', label: 'Голосование', icon: CheckSquare },
   { href: '/news', label: 'Автоновости', icon: Radio },
+  { href: '/partners', label: 'Партнеры', icon: HeartHandshake },
 ];
 
 
