@@ -5,14 +5,12 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from 'react';
 import type { Post, User, Car } from "@/lib/data";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
 import {
   Card,
   CardContent,
   CardFooter,
   CardHeader,
   CardTitle,
-  CardDescription
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
