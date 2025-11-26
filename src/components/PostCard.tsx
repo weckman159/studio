@@ -21,6 +21,8 @@ import { Badge } from "./ui/badge";
 import { CommentSheet } from "./CommentSheet";
 import { useUser } from "@/firebase";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "./ui/carousel";
+import { updateDoc, doc, increment, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
 
 interface PostCardProps {
   post: Post;
@@ -30,6 +32,7 @@ interface PostCardProps {
 
 export function PostCard({ post, user, car }: PostCardProps) {
   const { user: authUser } = useUser();
+  const firestore = useFirestore();
   
   const getImageUrls = () => {
     let urls: {url: string, hint: string}[] = [];
@@ -71,14 +74,29 @@ export function PostCard({ post, user, car }: PostCardProps) {
     if (authUser?.uid) {
       setIsLiked(post.likedBy?.includes(authUser.uid));
     }
-  }, [authUser, post.likedBy]);
+   }, [authUser, post.likedBy]);
 
-  const handleLike = () => {
-    if(!authUser) return;
+  const handleLike = async () => {
+    if (!authUser || !firestore) return;
+    
     const newLikedState = !isLiked;
+    const newLikeCount = newLikedState ? likeCount + 1 : likeCount - 1;
+    
     setIsLiked(newLikedState);
-    setLikeCount(prev => newLikedState ? prev + 1 : prev - 1);
-    // Here you would typically call a function to update the backend
+    setLikeCount(newLikeCount);
+
+    try {
+      const postRef = doc(firestore, 'posts', post.id);
+      await updateDoc(postRef, {
+        likesCount: increment(newLikedState ? 1 : -1),
+        likedBy: newLikedState ? arrayUnion(authUser.uid) : arrayRemove(authUser.uid),
+      });
+    } catch (error) {
+      // Revert UI on error
+      setIsLiked(!newLikedState);
+      setLikeCount(likeCount);
+      console.error("Error updating like:", error);
+    }
   };
 
   const handleFavorite = () => {
@@ -161,7 +179,7 @@ export function PostCard({ post, user, car }: PostCardProps) {
       </CardContent>
       <CardFooter className="flex justify-between items-center">
         <div className="flex space-x-1 text-muted-foreground">
-          <Button variant="ghost" size="sm" onClick={handleLike} aria-label="Like post">
+          <Button variant="ghost" size="sm" onClick={handleLike} disabled={!authUser} aria-label="Like post">
             <Heart className={`mr-2 h-4 w-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
             {likeCount}
           </Button>
@@ -171,7 +189,7 @@ export function PostCard({ post, user, car }: PostCardProps) {
           </Button>
         </div>
         <div className="flex items-center">
-             <Button variant="ghost" size="icon" onClick={handleFavorite} aria-label="Add to favorites">
+             <Button variant="ghost" size="icon" onClick={handleFavorite} disabled={!authUser} aria-label="Add to favorites">
                  <Bookmark className={`h-5 w-5 ${isFavorited ? 'fill-primary text-primary' : 'text-muted-foreground'}`} />
              </Button>
         </div>

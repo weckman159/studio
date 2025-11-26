@@ -214,9 +214,16 @@ export default function PostDetailPage() {
       } catch (error) {
         console.log('Ошибка при попытке поделиться:', error);
       }
+    } else if (navigator.clipboard) {
+        try {
+            await navigator.clipboard.writeText(window.location.href);
+            alert('Ссылка скопирована в буфер обмена');
+        } catch (error) {
+            console.error('Не удалось скопировать ссылку:', error);
+            alert('Не удалось скопировать ссылку');
+        }
     } else {
-      navigator.clipboard.writeText(window.location.href);
-      alert('Ссылка скопирована в буфер обмена');
+        alert('Функция "Поделиться" не поддерживается в вашем браузере.');
     }
   };
 
