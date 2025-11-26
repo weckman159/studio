@@ -24,6 +24,7 @@ import { useEffect, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import type { User as UserData } from '@/lib/data';
+import { ThemeToggle } from './ThemeToggle';
 
 
 export function Header() {
@@ -82,8 +83,9 @@ export function Header() {
             </Button>
         </div>
         <div className="flex-1" />
-        <div className="flex items-center justify-end space-x-4">
+        <div className="flex items-center justify-end space-x-2">
           <GlobalSearch />
+          <ThemeToggle />
           {isUserLoading ? (
              <div className="h-8 w-20 bg-muted rounded-md animate-pulse" />
           ) : user && user.uid ? (
@@ -108,12 +110,14 @@ export function Header() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href={`/profile/${user.uid}`}>
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Профиль</span>
-                  </Link>
-                </DropdownMenuItem>
+                {user.uid && (
+                    <DropdownMenuItem asChild>
+                        <Link href={`/profile/${user.uid}`}>
+                            <User className="mr-2 h-4 w-4" />
+                            <span>Профиль</span>
+                        </Link>
+                    </DropdownMenuItem>
+                )}
                  <DropdownMenuItem asChild>
                   <Link href="/garage">
                     <CarFront className="mr-2 h-4 w-4" />

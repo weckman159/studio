@@ -12,6 +12,7 @@ import Link from "next/link";
 import { FirebaseClientProvider } from "@/firebase/client-provider";
 import { CarOfTheDay } from "@/components/CarOfTheDay";
 import { useActivePath } from "@/hooks/use-active-path";
+import { ThemeProvider } from "next-themes";
 
 const navLinks = [
   { href: '/', label: 'Главная', icon: Home },
@@ -95,44 +96,51 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <title>AutoSphere</title>
         <meta name="description" content="A community for car enthusiasts" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="true" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
           href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
           rel="stylesheet"
         />
       </head>
       <body className="font-body antialiased">
-        <FirebaseClientProvider>
-          <SidebarProvider>
-            <div className="relative flex min-h-screen">
-              <AppSidebar />
-              <div className="flex flex-col flex-1">
-                <Header />
-                <main className="flex-1">
-                  <div className="container mx-auto px-4 py-8">
-                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                      <div className="lg:col-span-3">
-                        {children}
-                      </div>
-                      <aside className="lg:col-span-1">
-                        <div className="sticky top-24 space-y-6">
-                           <CarOfTheDay />
+        <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+        >
+          <FirebaseClientProvider>
+            <SidebarProvider>
+              <div className="relative flex min-h-screen">
+                <AppSidebar />
+                <div className="flex flex-col flex-1">
+                  <Header />
+                  <main className="flex-1">
+                    <div className="container mx-auto px-4 py-8">
+                      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                        <div className="lg:col-span-3">
+                          {children}
                         </div>
-                      </aside>
+                        <aside className="lg:col-span-1">
+                          <div className="sticky top-24 space-y-6">
+                            <CarOfTheDay />
+                          </div>
+                        </aside>
+                      </div>
                     </div>
-                  </div>
-                </main>
-                <Footer />
+                  </main>
+                  <Footer />
+                </div>
               </div>
-            </div>
-            <Toaster />
-          </SidebarProvider>
-        </FirebaseClientProvider>
+              <Toaster />
+            </SidebarProvider>
+          </FirebaseClientProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
