@@ -193,7 +193,9 @@ export default function PostDetailPage() {
 
       setCommentText('');
       await fetchComments();
-      setPost({ ...post, commentsCount: post.commentsCount + 1 });
+      if(post) {
+        setPost({ ...post, commentsCount: post.commentsCount + 1 });
+      }
     } catch (error) {
       console.error('Ошибка добавления комментария:', error);
     } finally {
@@ -266,7 +268,7 @@ export default function PostDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       {/* Обложка поста */}
       {post.imageUrl && (
         <div className="w-full h-[400px] overflow-hidden bg-muted relative">
@@ -279,7 +281,7 @@ export default function PostDetailPage() {
         </div>
       )}
 
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Кнопка назад */}
         <Link href="/posts">
           <Button variant="ghost" size="sm" className="mb-6">
@@ -364,14 +366,10 @@ export default function PostDetailPage() {
           </div>
 
           {/* Текст поста */}
-          <Card className="mb-8">
-            <CardContent className="pt-6">
-              <div 
-                className="prose prose-lg dark:prose-invert max-w-none"
-                dangerouslySetInnerHTML={{ __html: post.content }}
-              />
-            </CardContent>
-          </Card>
+          <div 
+            className="prose prose-lg dark:prose-invert max-w-none mb-8"
+            dangerouslySetInnerHTML={{ __html: post.content }}
+          />
 
           {/* Комментарии */}
           <Card>

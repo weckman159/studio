@@ -11,11 +11,12 @@ import { useFirestore, useMemoFirebase } from '@/firebase';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Search, Plus, MessageCircle, FileText } from 'lucide-react';
-import Image from 'next/image';
-import { Post as PostData } from '@/lib/data';
+import type { Post as PostData, User, Car } from '@/lib/data';
+import { users, cars } from '@/lib/data'; // Using mock users/cars for now
+import { PostCard } from '@/components/PostCard';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 
 // Типы постов для фильтрации
 const postTypes = [
@@ -83,31 +84,6 @@ export default function PostsPage() {
     setFilteredPosts(result);
   }, [posts, selectedType, searchQuery]);
 
-  // Форматирование даты (опционально)
-  const formatDate = (timestamp: any) => {
-    if (!timestamp) return '';
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return new Intl.DateTimeFormat('ru-RU', {
-      day: '2-digit',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date);
-  };
-
-  // UI loading
-  if (loading) {
-    return (
-      <div>
-        <div className="flex items-center justify-center min-h-[300px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Загрузка постов...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div>
@@ -152,7 +128,31 @@ export default function PostsPage() {
         </div>
       </div>
       {/* Лента постов */}
-      {filteredPosts.length === 0 ? (
+      {loading ? (
+        <div className="space-y-6">
+          {[...Array(3)].map((_, i) => (
+             <Card key={i}>
+                <CardHeader>
+                  <div className="flex items-center space-x-3">
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                    <div className="space-y-1">
+                      <Skeleton className="h-4 w-48" />
+                      <Skeleton className="h-3 w-64" />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-6 w-3/4 mb-4" />
+                  <Skeleton className="aspect-video w-full rounded-lg" />
+                </CardContent>
+                <CardFooter className="flex justify-between">
+                   <Skeleton className="h-8 w-24" />
+                   <Skeleton className="h-8 w-24" />
+                </CardFooter>
+              </Card>
+          ))}
+        </div>
+      ) : filteredPosts.length === 0 ? (
         <div className="text-center py-12">
           <MessageCircle className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
           <h3 className="text-xl font-semibold mb-2">Постов нет</h3>
@@ -161,34 +161,13 @@ export default function PostsPage() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredPosts.map(post => (
-            <Link key={post.id} href={`/posts/${post.id}`}>
-              <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer flex flex-col">
-                <div className="relative aspect-video w-full overflow-hidden rounded-t-lg bg-muted">
-                    {post.imageUrl && (
-                        <Image
-                        src={post.imageUrl}
-                        alt={post.title}
-                        fill
-                        className="object-cover"
-                        />
-                    )}
-                </div>
-                <CardHeader className="flex-grow">
-                  <CardTitle className="text-lg line-clamp-2">{post.title}</CardTitle>
-                  <CardDescription className="line-clamp-3">
-                    {post.content.replace(/<[^>]*>?/gm, '').slice(0, 120)}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-2 text-xs text-muted-foreground">
-                  <Badge variant="outline">{post.type}</Badge>
-                  <span>Автор: {post.userId}</span> {/* Assuming authorName is not available on PostData */}
-                  <span>{formatDate(post.createdAt)}</span>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+        <div className="space-y-6">
+          {filteredPosts.map(post => {
+            const user = users.find(u => u.id === post.authorId) || users[0];
+            const car = cars.find(c => c.id === post.carId) || cars[0];
+            if (!user || !car) return null;
+            return <PostCard key={post.id} post={post} user={user} car={car} />;
+          })}
         </div>
       )}
     </div>

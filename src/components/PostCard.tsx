@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import Link from "next/link";
@@ -12,6 +11,8 @@ import {
   CardContent,
   CardFooter,
   CardHeader,
+  CardTitle,
+  CardDescription
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -39,24 +40,21 @@ export function PostCard({ post, user, car }: PostCardProps) {
         const placeholder = PlaceHolderImages.find(p => p.id === id);
         if(placeholder) urls.push({url: placeholder.imageUrl, hint: placeholder.imageHint});
       });
-    } else if (post.imageId) {
-      const placeholder = PlaceHolderImages.find(p => p.id === post.imageId);
-      if(placeholder) urls.push({url: placeholder.imageUrl, hint: placeholder.imageHint});
+    } else if (post.imageUrl) {
+      urls.push({ url: post.imageUrl, hint: "uploaded image" });
     }
     return urls;
   }
   
   const finalImageUrls = getImageUrls();
-
-  const userAvatar = PlaceHolderImages.find((img) => img.id === user.avatarId);
+  const userAvatar = user.photoURL;
   const [formattedDate, setFormattedDate] = useState('');
   const [isCommentSheetOpen, setCommentSheetOpen] = useState(false);
-  const [isLiked, setIsLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(post.likes);
+  const [isLiked, setIsLiked] = useState(post.likedBy?.includes(authUser?.uid || '') || false);
+  const [likeCount, setLikeCount] = useState(post.likesCount || 0);
   const [isFavorited, setIsFavorited] = useState(false);
 
   useEffect(() => {
-    // Safely format the date on the client side to avoid hydration mismatch
     if (post.createdAt) {
        const date = new Date(post.createdAt);
        if (!isNaN(date.getTime())) {
@@ -68,11 +66,18 @@ export function PostCard({ post, user, car }: PostCardProps) {
        }
     }
   }, [post.createdAt]);
+  
+   useEffect(() => {
+    if (authUser?.uid) {
+      setIsLiked(post.likedBy?.includes(authUser.uid));
+    }
+  }, [authUser, post.likedBy]);
 
   const handleLike = () => {
     if(!authUser) return;
-    setIsLiked(!isLiked);
-    setLikeCount(prev => isLiked ? prev - 1 : prev + 1);
+    const newLikedState = !isLiked;
+    setIsLiked(newLikedState);
+    setLikeCount(prev => newLikedState ? prev + 1 : prev - 1);
     // Here you would typically call a function to update the backend
   };
 
@@ -90,34 +95,12 @@ export function PostCard({ post, user, car }: PostCardProps) {
         postId={post.id}
     />
     <Card className="overflow-hidden">
-      <CardHeader>
-        <div className="flex items-center space-x-3">
-          <Avatar>
-            {userAvatar && <AvatarImage src={userAvatar.imageUrl} alt={user.name} data-ai-hint={userAvatar.imageHint} />}
-            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-          </Avatar>
-          <div>
-            <Link href={`/profile/${user.id}`} className="font-semibold hover:underline">
-              {user.name}
-            </Link>
-            <p className="text-sm text-muted-foreground">
-              добавил(а) пост в бортжурнал{' '}
-              <Link href={`/car/${car.id}`} className="font-medium text-primary hover:underline">
-                {car.brand} {car.model}
-              </Link>
-            </p>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <h2 className="text-2xl font-bold mb-4">{post.title}</h2>
-        
-        {finalImageUrls.length > 0 && (
-          <Carousel className="w-full mb-4 rounded-lg overflow-hidden">
+      {finalImageUrls.length > 0 && (
+          <Carousel className="w-full rounded-t-lg overflow-hidden bg-muted">
             <CarouselContent>
               {finalImageUrls.map((img, index) => (
                 <CarouselItem key={index}>
-                   <Link href={`/car/${car.id}?postId=${post.id}`} className="block">
+                   <Link href={`/posts/${post.id}`} className="block">
                       <div className="relative aspect-video">
                         <Image
                           src={img.url}
@@ -139,14 +122,42 @@ export function PostCard({ post, user, car }: PostCardProps) {
             )}
           </Carousel>
         )}
-
+      <CardHeader>
+        <div className="flex items-center space-x-3 mb-2">
+          <Avatar>
+            {userAvatar && <AvatarImage src={userAvatar} alt={user.name} />}
+            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+          </Avatar>
+          <div>
+            <Link href={`/profile/${user.id}`} className="font-semibold hover:underline">
+              {user.name}
+            </Link>
+            <p className="text-sm text-muted-foreground">
+              в бортжурнале{' '}
+              <Link href={`/car/${car.id}`} className="font-medium text-primary hover:underline">
+                {car.brand} {car.model}
+              </Link>
+            </p>
+          </div>
+           {formattedDate && <p className="text-sm text-muted-foreground ml-auto">{formattedDate}</p>}
+        </div>
+        <CardTitle>
+            <Link href={`/posts/${post.id}`} className="text-2xl font-bold hover:underline">
+                {post.title}
+            </Link>
+        </CardTitle>
+        {post.type && <Badge variant="outline" className="w-fit">{post.type}</Badge>}
+      </CardHeader>
+      <CardContent>
         <div 
-          className="text-card-foreground/80 whitespace-pre-line prose dark:prose-invert max-w-none"
+          className="text-card-foreground/80 line-clamp-4 whitespace-pre-line prose dark:prose-invert max-w-none"
           dangerouslySetInnerHTML={{ __html: post.content }}
         />
-        <div className="flex flex-wrap gap-2 mt-4">
-            {post.tags.map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
-        </div>
+        {post.tags && (
+            <div className="flex flex-wrap gap-2 mt-4">
+                {post.tags.map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
+            </div>
+        )}
       </CardContent>
       <CardFooter className="flex justify-between items-center">
         <div className="flex space-x-1 text-muted-foreground">
@@ -156,14 +167,13 @@ export function PostCard({ post, user, car }: PostCardProps) {
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setCommentSheetOpen(true)} aria-label="View comments">
             <MessageCircle className="mr-2 h-4 w-4" />
-            {post.comments}
+            {post.commentsCount || 0}
           </Button>
         </div>
         <div className="flex items-center">
              <Button variant="ghost" size="icon" onClick={handleFavorite} aria-label="Add to favorites">
                  <Bookmark className={`h-5 w-5 ${isFavorited ? 'fill-primary text-primary' : 'text-muted-foreground'}`} />
              </Button>
-            {formattedDate && <p className="text-sm text-muted-foreground ml-4">{formattedDate}</p>}
         </div>
       </CardFooter>
     </Card>

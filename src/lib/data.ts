@@ -43,6 +43,7 @@ export interface Post {
   content: string;
   imageUrl?: string;
   imageUrls?: string[];
+  imageIds?: string[];
   tags: string[];
   type: string; // 'Блог', 'Фотоотчет', 'Вопрос', 'Мой опыт', 'Обзор'
   likesCount: number;
@@ -192,5 +193,6 @@ export const comments: Comment[] = [
     { id: '2', postId: '1', authorId: '1', authorName: 'Alexey Novikov', content: 'Да, очень доволен!', createdAt: '2024-05-20T11:05:00Z' },
     { id: '3', postId: '2', authorId: '1', authorName: 'Alexey Novikov', content: 'Какие красивые места! Тоже мечтаю там побывать.', createdAt: '2024-05-18T16:00:00Z' },
 ]
+
 
 
