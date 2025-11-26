@@ -16,11 +16,9 @@ import {
 import { Settings, User, LogOut, CarFront, Menu, Shield } from 'lucide-react';
 import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { users } from '@/lib/data';
 import { SidebarTrigger, useSidebar } from './ui/sidebar';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
 import GlobalSearch from './GlobalSearch';
 import { useEffect, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
@@ -37,23 +35,33 @@ export function Header() {
   const [profile, setProfile] = useState<UserData | null>(null);
 
   useEffect(() => {
-    if (user && firestore) {
-      getDoc(doc(firestore, 'users', user.uid))
-        .then(docSnap => {
-          if (docSnap.exists()) {
-            setProfile({ id: docSnap.id, ...docSnap.data() } as UserData);
-          } else {
-             const mockUser = users.find(u => u.id === user.uid) || users.find(u => u.id === '1');
-             setProfile(mockUser || null);
-          }
-        });
-    } else {
-      setProfile(null);
-    }
+    const fetchProfile = async () => {
+        if (user && firestore) {
+            try {
+                const docRef = doc(firestore, 'users', user.uid);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    setProfile({ id: docSnap.id, ...docSnap.data() } as UserData);
+                } else {
+                    // Fallback to mock data if not in Firestore (for demo purposes)
+                    const mockUser = users.find(u => u.id === user.uid);
+                    setProfile(mockUser || null);
+                }
+            } catch (error) {
+                console.error("Error fetching user profile:", error);
+                // Fallback to mock data on error
+                const mockUser = users.find(u => u.id === user.uid);
+                setProfile(mockUser || null);
+            }
+        } else {
+            setProfile(null);
+        }
+    };
+    fetchProfile();
   }, [user, firestore]);
 
-  const userAvatar = profile?.photoURL;
-  const userName = profile?.name || user?.email;
+  const userAvatar = profile?.photoURL || user?.photoURL;
+  const userName = profile?.name || user?.displayName || user?.email;
 
 
   const handleLogout = () => {
@@ -143,3 +151,5 @@ export function Header() {
     </header>
   );
 }
+
+    

@@ -13,12 +13,12 @@ export interface User {
   createdAt?: any;
   updatedAt?: any;
   currentCarIds?: string[];
-  stats: {
-    posts: number;
-    likes: number;
-    wins: number;
-    followers: number;
-    following: number;
+  stats?: {
+    posts?: number;
+    likes?: number;
+    wins?: number;
+    followers?: number;
+    following?: number;
   };
 }
 
@@ -227,3 +227,6 @@ export const comments: Comment[] = [
 
 
 
+
+
+    
