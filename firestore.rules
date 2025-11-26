@@ -1,4 +1,5 @@
 
+
 rules_version = '2';
 
 /**
@@ -279,6 +280,36 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isSignedIn() && isRequestingUser('userId');
       allow update, delete: if isSignedIn() && isDocumentOwner(resource.data);
+    }
+    
+    // ------------------------------------------------------------------------
+    // Collection: dialogs
+    // ------------------------------------------------------------------------
+    /**
+     * @description Manages private conversations.
+     * @path /dialogs/{dialogId}
+     * @allow (read, write) Only participants of the dialog can access it.
+     * @principle Enforces that only members of a conversation can read or modify the dialog metadata.
+     */
+    match /dialogs/{dialogId} {
+       allow read, write: if isSignedIn() && request.auth.uid in resource.data.participantIds;
+    }
+
+    // ------------------------------------------------------------------------
+    // Collection: messages
+    // ------------------------------------------------------------------------
+    /**
+     * @description Manages individual messages within conversations.
+     * @path /messages/{messageId}
+     * @allow (read) Only participants of the parent dialog can read messages.
+     * @allow (create) Only authenticated users can create messages.
+     * @deny (update, delete) Client-side updates and deletes are not allowed.
+     * @principle Messages can be created by any signed-in user, but only read by members of that conversation.
+     */
+    match /messages/{messageId} {
+       allow read: if isSignedIn() && get(/databases/$(database)/documents/dialogs/$(resource.data.dialogId)).data.participantIds.hasAny([request.auth.uid]);
+       allow create: if isSignedIn() && isRequestingUser('authorId');
+       allow update, delete: if false;
     }
   }
 }
