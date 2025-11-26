@@ -8,7 +8,6 @@ import type { Post, User, Car } from '@/lib/data';
 import { users, cars } from "@/lib/data"; 
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
-import { CarOfTheDay } from "@/components/CarOfTheDay";
 import { PostFilters } from "@/components/PostFilters";
 import { useState } from "react";
 
@@ -38,19 +37,12 @@ export default function Home() {
 
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-        <div className="lg:col-span-1">
-          <CarOfTheDay />
-        </div>
-        <div className="lg:col-span-1">
-          <PostFilters 
-            activeType={activeType}
-            onTypeChange={setActiveType}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-          />
-        </div>
-      </div>
+       <PostFilters 
+          activeType={activeType}
+          onTypeChange={setActiveType}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+        />
       <div>
         <h1 className="text-3xl font-bold mb-6">Лента постов</h1>
         <div className="space-y-6">
