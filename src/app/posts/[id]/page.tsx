@@ -118,14 +118,17 @@ export default function PostDetailPage() {
     try {
       const q = query(
         collection(firestore, 'comments'),
-        where('postId', '==', postId),
-        orderBy('createdAt', 'desc')
+        where('postId', '==', postId)
       );
       const querySnapshot = await getDocs(q);
       const commentsData: Comment[] = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       } as Comment));
+      
+      // Сортировка на клиенте
+      commentsData.sort((a, b) => b.createdAt?.toDate() - a.createdAt?.toDate());
+
       setComments(commentsData);
     } catch (error) {
       console.error('Ошибка загрузки комментариев:', error);
@@ -214,7 +217,7 @@ export default function PostDetailPage() {
       } catch (error) {
         console.log('Ошибка при попытке поделиться:', error);
       }
-    } else if (navigator.clipboard) {
+    } else if (navigator.clipboard && window.isSecureContext) {
         try {
             await navigator.clipboard.writeText(window.location.href);
             alert('Ссылка скопирована в буфер обмена');
