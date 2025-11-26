@@ -3,11 +3,13 @@
 export interface User {
   id: string;
   name: string;
-  email: string;
-  avatarId: string; // Will be replaced by photoURL
+  email?: string;
   photoURL?: string;
-  bio: string;
+  bio?: string;
   nickname?: string;
+  location?: string;
+  createdAt?: any;
+  updatedAt?: any;
   currentCarIds?: string[];
   stats: {
     posts: number;
@@ -26,10 +28,8 @@ export interface Car {
   year: number;
   engine: string;
   description?: string;
-  imageId: string; // Will be replaced by photoUrl
   photoUrl?: string; // mainPhotoURL
   photos?: string[]; // gallery
-  photoPath?: string;
   isCarOfTheDay?: boolean;
 }
 
@@ -43,8 +43,6 @@ export interface Post {
   content: string;
   imageUrl?: string;
   imageUrls?: string[];
-  imageId?: string;
-  imageIds?: string[];
   tags: string[];
   type: string; // 'Блог', 'Фотоотчет', 'Вопрос', 'Мой опыт', 'Обзор'
   likesCount: number;
@@ -70,7 +68,7 @@ export const users: User[] = [
     id: '1',
     name: 'Alexey Novikov',
     email: 'alex@example.com',
-    avatarId: 'avatar1',
+    photoURL: 'https://images.unsplash.com/photo-1607031542107-f6f46b5d54e9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxtYW4lMjBwb3J0cmFpdHxlbnwwfHx8fDE3NjM5MjU3NzF8MA&ixlib=rb-4.1.0&q=80&w=1080',
     bio: 'Люблю скорость и тюнинг. Владелец нескольких интересных проектов.',
     nickname: 'ANovikov',
     currentCarIds: ['1'],
@@ -80,7 +78,7 @@ export const users: User[] = [
     id: '2',
     name: 'Elena Petrova',
     email: 'elena@example.com',
-    avatarId: 'avatar2',
+    photoURL: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8d29tYW4lMjBwb3J0cmFpdHxlbnwwfHx8fDE3NjM5NTk2MjN8MA&ixlib=rb-4.1.0&q=80&w=1080',
     bio: 'Путешествую на машине по самым красивым местам.',
     stats: { posts: 5, likes: 189, wins: 1, followers: 88, following: 12 },
   },
@@ -93,7 +91,6 @@ export const cars: Car[] = [
     brand: 'BMW',
     model: 'M3 G80',
     year: 2023,
-    imageId: 'car1',
     photoUrl: 'https://images.unsplash.com/photo-1628519592419-bf288f08cef5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxzcG9ydHMlMjBjYXJ8ZW58MHx8fHwxNzYzOTc2NTgyfDA&ixlib=rb-4.1.0&q=80&w=1080',
     photos: ['https://images.unsplash.com/photo-1628519592419-bf288f08cef5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxzcG9ydHMlMjBjYXJ8ZW58MHx8fHwxNzYzOTc2NTgyfDA&ixlib=rb-4.1.0&q=80&w=1080'],
     engine: '3.0 L S58 twin-turbo I6',
@@ -105,7 +102,6 @@ export const cars: Car[] = [
     brand: 'Nissan',
     model: 'Silvia S15',
     year: 2002,
-    imageId: 'car2',
     photoUrl: 'https://images.unsplash.com/photo-1605906457463-5eb60f753738?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxqZG0lMjBjYXJ8ZW58MHx8fHwxNzYzOTE5NTE0fDA&ixlib=rb-4.1.0&q=80&w=1080',
     photos: ['https://images.unsplash.com/photo-1605906457463-5eb60f753738?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxqZG0lMjBjYXJ8ZW58MHx8fHwxNzYzOTE5NTE0fDA&ixlib=rb-4.1.0&q=80&w=1080'],
     engine: '2.0 L SR20DET I4',
@@ -116,7 +112,6 @@ export const cars: Car[] = [
     brand: 'Toyota',
     model: 'Land Cruiser 300',
     year: 2022,
-    imageId: 'car3',
     photoUrl: 'https://images.unsplash.com/photo-1667029187427-7a018063cc53?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxzdXYlMjBtb3VudGFpbnN8ZW58MHx8fHwxNzYzOTYwMzUwfDA&ixlib=rb-4.1.0&q=80&w=1080',
     photos: ['https://images.unsplash.com/photo-1667029187427-7a018063cc53?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxzdXYlMjBtb3VudGFpbnN8ZW58MHx8fHwxNzYzOTYwMzUwfDA&ixlib=rb-4.1.0&q=80&w=1080'],
     engine: '3.4 L V35A-FTS twin-turbo V6',
@@ -131,7 +126,7 @@ export const posts: Post[] = [
     carId: '1',
     title: 'Новая выхлопная система!',
     content: 'Установил полный титановый выхлоп от Akrapovič. Звук просто космос! Машина стала дышать легче, а отстрелы радуют слух. \n\nДальше в планах чип-тюнинг Stage 2.',
-    imageIds: ['post1', 'car1'],
+    imageUrls: ['https://images.unsplash.com/photo-1615644359756-d1058b89608a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxjYXIlMjBleGhhdXN0fGVufDB8fHx8MTc2MzkxNjA3MHww&ixlib=rb-4.1.0&q=80&w=1080', 'https://images.unsplash.com/photo-1628519592419-bf288f08cef5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxzcG9ydHMlMjBjYXJ8ZW58MHx8fHwxNzYzOTc2NTgyfDA&ixlib=rb-4.1.0&q=80&w=1080'],
     tags: ['тюнинг', 'ремонт'],
     type: 'Блог',
     likesCount: 152,
@@ -146,7 +141,7 @@ export const posts: Post[] = [
     carId: '3',
     title: 'Поездка на Алтай',
     content: 'Совершили большое путешествие на Алтай. Land Cruiser показал себя отлично на бездорожье. Проехали более 5000 км, посетили самые красивые озера и перевалы. \n\nВ следующем году планируем поехать на Байкал!',
-    imageId: 'post2',
+    imageUrl: 'https://images.unsplash.com/photo-1629538745524-5b748fddac9f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxjYXIlMjByb2FkfGVufDB8fHx8MTc2MzkyNDg1MHww&ixlib=rb-4.1.0&q=80&w=1080',
     tags: ['путешествия'],
     type: 'Фотоотчет',
     likesCount: 210,
@@ -161,7 +156,7 @@ export const posts: Post[] = [
     carId: '2',
     title: 'Подготовка к дрифт-сезону',
     content: 'Начинаем готовить Silvia к летнему дрифт-сезону. Полностью перебрали подвеску, установили выворот. \n\nВпереди настройка и первые тесты на треке.',
-    imageIds: ['post3', 'car2'],
+    imageUrls: ['https://images.unsplash.com/photo-1541443724873-8ba49db7a737?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxjYXIlMjBkcmlmdHxlbnwwfHx8fDE3NjQwMDQ1MTV8MA&ixlib=rb-4.1.0&q=80&w=1080', 'https://images.unsplash.com/photo-1605906457463-5eb60f753738?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxqZG0lMjBjYXJ8ZW58MHx8fHwxNzYzOTE5NTE0fDA&ixlib=rb-4.1.0&q=80&w=1080'],
     tags: ['тюнинг', 'спорт'],
     type: 'Блог',
     likesCount: 98,
@@ -176,3 +171,4 @@ export const comments: Comment[] = [
     { id: '2', postId: '1', authorId: '1', authorName: 'Alexey Novikov', content: 'Да, очень доволен!', createdAt: '2024-05-20T11:05:00Z' },
     { id: '3', postId: '2', authorId: '1', authorName: 'Alexey Novikov', content: 'Какие красивые места! Тоже мечтаю там побывать.', createdAt: '2024-05-18T16:00:00Z' },
 ]
+

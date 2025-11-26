@@ -9,11 +9,10 @@ import { notFound, useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from '@/components/ui/button';
-import { FileText, Award, Car as CarIcon, Edit, Users as UsersIcon, Heart, MessageCircle, Plus, AtSign, Bookmark, UserCheck, UserPlus, MapPin, Calendar } from "lucide-react";
+import { FileText, Award, Car as CarIcon, Edit3, Users as UsersIcon, Heart, MessageCircle, Plus, AtSign, Bookmark, UserCheck, UserPlus, MapPin, Calendar } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import type { User as UserData, Car, Post } from '@/lib/data';
 import { users, cars as mockCars, posts as mockPosts } from '@/lib/data';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { EditProfileModal } from '@/components/EditProfileModal';
 import { AddCarForm } from '@/components/AddCarForm';
 import { GarageCard } from '@/components/GarageCard';
@@ -26,7 +25,6 @@ import { UserListDialog } from '@/components/UserListDialog';
 
 
 function CompactPostItem({ post }: { post: Post }) {
-    const postImage = PlaceHolderImages.find((img) => img.id === post.imageId);
     const car = mockCars.find(c => c.id === post.carId);
     const [formattedDate, setFormattedDate] = useState('');
 
@@ -47,15 +45,14 @@ function CompactPostItem({ post }: { post: Post }) {
 
     return (
         <Card className="flex items-start p-4 transition-all hover:bg-muted/50">
-            {postImage && (
+            {post.imageUrl && (
                 <Link href={`/car/${car.id}`} className="mr-4 flex-shrink-0">
                     <Image
-                        src={postImage.imageUrl}
+                        src={post.imageUrl}
                         alt={post.title}
                         width={128}
                         height={80}
                         className="rounded-md object-cover w-32 h-20"
-                        data-ai-hint={postImage.imageHint}
                     />
                 </Link>
             )}
@@ -92,10 +89,7 @@ export default function ProfilePage() {
   
   const isOwner = authUser && authUser.uid === id;
   
-  // Find user by ID, if it's the owner, fallback to mock user '1'
-  const initialUser = users.find(u => u.id === id) || (isOwner ? users.find(u => u.id === '1') : undefined);
-  
-  const [user, setUser] = useState<UserData | undefined>(initialUser);
+  const [user, setUser] = useState<UserData | undefined>(undefined);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isEditModalOpen, setEditModalOpen] = useState(false);
   const [isCarModalOpen, setCarModalOpen] = useState(false);
@@ -111,26 +105,28 @@ export default function ProfilePage() {
   const { data: userCars, isLoading: carsLoading } = useCollection<Car>(carsQuery);
   const userPosts = mockPosts.filter(p => p.authorId === id);
   const favoritePosts = mockPosts.filter(p => ['1', '3'].includes(p.id)); // Mock favorites
-  const currentCars = userCars?.filter(car => user?.currentCarIds?.includes(car.id)) || [];
 
   useEffect(() => {
-    if (isOwner && authUser && !users.find(u => u.id === authUser.uid)) {
-        const ownerUser = users.find(u => u.id === '1');
-        if (ownerUser) setUser({...ownerUser, id: authUser.uid});
-    } else {
-        const foundUser = users.find(u => u.id === id);
-        setUser(foundUser);
+    const fetchUser = async () => {
+        if (!id || !firestore) return;
+        const userDoc = await getDoc(doc(firestore, 'users', id));
+        if (userDoc.exists()) {
+            setUser({ id: userDoc.id, ...userDoc.data() } as UserData);
+        } else {
+            // Try to find in mock data as a fallback for demo
+            const mockUser = users.find(u => u.id === id);
+            setUser(mockUser);
+            if(!mockUser) notFound();
+        }
     }
-  }, [id, isOwner, authUser]);
+    fetchUser();
+  }, [id, firestore]);
 
-  const pageLoading = isAuthUserLoading || carsLoading;
+
+  const pageLoading = isAuthUserLoading || carsLoading || !user;
   
-  if (pageLoading && !user) {
+  if (pageLoading) {
     return <div className="container mx-auto px-4 py-8 text-center">Загрузка профиля...</div>;
-  }
-
-  if (!user) {
-    notFound();
   }
   
   const handleProfileSave = (updatedUser: UserData) => {
@@ -152,11 +148,12 @@ export default function ProfilePage() {
       setIsSubscribed(!isSubscribed);
       setUser(prevUser => {
           if (!prevUser) return prevUser;
+          const currentFollowers = prevUser.stats?.followers || 0;
           return {
               ...prevUser,
               stats: {
                   ...prevUser.stats,
-                  followers: prevUser.stats.followers + (isSubscribed ? -1 : 1),
+                  followers: currentFollowers + (isSubscribed ? -1 : 1),
               }
           }
       })
@@ -172,7 +169,6 @@ export default function ProfilePage() {
     }
   };
 
-  const userAvatar = PlaceHolderImages.find((img) => img.id === user.avatarId);
   const formatDate = (timestamp: any) => {
     if (!timestamp) return '';
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
@@ -188,7 +184,6 @@ export default function ProfilePage() {
         isOpen={isEditModalOpen}
         setIsOpen={setEditModalOpen}
         user={user}
-        userCars={userCars || []}
         onSave={handleProfileSave}
       />
       {userCars && (
@@ -209,7 +204,7 @@ export default function ProfilePage() {
           <CardContent className="pt-6">
             <div className="flex flex-col md:flex-row gap-6">
               <Avatar className="h-32 w-32">
-                {userAvatar && <AvatarImage src={userAvatar.imageUrl} alt={user.name} data-ai-hint={userAvatar.imageHint} />}
+                {user.photoURL && <AvatarImage src={user.photoURL} alt={user.name} />}
                 <AvatarFallback className="text-4xl">{user.name.charAt(0)}</AvatarFallback>
               </Avatar>
 
@@ -226,10 +221,12 @@ export default function ProfilePage() {
                           <span>{user.location}</span>
                         </div>
                       )}
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                        <Calendar className="h-4 w-4" />
-                        <span>На платформе с {formatDate(user.createdAt)}</span>
-                      </div>
+                      {user.createdAt && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                          <Calendar className="h-4 w-4" />
+                          <span>На платформе с {formatDate(user.createdAt)}</span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex gap-2">
@@ -265,11 +262,11 @@ export default function ProfilePage() {
                     <p className="text-sm text-muted-foreground">Постов</p>
                   </div>
                   <button onClick={() => setFollowersModalOpen(true)} className="text-center p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
-                      <div className="text-2xl font-bold">{user.stats.followers}</div>
+                      <div className="text-2xl font-bold">{user.stats?.followers || 0}</div>
                       <p className="text-sm text-muted-foreground">Подписчики</p>
                   </button>
                   <button onClick={() => setFollowingModalOpen(true)} className="text-center p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
-                      <div className="text-2xl font-bold">{user.stats.following}</div>
+                      <div className="text-2xl font-bold">{user.stats?.following || 0}</div>
                       <p className="text-sm text-muted-foreground">Подписки</p>
                   </button>
                 </div>
@@ -288,9 +285,12 @@ export default function ProfilePage() {
             <TabsContent value="posts">
                  {userPosts && userPosts.length > 0 ? (
                   <div className="space-y-4">
-                    {userPosts.map((post) => (
-                       <CompactPostItem key={post.id} post={post} />
-                    ))}
+                    {userPosts.map((post) => {
+                      const postUser = users.find(u => u.id === post.authorId);
+                      const postCar = userCars?.find(c => c.id === post.carId) || mockCars.find(c => c.id === post.carId);
+                      if (!postUser || !postCar) return null;
+                      return <PostCard key={post.id} post={post} user={postUser} car={postCar} />
+                    })}
                   </div>
                 ) : (
                    <Card>
@@ -357,4 +357,3 @@ export default function ProfilePage() {
   );
 }
 
-    

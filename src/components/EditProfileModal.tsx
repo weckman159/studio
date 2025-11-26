@@ -2,6 +2,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { useUser, useFirestore, useStorage } from '@/firebase';
+import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
+import { updateProfile } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -11,69 +19,134 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useToast } from '@/hooks/use-toast';
-import type { User, Car } from '@/lib/data';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Checkbox } from './ui/checkbox';
-import { ScrollArea } from './ui/scroll-area';
+import { Loader2 } from 'lucide-react';
+import type { User as UserData } from '@/lib/data';
+import { useFileUpload } from '@/hooks/use-file-upload';
 
 interface EditProfileModalProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
-  user: User;
-  userCars: Car[];
-  onSave: (updatedUser: User) => void;
+  user: UserData;
+  onSave: (updatedUser: UserData) => void;
 }
 
-export function EditProfileModal({ isOpen, setIsOpen, user, userCars, onSave }: EditProfileModalProps) {
+const profileFormSchema = z.object({
+  name: z.string()
+    .min(2, { message: 'Имя должно содержать минимум 2 символа' })
+    .max(50, { message: 'Имя не должно превышать 50 символов' }),
+  nickname: z.string().max(50, { message: 'Никнейм не должен превышать 50 символов' }).optional(),
+  bio: z.string().max(500, { message: 'Биография не должна превышать 500 символов' }).optional(),
+  location: z.string().max(100, { message: 'Местоположение не должно превышать 100 символов' }).optional(),
+});
+
+type ProfileFormValues = z.infer<typeof profileFormSchema>;
+
+export function EditProfileModal({ isOpen, setIsOpen, user, onSave }: EditProfileModalProps) {
   const { toast } = useToast();
-  const [name, setName] = useState(user.name);
-  const [nickname, setNickname] = useState(user.nickname || '');
-  const [avatarUrl, setAvatarUrl] = useState('');
+  const { user: authUser, auth } = useUser();
+  const firestore = useFirestore();
+  const storage = useStorage();
+
+  const { uploadFiles, uploading, progress, error: uploadError } = useFileUpload({ maxFiles: 1, maxSizeInMB: 5 });
+
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [currentCarIds, setCurrentCarIds] = useState<string[]>(user.currentCarIds || []);
+  const [avatarPreview, setAvatarPreview] = useState<string>('');
+
+  const form = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileFormSchema),
+    defaultValues: {
+      name: '',
+      nickname: '',
+      bio: '',
+      location: '',
+    },
+  });
 
   useEffect(() => {
-    if (user) {
-      setName(user.name);
-      setNickname(user.nickname || '');
-      const userAvatar = PlaceHolderImages.find(img => img.id === user.avatarId);
-      setAvatarUrl(userAvatar?.imageUrl || '');
-      setCurrentCarIds(user.currentCarIds || []);
+    if (user && isOpen) {
+      form.reset({
+        name: user.name || '',
+        nickname: user.nickname || '',
+        bio: user.bio || '',
+        location: user.location || '',
+      });
+      setAvatarPreview(user.photoURL || '');
+      setAvatarFile(null);
     }
-  }, [user, isOpen]);
+  }, [user, isOpen, form]);
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
+  const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
       setAvatarFile(file);
-      setAvatarUrl(URL.createObjectURL(file));
+      const reader = new FileReader();
+      reader.onloadend = () => setAvatarPreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const onSubmit = async (data: ProfileFormValues) => {
+    if (!authUser || !firestore || !storage || !auth) {
+      toast({ variant: "destructive", title: "Ошибка", description: "Необходима авторизация." });
+      return;
+    }
+
+    try {
+      let newAvatarUrl = user.photoURL || '';
+
+      if (avatarFile) {
+        const uploadResult = await uploadFiles([avatarFile], 'avatars', authUser.uid);
+        if (uploadResult.length > 0) {
+          newAvatarUrl = uploadResult[0].url;
+        } else {
+          throw new Error(uploadError || "Не удалось загрузить аватар.");
+        }
+      }
+
+      const updatedUserData = {
+        ...user,
+        name: data.name,
+        nickname: data.nickname,
+        bio: data.bio,
+        location: data.location,
+        photoURL: newAvatarUrl,
+        updatedAt: new Date().toISOString(),
+      };
+      
+      // Update Firestore
+      const userRef = doc(firestore, 'users', authUser.uid);
+      await setDoc(userRef, { 
+        displayName: updatedUserData.name,
+        nickname: updatedUserData.nickname,
+        bio: updatedUserData.bio,
+        location: updatedUserData.location,
+        photoURL: newAvatarUrl,
+        updatedAt: serverTimestamp(),
+       }, { merge: true });
+
+      // Update Firebase Auth profile
+      if (auth.currentUser) {
+        await updateProfile(auth.currentUser, {
+          displayName: updatedUserData.name,
+          photoURL: newAvatarUrl,
+        });
+      }
+      
+      onSave(updatedUserData as UserData);
+      toast({ title: "Профиль обновлен", description: "Ваши изменения были сохранены." });
+      setIsOpen(false);
+
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Ошибка сохранения', description: e.message });
     }
   };
   
-  const handleCarSelection = (carId: string) => {
-    setCurrentCarIds(prev => 
-      prev.includes(carId) 
-        ? prev.filter(id => id !== carId) 
-        : [...prev, carId]
-    );
-  };
-  
-  const handleSaveChanges = () => {
-    const updatedUser: User = {
-        ...user,
-        name,
-        nickname,
-        currentCarIds,
-    };
-    
-    onSave(updatedUser);
-    toast({ title: "Профиль обновлен", description: "Ваши изменения были сохранены." });
-    setIsOpen(false);
-  };
+  const isSaving = form.formState.isSubmitting || uploading;
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -84,51 +157,81 @@ export function EditProfileModal({ isOpen, setIsOpen, user, userCars, onSave }: 
             Внесите изменения в свой профиль. Нажмите "Сохранить", когда закончите.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-6 py-4">
-          <div className="flex items-center gap-4">
-            <Avatar className="h-20 w-20">
-                <AvatarImage src={avatarUrl} alt={name} />
-                <AvatarFallback>{name.charAt(0)}</AvatarFallback>
-            </Avatar>
-            <div className="grid w-full max-w-sm items-center gap-1.5">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="flex items-center gap-4">
+              <Avatar className="h-20 w-20">
+                <AvatarImage src={avatarPreview} alt={form.getValues('name')} />
+                <AvatarFallback>{form.getValues('name')?.charAt(0) || 'U'}</AvatarFallback>
+              </Avatar>
+              <div className="grid w-full max-w-sm items-center gap-1.5">
                 <Label htmlFor="picture">Аватар</Label>
-                <Input id="picture" type="file" onChange={handleAvatarChange} accept="image/*" />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="name">Имя</Label>
-            <Input id="name" value={name} onChange={e => setName(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="nickname">Псевдоним (ник)</Label>
-            <Input id="nickname" value={nickname} onChange={e => setNickname(e.target.value)} placeholder="Ваш никнейм" />
-          </div>
-          <div className="space-y-2">
-            <Label>Мое текущее авто</Label>
-            <ScrollArea className="h-32 w-full rounded-md border p-4">
-              <div className="space-y-2">
-                {userCars && userCars.length > 0 ? (
-                  userCars.map(car => (
-                    <div key={car.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`car-${car.id}`}
-                        checked={currentCarIds.includes(car.id)}
-                        onCheckedChange={() => handleCarSelection(car.id)}
-                      />
-                      <Label htmlFor={`car-${car.id}`} className="font-normal">{car.brand} {car.model}</Label>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground">В вашем гараже нет автомобилей.</p>
-                )}
+                <Input id="picture" type="file" onChange={handleAvatarSelect} accept="image/*" disabled={isSaving} />
               </div>
-            </ScrollArea>
-          </div>
-        </div>
-        <DialogFooter>
-            <Button variant="outline" onClick={() => setIsOpen(false)}>Отмена</Button>
-          <Button onClick={handleSaveChanges}>Сохранить</Button>
-        </DialogFooter>
+            </div>
+
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Имя</FormLabel>
+                  <FormControl>
+                    <Input {...field} disabled={isSaving} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="nickname"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Псевдоним (ник)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ваш уникальный ник" {...field} disabled={isSaving} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="location"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Местоположение</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Город, Страна" {...field} disabled={isSaving} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="bio"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>О себе</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Расскажите о себе..." {...field} disabled={isSaving} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isSaving}>Отмена</Button>
+              <Button type="submit" disabled={isSaving}>
+                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {uploading ? `Загрузка... ${progress}%` : 'Сохранить'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );
