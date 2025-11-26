@@ -9,7 +9,6 @@ import {
   collection, 
   query, 
   where, 
-  orderBy, 
   getDocs,
   addDoc,
   updateDoc,
@@ -33,10 +32,13 @@ import {
   Share2,
   Edit3,
   AlertCircle,
-  Send
+  Send,
+  FileText
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { Skeleton } from '@/components/ui/skeleton';
+
 
 // Интерфейс полного поста
 interface Post {
@@ -64,6 +66,41 @@ interface Comment {
   authorAvatar?: string;
   content: string;
   createdAt: any;
+}
+
+function PostPageSkeleton() {
+    return (
+        <div className="min-h-screen">
+             <div className="w-full h-[400px] bg-muted"></div>
+             <div className="max-w-4xl mx-auto px-4 py-8">
+                <Skeleton className="h-9 w-24 mb-6" />
+                <article>
+                    <Skeleton className="h-8 w-32 mb-4" />
+                    <Skeleton className="h-12 md:h-14 w-full mb-6" />
+                    <div className="flex flex-wrap items-center gap-6 mb-8 pb-6 border-b">
+                        <div className="flex items-center gap-3">
+                            <Skeleton className="h-12 w-12 rounded-full" />
+                            <div>
+                                <Skeleton className="h-5 w-24 mb-1" />
+                                <Skeleton className="h-3 w-16" />
+                            </div>
+                        </div>
+                        <Skeleton className="h-5 w-32" />
+                        <div className="flex items-center gap-4 ml-auto">
+                            <Skeleton className="h-9 w-20" />
+                            <Skeleton className="h-9 w-20" />
+                            <Skeleton className="h-9 w-10" />
+                        </div>
+                    </div>
+                     <div className="space-y-4">
+                        <Skeleton className="h-6 w-full" />
+                        <Skeleton className="h-6 w-5/6" />
+                        <Skeleton className="h-6 w-full" />
+                    </div>
+                </article>
+             </div>
+        </div>
+    )
 }
 
 export default function PostDetailPage() {
@@ -250,16 +287,7 @@ export default function PostDetailPage() {
 
   // UI загрузки
   if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Загрузка поста...</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <PostPageSkeleton />;
   }
 
   if (!post) {
@@ -281,7 +309,7 @@ export default function PostDetailPage() {
   return (
     <div className="min-h-screen">
       {/* Обложка поста */}
-      {post.imageUrl && (
+      {post.imageUrl ? (
         <div className="w-full h-[400px] overflow-hidden bg-muted relative">
           <Image
             src={post.imageUrl}
@@ -290,6 +318,10 @@ export default function PostDetailPage() {
             className="object-cover"
           />
         </div>
+      ) : (
+         <div className="w-full h-[400px] bg-muted flex items-center justify-center">
+            <FileText className="w-24 h-24 text-muted-foreground/50"/>
+         </div>
       )}
 
       <div className="max-w-4xl mx-auto px-4 py-8">

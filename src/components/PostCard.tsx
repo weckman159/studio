@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Heart, MessageCircle, Bookmark } from "lucide-react";
+import { Heart, MessageCircle, Bookmark, FileText } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { CommentSheet } from "./CommentSheet";
 import { useUser } from "@/firebase";
@@ -113,7 +113,7 @@ export function PostCard({ post, user, car }: PostCardProps) {
         postId={post.id}
     />
     <Card className="overflow-hidden">
-      {finalImageUrls.length > 0 && (
+      {finalImageUrls.length > 0 ? (
           <Carousel className="w-full rounded-t-lg overflow-hidden bg-muted">
             <CarouselContent>
               {finalImageUrls.map((img, index) => (
@@ -139,7 +139,12 @@ export function PostCard({ post, user, car }: PostCardProps) {
               </>
             )}
           </Carousel>
-        )}
+        ) : (
+          <div className="aspect-video w-full bg-muted flex items-center justify-center rounded-t-lg">
+            <FileText className="h-16 w-16 text-muted-foreground/30" />
+          </div>
+        )
+      }
       <CardHeader>
         <div className="flex items-center space-x-3 mb-2">
           <Avatar>

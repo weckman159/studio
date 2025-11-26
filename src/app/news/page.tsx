@@ -292,17 +292,20 @@ export default function AutoNewsFeedPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredNews.map(item => (
               <Card key={item.id} className="h-full hover:shadow-lg transition-shadow flex flex-col">
-                {/* Изображение */}
-                {item.imageUrl && (
-                  <div className="aspect-video w-full overflow-hidden rounded-t-lg relative">
-                    <Image
-                      src={item.imageUrl}
-                      alt={item.title}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                )}
+                <div className="aspect-video w-full overflow-hidden rounded-t-lg relative bg-muted">
+                    {item.imageUrl ? (
+                        <Image
+                        src={item.imageUrl}
+                        alt={item.title}
+                        fill
+                        className="object-cover"
+                        />
+                    ) : (
+                        <div className="flex items-center justify-center h-full">
+                            <Newspaper className="h-16 w-16 text-muted-foreground/50"/>
+                        </div>
+                    )}
+                </div>
 
                 <CardHeader className='flex-grow'>
                   <div className="flex items-start justify-between gap-2 mb-2">

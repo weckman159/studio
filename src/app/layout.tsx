@@ -18,12 +18,8 @@ const navLinks = [
   { href: '/', label: 'Главная', icon: Home },
   { href: '/posts', label: 'Журналы', icon: BookOpen },
   { href: '/communities', label: 'Сообщества', icon: Users },
-  { href: '/marketplace', label: 'Маркетплейс', icon: ShoppingCart },
   { href: '/workshops', label: 'Мастерские', icon: Wrench },
   { href: '/events', label: 'События', icon: Calendar },
-  { href: '/voting', label: 'Голосование', icon: CheckSquare },
-  { href: '/news', label: 'Автоновости', icon: Radio },
-  { href: '/partners', label: 'Партнеры', icon: HeartHandshake },
 ];
 
 

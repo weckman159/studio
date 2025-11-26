@@ -3,7 +3,7 @@
 'use client'
 
 import { useEffect, useState } from 'react';
-import { collection, getDocs, deleteDoc, doc, updateDoc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, updateDoc, setDoc, getDoc } from 'firebase/firestore';
 import { useFirestore, useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { User as UserData, Workshop, Feedback } from '@/lib/data';
@@ -50,7 +50,7 @@ function DashboardAdmin() {
   const statCards = [
     { title: 'Пользователи', value: stats.users, icon: Users },
     { title: 'Посты', value: stats.posts, icon: Wrench },
-    { title: 'Мастерские', value: stats.workshops, icon: 'M' },
+    { title: 'Мастерские', value: stats.workshops, icon: Wrench },
     { title: 'Обратная связь', value: stats.feedback, icon: MessageSquare },
   ];
 
