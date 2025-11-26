@@ -218,12 +218,26 @@
           "description": "Unique identifier for the user settings entity. This should match the User ID."
         },
         "notifications": {
-          "type": "string",
-          "description": "Embedded JSON string representing notification settings.  Fields include emailNotifications, newComments, newLikes, newFollowers, marketplaceMessages, and eventReminders."
+          "type": "object",
+          "description": "Embedded object representing notification settings.",
+          "properties": {
+            "emailNotifications": {"type": "boolean"},
+            "newComments": {"type": "boolean"},
+            "newLikes": {"type": "boolean"},
+            "newFollowers": {"type": "boolean"},
+            "marketplaceMessages": {"type": "boolean"},
+            "eventReminders": {"type": "boolean"}
+          }
         },
         "privacy": {
-          "type": "string",
-          "description": "Embedded JSON string representing privacy settings. Fields include profileVisibility, showEmail, showGarage, and allowMessages."
+          "type": "object",
+          "description": "Embedded object representing privacy settings.",
+          "properties": {
+            "profileVisibility": {"type": "string", "enum": ["public", "private"]},
+            "showEmail": {"type": "boolean"},
+            "showGarage": {"type": "boolean"},
+            "allowMessages": {"type": "boolean"}
+          }
         },
         "updatedAt": {
           "type": "string",
@@ -347,7 +361,7 @@
           "schema": {
             "$ref": "#/backend/entities/UserSettings"
           },
-          "description": "Stores user-specific settings.  Profile visibility is denormalized to the users collection for Authorization Independence.",
+          "description": "Stores user-specific settings. Profile visibility is denormalized to the users collection for Authorization Independence.",
           "params": [
             {
               "name": "userId",
