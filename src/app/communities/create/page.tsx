@@ -4,8 +4,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { useFirestore, useStorage, useUser } from '@/firebase';
+import { useFirestore, useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -17,6 +16,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ArrowLeft, Upload, AlertCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useFileUpload } from '@/hooks/use-file-upload';
+import { Progress } from '@/components/ui/progress';
 
 // Интерфейс для данных формы
 interface CommunityFormData {
@@ -32,7 +33,8 @@ export default function CreateCommunityPage() {
   const router = useRouter();
   const { user } = useUser();
   const firestore = useFirestore();
-  const storage = useStorage();
+  const { uploadFiles, uploading, progress, error: uploadError } = useFileUpload({ maxFiles: 2, maxSizeInMB: 5 });
+
 
   // Состояния формы
   const [formData, setFormData] = useState<CommunityFormData>({
@@ -125,24 +127,6 @@ export default function CreateCommunityPage() {
     }
   };
 
-  // Функция загрузки изображения в Firebase Storage
-  const uploadImage = async (file: File, path: string): Promise<string> => {
-    if (!storage) throw new Error("Storage not initialized");
-    try {
-      const timestamp = Date.now();
-      const fileName = `${timestamp}_${file.name}`;
-      const storageRef = ref(storage, `${path}/${fileName}`);
-      
-      await uploadBytes(storageRef, file);
-      
-      const downloadURL = await getDownloadURL(storageRef);
-      return downloadURL;
-    } catch (error) {
-      console.error('Ошибка загрузки изображения:', error);
-      throw new Error('Не удалось загрузить изображение');
-    }
-  };
-
   // Валидация формы
   const validateForm = (): boolean => {
     if (!formData.name.trim()) {
@@ -201,16 +185,19 @@ export default function CreateCommunityPage() {
     setError('');
 
     try {
-      let imageUrl = '';
-      let coverUrl = '';
+      const communityId = doc(collection(firestore, 'temp')).id;
+      const filesToUpload: { file: File, path: 'avatars' | 'covers' }[] = [];
+      if(imageFile) filesToUpload.push({ file: imageFile, path: 'avatars' });
+      if(coverFile) filesToUpload.push({ file: coverFile, path: 'covers' });
 
-      if (imageFile) {
-        imageUrl = await uploadImage(imageFile, 'communities/avatars');
-      }
-
-      if (coverFile) {
-        coverUrl = await uploadImage(coverFile, 'communities/covers');
-      }
+      const uploadResults = await uploadFiles(
+        filesToUpload.map(f => f.file),
+        'communities',
+        communityId
+      );
+      
+      const imageUrl = uploadResults.find(r => r.fileName.startsWith(imageFile?.name || ''))?.url || '';
+      const coverUrl = uploadResults.find(r => r.fileName.startsWith(coverFile?.name || ''))?.url || '';
 
       const communityData = {
         name: formData.name.trim(),
@@ -228,7 +215,8 @@ export default function CreateCommunityPage() {
         updatedAt: serverTimestamp()
       };
 
-      const docRef = await addDoc(collection(firestore, 'communities'), communityData);
+      const docRef = doc(firestore, 'communities', communityId);
+      await setDoc(docRef, communityData);
 
       router.push(`/communities/${docRef.id}`);
 
@@ -239,6 +227,8 @@ export default function CreateCommunityPage() {
       setLoading(false);
     }
   };
+  
+  const totalLoading = loading || uploading;
 
   if (!user) {
     return (
@@ -271,10 +261,10 @@ export default function CreateCommunityPage() {
         </p>
       </div>
 
-      {error && (
+      {(error || uploadError) && (
         <Alert variant="destructive" className="mb-6">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{error || uploadError}</AlertDescription>
         </Alert>
       )}
 
@@ -297,7 +287,7 @@ export default function CreateCommunityPage() {
                 value={formData.name}
                 onChange={(e) => handleInputChange('name', e.target.value)}
                 maxLength={50}
-                disabled={loading}
+                disabled={totalLoading}
               />
               <p className="text-sm text-muted-foreground">
                 {formData.name.length}/50 символов
@@ -315,7 +305,7 @@ export default function CreateCommunityPage() {
                 onChange={(e) => handleInputChange('description', e.target.value)}
                 maxLength={200}
                 rows={3}
-                disabled={loading}
+                disabled={totalLoading}
               />
               <p className="text-sm text-muted-foreground">
                 {formData.description.length}/200 символов
@@ -332,7 +322,7 @@ export default function CreateCommunityPage() {
                 value={formData.fullDescription}
                 onChange={(e) => handleInputChange('fullDescription', e.target.value)}
                 rows={5}
-                disabled={loading}
+                disabled={totalLoading}
               />
             </div>
 
@@ -343,7 +333,7 @@ export default function CreateCommunityPage() {
               <Select
                 value={formData.category}
                 onValueChange={(value) => handleInputChange('category', value)}
-                disabled={loading}
+                disabled={totalLoading}
               >
                 <SelectTrigger id="category">
                   <SelectValue placeholder="Выберите категорию" />
@@ -369,7 +359,7 @@ export default function CreateCommunityPage() {
                 id="isPrivate"
                 checked={formData.isPrivate}
                 onCheckedChange={(checked) => handleInputChange('isPrivate', checked)}
-                disabled={loading}
+                disabled={totalLoading}
               />
             </div>
           </CardContent>
@@ -405,7 +395,7 @@ export default function CreateCommunityPage() {
                     type="file"
                     accept="image/*"
                     onChange={handleImageSelect}
-                    disabled={loading}
+                    disabled={totalLoading}
                   />
                   <p className="text-sm text-muted-foreground mt-1">
                     Рекомендуемый размер: 400x400px, макс. 5 МБ
@@ -436,7 +426,7 @@ export default function CreateCommunityPage() {
                     type="file"
                     accept="image/*"
                     onChange={handleCoverSelect}
-                    disabled={loading}
+                    disabled={totalLoading}
                   />
                   <p className="text-sm text-muted-foreground mt-1">
                     Рекомендуемый размер: 1200x400px, макс. 5 МБ
@@ -444,6 +434,7 @@ export default function CreateCommunityPage() {
                 </div>
               </div>
             </div>
+             {uploading && <Progress value={progress} className="w-full mt-2" />}
           </CardContent>
         </Card>
 
@@ -461,7 +452,7 @@ export default function CreateCommunityPage() {
               value={formData.rules}
               onChange={(e) => handleInputChange('rules', e.target.value)}
               rows={8}
-              disabled={loading}
+              disabled={totalLoading}
             />
           </CardContent>
         </Card>
@@ -470,13 +461,13 @@ export default function CreateCommunityPage() {
           <Button
             type="submit"
             size="lg"
-            disabled={loading}
+            disabled={totalLoading}
             className="flex-1"
           >
-            {loading ? (
+            {totalLoading ? (
               <>
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Создание...
+                {uploading ? `Загрузка... ${progress}%` : 'Создание...'}
               </>
             ) : (
               'Создать сообщество'
@@ -487,7 +478,7 @@ export default function CreateCommunityPage() {
               type="button"
               variant="outline"
               size="lg"
-              disabled={loading}
+              disabled={totalLoading}
             >
               Отмена
             </Button>
@@ -497,5 +488,4 @@ export default function CreateCommunityPage() {
     </div>
   );
 }
-
     

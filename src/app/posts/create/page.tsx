@@ -1,3 +1,4 @@
+
 // src/app/posts/create/page.tsx
 // Страница создания нового пользовательского поста
 // Форма с редактором и загрузкой главного фото. После публикации — переход к посту.
@@ -7,9 +8,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { useFirestore, useStorage, useUser } from '@/firebase';
+import { collection, addDoc, serverTimestamp, doc } from 'firebase/firestore';
+import { useFirestore, useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,6 +20,8 @@ import { ArrowLeft, Upload, Loader2, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
+import { useFileUpload } from '@/hooks/use-file-upload';
+import { Progress } from '@/components/ui/progress';
 
 const CKEditorWrapper = dynamic(() => import('@/components/CKEditorWrapper'), {
   ssr: false,
@@ -35,7 +37,7 @@ export default function CreatePostPage() {
   const router = useRouter();
   const { user } = useUser();
   const firestore = useFirestore();
-  const storage = useStorage();
+  const { uploadFiles, uploading, progress, error: uploadError } = useFileUpload({ maxFiles: 1, maxSizeInMB: 5 });
 
 
   // Состояния формы
@@ -92,7 +94,7 @@ export default function CreatePostPage() {
     e.preventDefault();
     setError('');
 
-    if (!user || !firestore || !storage) {
+    if (!user || !firestore) {
       setError('Необходимо войти');
       router.push('/auth');
       return;
@@ -103,10 +105,13 @@ export default function CreatePostPage() {
     try {
       let imageUrl = '';
       if (imageFile) {
-        const name = `${Date.now()}_${imageFile.name}`;
-        const fileRef = ref(storage, `posts/images/${name}`);
-        await uploadBytes(fileRef, imageFile);
-        imageUrl = await getDownloadURL(fileRef);
+        const postId = doc(collection(firestore, 'temp')).id;
+        const uploadResult = await uploadFiles([imageFile], 'posts', postId);
+        if(uploadResult.length > 0) {
+            imageUrl = uploadResult[0].url;
+        } else {
+            throw new Error(uploadError || "Failed to upload image");
+        }
       }
       // Добавляем пост
       const docRef = await addDoc(collection(firestore, 'posts'), {
@@ -131,6 +136,8 @@ export default function CreatePostPage() {
       setLoading(false);
     }
   };
+  
+  const totalLoading = loading || uploading;
 
   if (!user) {
     return (
@@ -162,10 +169,10 @@ export default function CreatePostPage() {
           Опишите ваш опыт, задайте вопрос или просто поделитесь историей.
         </p>
       </div>
-      {error && (
+      {(error || uploadError) && (
         <Alert variant="destructive" className="mb-6">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{error || uploadError}</AlertDescription>
         </Alert>
       )}
       <form onSubmit={handleSubmit}>
@@ -180,7 +187,7 @@ export default function CreatePostPage() {
               <Select
                 value={type}
                 onValueChange={setType}
-                disabled={loading}
+                disabled={totalLoading}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Выберите тип" />
@@ -200,7 +207,7 @@ export default function CreatePostPage() {
                 value={title}
                 onChange={e => setTitle(e.target.value)}
                 maxLength={120}
-                disabled={loading}
+                disabled={totalLoading}
                 required
               />
               <p className="text-sm text-muted-foreground">{title.length}/120</p>
@@ -221,13 +228,14 @@ export default function CreatePostPage() {
                     type="file"
                     accept="image/*"
                     onChange={handleImageSelect}
-                    disabled={loading}
+                    disabled={totalLoading}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
                     Макс. 5 МБ, оптимально 800x600px
                   </p>
                 </div>
               </div>
+              {uploading && <Progress value={progress} className="w-full mt-2" />}
             </div>
             {/* Контент (текст или ckeditor) */}
             <div className="space-y-2">
@@ -243,13 +251,13 @@ export default function CreatePostPage() {
           <Button
             type="submit"
             size="lg"
-            disabled={loading}
+            disabled={totalLoading}
             className="flex-1"
           >
-            {loading ? (
+            {totalLoading ? (
               <>
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Публикуем...
+                {uploading ? `Загрузка... ${progress}%` : 'Публикация...'}
               </>
             ) : (
               'Опубликовать'
@@ -260,7 +268,7 @@ export default function CreatePostPage() {
               type="button"
               variant="outline"
               size="lg"
-              disabled={loading}
+              disabled={totalLoading}
             >
               Отмена
             </Button>
