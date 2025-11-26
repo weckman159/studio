@@ -3,6 +3,8 @@
 export interface User {
   id: string;
   name: string;
+  displayName?: string; // from firebase auth
+  role?: 'admin' | 'user';
   email?: string;
   photoURL?: string;
   bio?: string;
@@ -84,6 +86,32 @@ export interface MarketplaceItem {
   views?: number; // Количество просмотров
 }
 
+export interface Workshop {
+  id: string;
+  name: string;
+  city: string;
+  address: string;
+  specialization: string;
+  phone?: string;
+  rating: number;
+  reviewsCount: number;
+  imageUrl?: string;
+  description?: string;
+  website?: string;
+  source?: string;
+  updatedAt?: any;
+  lat?: number;
+  lng?: number;
+  createdBy?: string;
+}
+
+export interface Feedback {
+  id: string;
+  email?: string;
+  msg: string;
+  createdAt: any;
+}
+
 
 export const users: User[] = [
   {
@@ -93,6 +121,7 @@ export const users: User[] = [
     photoURL: 'https://images.unsplash.com/photo-1607031542107-f6f46b5d54e9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxtYW4lMjBwb3J0cmFpdHxlbnwwfHx8fDE3NjM5MjU3NzF8MA&ixlib=rb-4.1.0&q=80&w=1080',
     bio: 'Люблю скорость и тюнинг. Владелец нескольких интересных проектов.',
     nickname: 'ANovikov',
+    role: 'admin',
     currentCarIds: ['1'],
     stats: { posts: 12, likes: 345, wins: 2, followers: 150, following: 42 },
   },
@@ -102,6 +131,7 @@ export const users: User[] = [
     email: 'elena@example.com',
     photoURL: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8d29tYW4lMjBwb3J0cmFpdHxlbnwwfHx8fDE3NjM5NTk2MjN8MA&ixlib=rb-4.1.0&q=80&w=1080',
     bio: 'Путешествую на машине по самым красивым местам.',
+    role: 'user',
     stats: { posts: 5, likes: 189, wins: 1, followers: 88, following: 12 },
   },
 ];
@@ -193,6 +223,7 @@ export const comments: Comment[] = [
     { id: '2', postId: '1', authorId: '1', authorName: 'Alexey Novikov', content: 'Да, очень доволен!', createdAt: '2024-05-20T11:05:00Z' },
     { id: '3', postId: '2', authorId: '1', authorName: 'Alexey Novikov', content: 'Какие красивые места! Тоже мечтаю там побывать.', createdAt: '2024-05-18T16:00:00Z' },
 ]
+
 
 
 

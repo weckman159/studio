@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Link from 'next/link';
@@ -12,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Settings, User, LogOut, CarFront, Menu } from 'lucide-react';
+import { Settings, User, LogOut, CarFront, Menu, Shield } from 'lucide-react';
 import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -21,16 +22,39 @@ import { SidebarTrigger, useSidebar } from './ui/sidebar';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import GlobalSearch from './GlobalSearch';
+import { useEffect, useState } from 'react';
+import { doc, getDoc } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+import type { User as UserData } from '@/lib/data';
+
 
 export function Header() {
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
+  const firestore = useFirestore();
   const { toast } = useToast();
   const { toggleSidebar } = useSidebar();
+  const [profile, setProfile] = useState<UserData | null>(null);
 
+  useEffect(() => {
+    if (user && firestore) {
+      getDoc(doc(firestore, 'users', user.uid))
+        .then(docSnap => {
+          if (docSnap.exists()) {
+            setProfile({ id: docSnap.id, ...docSnap.data() } as UserData);
+          } else {
+             const mockUser = users.find(u => u.id === user.uid) || users.find(u => u.id === '1');
+             setProfile(mockUser || null);
+          }
+        });
+    } else {
+      setProfile(null);
+    }
+  }, [user, firestore]);
 
-  const currentUser = user ? users.find(u => u.id === user.uid) || users.find(u => u.id === '1') : null;
-  const userAvatar = currentUser ? PlaceHolderImages.find(img => img.id === currentUser.avatarId) : null;
+  const userAvatar = profile?.photoURL;
+  const userName = profile?.name || user?.email;
+
 
   const handleLogout = () => {
     if (auth) {
@@ -59,8 +83,8 @@ export function Header() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                   <Avatar className="h-10 w-10">
-                    {userAvatar && <AvatarImage src={userAvatar.imageUrl} alt="User Avatar" data-ai-hint={userAvatar.imageHint} />}
-                    <AvatarFallback>{user.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                    {userAvatar && <AvatarImage src={userAvatar} alt="User Avatar" />}
+                    <AvatarFallback>{userName?.charAt(0).toUpperCase()}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
@@ -68,7 +92,7 @@ export function Header() {
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium leading-none">
-                      {currentUser?.name || user.email}
+                      {userName}
                     </p>
                     <p className="text-xs leading-none text-muted-foreground">
                       {user.email}
@@ -88,6 +112,14 @@ export function Header() {
                     <span>Гараж</span>
                   </Link>
                 </DropdownMenuItem>
+                 {profile?.role === 'admin' && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin">
+                      <Shield className="mr-2 h-4 w-4" />
+                      <span>Админка</span>
+                    </Link>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem asChild>
                   <Link href="/settings">
                     <Settings className="mr-2 h-4 w-4" />
