@@ -210,8 +210,8 @@ service cloud.firestore {
        * @principle Allows community interaction on public content, but users retain control of their own comments.
        */
       match /comments/{commentId} {
-        allow get: if isOwner(userId) || isPublicProfile(userId);
-        allow list: if isOwner(userId) || isPublicProfile(userId);
+        allow read: if true;
+        allow list: if true;
         allow create: if isSignedIn() && isRequestingUser('userId') && request.resource.data.postId == postId;
         allow update: if isSignedIn() && resource != null && isDocumentOwner(resource.data) && request.resource.data.userId == resource.data.userId;
         allow delete: if isSignedIn() && resource != null && isDocumentOwner(resource.data);
