@@ -1,68 +1,145 @@
-
-
 {
   "entities": {
     "User": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
       "type": "object",
-      "description": "Represents a user of the auto community.",
+      "description": "Represents a user of the AutoSphere application.",
       "properties": {
-        "id": { "type": "string", "description": "Unique identifier for the user entity." },
-        "name": { "type": "string", "description": "User's display name." },
-        "email": { "type": "string", "description": "User's email address.", "format": "email" },
-        "avatar": { "type": "string", "description": "URL of the user's avatar image.", "format": "uri" },
-        "bio": { "type": "string", "description": "A short biography or description of the user." },
-        "createdAt": { "type": "string", "description": "Timestamp of when the user account was created.", "format": "date-time" }
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "User's full name."
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email address.",
+          "format": "email"
+        },
+        "avatar": {
+          "type": "string",
+          "description": "URL of the user's avatar image.",
+          "format": "uri"
+        },
+        "bio": {
+          "type": "string",
+          "description": "A short biography or description of the user."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp of when the user account was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp of when the user account was last updated.",
+          "format": "date-time"
+        },
+        "profileVisibility": {
+          "type": "string",
+          "description": "Profile visibility setting ('public' or 'private').",
+          "format": "string"
+        }
       },
-      "required": ["id", "name", "email", "createdAt"]
+      "required": [
+        "id",
+        "name",
+        "email",
+        "createdAt"
+      ]
     },
     "Post": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Post",
       "type": "object",
-      "description": "Represents a blog post or journal entry related to cars.",
+      "description": "Represents a user-generated post in the AutoSphere community.",
       "properties": {
-        "id": { "type": "string", "description": "Unique identifier for the post entity." },
-        "userId": { "type": "string", "description": "Reference to User. (Relationship: User 1:N Post)" },
-        "title": { "type": "string", "description": "Title of the blog post." },
-        "content": { "type": "string", "description": "The main content of the blog post." },
-        "images": { "type": "array", "description": "URLs of images associated with the post.", "items": { "type": "string" } },
-        "tags": { "type": "array", "description": "Tags associated with the post (e.g., 'tuning', 'repair').", "items": { "type": "string" } },
-        "likes": { "type": "number", "description": "Number of likes the post has received." },
-        "createdAt": { "type": "string", "description": "Timestamp of when the post was created.", "format": "date-time" }
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the post entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who created the post. (Relationship: User 1:N Post)"
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the post."
+        },
+        "content": {
+          "type": "string",
+          "description": "Main text content of the post."
+        },
+        "images": {
+          "type": "array",
+          "description": "Array of URLs for images included in the post.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tags": {
+          "type": "array",
+          "description": "Array of tags associated with the post (e.g., 'tuning', 'repair').",
+          "items": {
+            "type": "string"
+          }
+        },
+        "likes": {
+          "type": "number",
+          "description": "Number of likes the post has received."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp of when the post was created.",
+          "format": "date-time"
+        }
       },
-      "required": ["id", "userId", "title", "content", "createdAt"]
+      "required": [
+        "id",
+        "userId",
+        "title",
+        "content",
+        "createdAt"
+      ]
     },
     "Comment": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Comment",
       "type": "object",
-      "description": "Represents a comment on a blog post.",
+      "description": "Represents a comment on a post.",
       "properties": {
-        "id": { "type": "string", "description": "Unique identifier for the comment entity." },
-        "postId": { "type": "string", "description": "Reference to Post. (Relationship: Post 1:N Comment)" },
-        "userId": { "type": "string", "description": "Reference to User. (Relationship: User 1:N Comment)" },
-        "text": { "type": "string", "description": "The text content of the comment." },
-        "createdAt": { "type": "string", "description": "Timestamp of when the comment was created.", "format": "date-time" }
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the comment entity."
+        },
+        "postId": {
+          "type": "string",
+          "description": "Reference to the Post the comment belongs to. (Relationship: Post 1:N Comment)"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who created the comment. (Relationship: User 1:N Comment)"
+        },
+        "text": {
+          "type": "string",
+          "description": "Text content of the comment."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp of when the comment was created.",
+          "format": "date-time"
+        }
       },
-      "required": ["id", "postId", "userId", "text", "createdAt"]
-    },
-    "Car": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Car",
-      "type": "object",
-      "description": "Represents a car owned by a user.",
-      "properties": {
-        "id": { "type": "string", "description": "Unique identifier for the car entity." },
-        "userId": { "type": "string", "description": "Reference to User. (Relationship: User 1:N Car)" },
-        "brand": { "type": "string", "description": "The brand of the car (e.g., BMW, Audi)." },
-        "model": { "type": "string", "description": "The model of the car (e.g., X5, A4)." },
-        "year": { "type": "number", "description": "The year the car was manufactured." },
-        "engine": { "type": "string", "description": "The engine specification of the car." },
-        "photo": { "type": "string", "description": "URL of the car's photo.", "format": "uri" }
-      },
-      "required": ["id", "userId", "brand", "model", "year", "engine"]
+      "required": [
+        "id",
+        "postId",
+        "userId",
+        "text",
+        "createdAt"
+      ]
     },
     "FeaturedCar": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -70,47 +147,93 @@
       "type": "object",
       "description": "Represents the 'Car of the Day'.",
       "properties": {
-        "date": { "type": "string", "description": "The date for which this car is featured (YYYY-MM-DD)." },
-        "carId": { "type": "string", "description": "Reference to Car. (Relationship: Car 1:N FeaturedCar)" },
-        "userId": { "type": "string", "description": "Reference to User who owns the featured car." }
+        "date": {
+          "type": "string",
+          "description": "Date for which the car is featured.  It is expected that this is stored as 'YYYY-MM-DD'.",
+          "format": "string"
+        },
+        "carId": {
+          "type": "string",
+          "description": "Reference to the Car that is featured. (Relationship: Car 1:N FeaturedCar)"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who owns the featured car. (Relationship: User 1:N FeaturedCar)"
+        }
       },
-      "required": ["date", "carId", "userId"]
+      "required": [
+        "date",
+        "carId",
+        "userId"
+      ]
     },
-     "PostLike": {
+    "Car": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "PostLike",
+      "title": "Car",
       "type": "object",
-      "description": "Represents a user's 'like' on a post. Used to ensure a user can only like a post once.",
+      "description": "Represents a car owned by a user.",
       "properties": {
-        "userId": { "type": "string", "description": "The ID of the user who liked the post." },
-        "postId": { "type": "string", "description": "The ID of the post that was liked." },
-        "createdAt": { "type": "string", "description": "Timestamp of when the like was created.", "format": "date-time" }
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the car entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who owns the car. (Relationship: User 1:N Car)"
+        },
+        "brand": {
+          "type": "string",
+          "description": "Brand of the car (e.g., BMW, Audi)."
+        },
+        "model": {
+          "type": "string",
+          "description": "Model of the car (e.g., X5, A4)."
+        },
+        "year": {
+          "type": "number",
+          "description": "Year the car was manufactured."
+        },
+        "photo": {
+          "type": "string",
+          "description": "URL of the car's photo.",
+          "format": "uri"
+        }
       },
-      "required": ["userId", "postId", "createdAt"]
+      "required": [
+        "id",
+        "userId",
+        "brand",
+        "model",
+        "year"
+      ]
     },
-    "UserSubscription": {
+    "UserSettings": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "UserSubscription",
+      "title": "UserSettings",
       "type": "object",
-      "description": "Represents a subscription from one user (follower) to another (followed).",
+      "description": "Represents user-specific settings for the application, including notifications and privacy preferences.",
       "properties": {
-        "followerId": { "type": "string", "description": "The user who is subscribing." },
-        "followedId": { "type": "string", "description": "The user who is being subscribed to." },
-        "createdAt": { "type": "string", "description": "Timestamp of the subscription.", "format": "date-time" }
+        "userId": {
+          "type": "string",
+          "description": "Unique identifier for the user settings entity. This should match the User ID."
+        },
+        "notifications": {
+          "type": "string",
+          "description": "Embedded JSON string representing notification settings.  Fields include emailNotifications, newComments, newLikes, newFollowers, marketplaceMessages, and eventReminders."
+        },
+        "privacy": {
+          "type": "string",
+          "description": "Embedded JSON string representing privacy settings. Fields include profileVisibility, showEmail, showGarage, and allowMessages."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp of when the user settings were last updated.",
+          "format": "date-time"
+        }
       },
-      "required": ["followerId", "followedId", "createdAt"]
-    },
-    "UserFavorite": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "UserFavorite",
-      "type": "object",
-      "description": "Represents a user's favorited post.",
-      "properties": {
-        "userId": { "type": "string", "description": "The user who favorited the post." },
-        "postId": { "type": "string", "description": "The post that was favorited." },
-        "createdAt": { "type": "string", "description": "Timestamp of when the post was favorited.", "format": "date-time" }
-      },
-      "required": ["userId", "postId", "createdAt"]
+      "required": [
+        "userId"
+      ]
     }
   },
   "auth": {
@@ -125,84 +248,115 @@
         "path": "/users/{userId}",
         "definition": {
           "entityName": "User",
-          "schema": { "$ref": "#/backend/entities/User" },
-          "description": "Stores user profiles. Includes fields like name, email, avatar, and bio.",
-          "params": [{ "name": "userId", "description": "The unique identifier for the user." }]
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profiles. Includes denormalized 'profileVisibility' field from userSettings for authorization independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            }
+          ]
         }
       },
       {
         "path": "/users/{userId}/cars/{carId}",
         "definition": {
           "entityName": "Car",
-          "schema": { "$ref": "#/backend/entities/Car" },
-          "description": "Stores car information owned by users. Path-based ownership enforced.",
+          "schema": {
+            "$ref": "#/backend/entities/Car"
+          },
+          "description": "Stores car information for each user.  Path-based ownership.",
           "params": [
-            { "name": "userId", "description": "The unique identifier for the user." },
-            { "name": "carId", "description": "The unique identifier for the car." }
-          ]
-        }
-      },
-       {
-        "path": "/users/{userId}/favorites/{postId}",
-        "definition": {
-          "entityName": "UserFavorite",
-          "schema": { "$ref": "#/backend/entities/UserFavorite" },
-          "description": "Stores a user's favorite posts. Path-based ownership enforced.",
-          "params": [
-            { "name": "userId", "description": "The user who favorited the post." },
-            { "name": "postId", "description": "The favorited post's ID." }
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "carId",
+              "description": "The unique identifier of the car."
+            }
           ]
         }
       },
       {
-        "path": "/posts/{postId}",
+        "path": "/users/{userId}/posts/{postId}",
         "definition": {
           "entityName": "Post",
-          "schema": { "$ref": "#/backend/entities/Post" },
-          "description": "Stores posts. Includes the denormalized `userId`.",
-          "params": [{ "name": "postId", "description": "The unique identifier for the post." }]
-        }
-      },
-       {
-        "path": "/posts/{postId}/likes/{userId}",
-        "definition": {
-          "entityName": "PostLike",
-          "schema": { "$ref": "#/backend/entities/PostLike" },
-          "description": "Tracks likes on a post. The document ID is the user ID.",
+          "schema": {
+            "$ref": "#/backend/entities/Post"
+          },
+          "description": "Stores posts created by each user. Path-based ownership.",
           "params": [
-            { "name": "postId", "description": "The post being liked." },
-            { "name": "userId", "description": "The user who liked the post." }
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "postId",
+              "description": "The unique identifier of the post."
+            }
           ]
         }
       },
       {
-        "path": "/comments/{commentId}",
+        "path": "/users/{userId}/posts/{postId}/comments/{commentId}",
         "definition": {
           "entityName": "Comment",
-          "schema": { "$ref": "#/backend/entities/Comment" },
-          "description": "Stores comments. Includes denormalized `postId` and `userId`.",
-          "params": [{ "name": "commentId", "description": "The unique identifier for the comment." }]
+          "schema": {
+            "$ref": "#/backend/entities/Comment"
+          },
+          "description": "Stores comments for each post. Path-based ownership.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "postId",
+              "description": "The unique identifier of the post."
+            },
+            {
+              "name": "commentId",
+              "description": "The unique identifier of the comment."
+            }
+          ]
         }
       },
       {
-        "path": "/featured_cars/{date}",
+        "path": "/featuredCars/{date}",
         "definition": {
           "entityName": "FeaturedCar",
-          "schema": { "$ref": "#/backend/entities/FeaturedCar" },
-          "description": "Stores the 'Car of the Day', with fields for `carId` and `userId`.",
-          "params": [{ "name": "date", "description": "The date for which this car is featured (YYYY-MM-DD)." }]
+          "schema": {
+            "$ref": "#/backend/entities/FeaturedCar"
+          },
+          "description": "Stores the 'Car of the Day' information, keyed by date.",
+          "params": [
+            {
+              "name": "date",
+              "description": "The date for which the car is featured (YYYY-MM-DD)."
+            }
+          ]
         }
       },
-       {
-        "path": "/subscriptions/{subscriptionId}",
+      {
+        "path": "/userSettings/{userId}",
         "definition": {
-          "entityName": "UserSubscription",
-          "schema": { "$ref": "#/backend/entities/UserSubscription" },
-          "description": "Stores user subscription relationships (follower/followed).",
-          "params": [{ "name": "subscriptionId", "description": "The unique ID for the subscription document." }]
+          "entityName": "UserSettings",
+          "schema": {
+            "$ref": "#/backend/entities/UserSettings"
+          },
+          "description": "Stores user-specific settings.  Profile visibility is denormalized to the users collection for Authorization Independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            }
+          ]
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to support the AutoSphere application, focusing on posts, user garages, car profiles, and a featured 'Car of the Day'. It prioritizes authorization independence by storing ownership information directly within documents, avoiding the need for complex `get()` calls in security rules. Segregation ensures each collection has a consistent security posture. The structure uses path-based ownership for user-owned data and membership maps where collaboration is required.\\n\\n*   `/users/{userId}`: Stores user profiles. Path-based ownership is used, making security rules straightforward.\\n*   `/users/{userId}/cars/{carId}`: Stores car information owned by users. This hierarchical structure simplifies ownership-based access control.\\n*   `/users/{userId}/favorites/{postId}`: Stores a user's favorited posts. The path ensures a user can only manage their own favorites list.\\n*   `/posts/{postId}`: Stores posts. The `userId` field within each document enables filtering posts by owner.\\n*   `/posts/{postId}/likes/{userId}`: A subcollection to manage post likes. Using the `userId` as the document ID provides an idempotent way to handle likes and prevents duplicates.\\n*   `/comments/{commentId}`:  Stores comments. The `postId` and `userId` enable filtering and associating comments with posts and users.\\n*   `/featured_cars/{date}`: Stores the 'Car of the Day', with fields for `carId` and `userId` to link back to the car and its owner.\\n*   `/subscriptions/{subscriptionId}`: A top-level collection to manage user-to-user subscriptions. Each document contains `followerId` and `followedId` to represent the relationship, allowing for efficient querying of both followers and followed users.\\n\\nThis design achieves authorization independence through denormalization by including the `userId` in the `posts` and `comments` collections. The structure also supports the required QAPs. The segregation of data into separate collections ensures that `list` operations can be secured appropriately."
+    "reasoning": "The Firestore data structure is designed to support the features of the AutoSphere application, focusing on user profiles, car management, posts, and community interaction. Key considerations include authorization independence, data consistency, and efficient querying. The structure leverages path-based ownership for user-specific data and denormalization where needed for authorization.\n\n*   **Users Collection:** Stores user profiles with basic information (name, email, profile visibility). Profile visibility settings are duplicated to the `users` collection to avoid a `get()` call to the `/userSettings/{userId}` collection.\n*   **Cars Collection:** Stores car information, using a subcollection under each user to ensure easy management and querying of a user's cars.\n*   **Posts Collection:** Stores user-generated posts. Posts are stored in a subcollection under each user.\n*   **Comments Collection:** Stores comments related to each post, located as a subcollection under the post.\n*   **FeaturedCars Collection:** Stores the 'Car of the Day' information, keyed by date.  It includes references to the car and user.\n*   **UserSettings Collection:** Stores user-specific settings for notifications and privacy.\n\nThis structure ensures Authorization Independence by:\n\n*   Storing ownership information directly within each document (e.g., `userId` in `cars`, `posts`, and `comments`).\n*   Duplicating profile visibility settings from `userSettings` to the `users` collection.\n\nThis approach avoids the need for complex `get()` calls in security rules and enables atomic operations.\n\nQAPs (Rules are not Filters) are supported by:\n\n*   Structural Segregation:  Data with different access control needs (e.g., public vs. private profiles) are stored in separate collections or subcollections (e.g., user profiles vs. user settings).\n*   Path-Based Ownership: Using paths like `/users/{userId}/cars/{carId}` provides inherent ownership context, simplifying security rules for listing and accessing user-owned resources."
   }
 }
