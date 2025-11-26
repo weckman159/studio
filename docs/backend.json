@@ -304,6 +304,23 @@
         "updatedAt": { "type": "string", "format": "date-time", "description": "Timestamp of the last update." }
       },
       "required": ["id", "name", "address", "city"]
+    },
+    "WorkshopReview": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "WorkshopReview",
+      "type": "object",
+      "description": "Represents a user's review for a workshop.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the review." },
+        "workshopId": { "type": "string", "description": "ID of the workshop being reviewed." },
+        "userId": { "type": "string", "description": "ID of the user who wrote the review." },
+        "userName": { "type": "string", "description": "Name of the user." },
+        "userAvatar": { "type": "string", "format": "uri", "description": "URL of the user's avatar." },
+        "rating": { "type": "number", "description": "Rating given by the user (1-5)." },
+        "text": { "type": "string", "description": "The text content of the review." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the review was created." }
+      },
+      "required": ["id", "workshopId", "userId", "rating", "text", "createdAt"]
     }
   },
   "auth": {
@@ -457,8 +474,26 @@
             }
           ]
         }
+      },
+      {
+        "path": "/workshopReviews/{reviewId}",
+        "definition": {
+          "entityName": "WorkshopReview",
+          "schema": {
+            "$ref": "#/backend/entities/WorkshopReview"
+          },
+          "description": "Stores user reviews for car workshops.",
+          "params": [
+            {
+              "name": "reviewId",
+              "description": "The unique identifier for the review."
+            }
+          ]
+        }
       }
     ],
     "reasoning": "The Firestore data structure is designed to support the features of the AutoSphere application, focusing on user profiles, car management, posts, and community interaction. Key considerations include authorization independence, data consistency, and efficient querying. The structure leverages path-based ownership for user-specific data and denormalization where needed for authorization.\n\n*   **Users Collection:** Stores user profiles with basic information (name, email, profile visibility). Profile visibility settings are duplicated to the `users` collection to avoid a `get()` call to the `/userSettings/{userId}` collection.\n*   **Cars Collection:** Stores car information, using a subcollection under each user to ensure easy management and querying of a user's cars.\n*   **Posts Collection:** Stores user-generated posts. Posts are stored in a subcollection under each user.\n*   **Comments Collection:** Stores comments related to each post, located as a subcollection under the post.\n*   **FeaturedCars Collection:** Stores the 'Car of the Day' information, keyed by date.  It includes references to the car and user.\n*   **UserSettings Collection:** Stores user-specific settings for notifications and privacy.\n\nThis structure ensures Authorization Independence by:\n\n*   Storing ownership information directly within each document (e.g., `userId` in `cars`, `posts`, and `comments`).\n*   Duplicating profile visibility settings from `userSettings` to the `users` collection.\n\nThis approach avoids the need for complex `get()` calls in security rules and enables atomic operations.\n\nQAPs (Rules are not Filters) are supported by:\n\n*   Structural Segregation:  Data with different access control needs (e.g., public vs. private profiles) are stored in separate collections or subcollections (e.g., user profiles vs. user settings).\n*   Path-Based Ownership: Using paths like `/users/{userId}/cars/{carId}` provides inherent ownership context, simplifying security rules for listing and accessing user-owned resources."
   }
 }
+
+    

@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 /**
@@ -243,6 +244,24 @@ service cloud.firestore {
       allow read: if true;
       allow write: if false;
     }
+    
+    // ------------------------------------------------------------------------
+    // Collection: workshopReviews
+    // ------------------------------------------------------------------------
+    /**
+     * @description Manages user reviews for workshops.
+     * @path /workshopReviews/{reviewId}
+     * @allow (read) Anyone can read workshop reviews.
+     * @allow (create) Any authenticated user can create a review.
+     * @allow (update, delete) Only the user who created the review can modify or delete it.
+     * @principle Publicly readable, but writing and modification are controlled.
+     */
+    match /workshopReviews/{reviewId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isRequestingUser('userId');
+      allow update, delete: if isSignedIn() && isDocumentOwner(resource.data);
+    }
   }
 }
+
     
