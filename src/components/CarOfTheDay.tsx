@@ -93,9 +93,9 @@ export function CarOfTheDay() {
   const ownerAvatar = PlaceHolderImages.find(img => img.id === owner.avatarId);
 
   return (
-    <Card className="overflow-hidden relative group">
-       <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/70 to-blue-600/70 rounded-lg blur-md opacity-50 group-hover:opacity-80 group-hover:blur-lg transition duration-500"></div>
-      <div className="relative bg-card">
+    <div className="relative group">
+      <div className="absolute -inset-0.5 bg-gradient-to-r from-primary to-blue-600 rounded-lg blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+      <Card className="relative overflow-hidden">
         <CardHeader>
           <CardTitle className="flex items-center text-primary">
               <Award className="mr-2 h-6 w-6"/>Автомобиль дня
@@ -133,7 +133,7 @@ export function CarOfTheDay() {
               Голосовать
           </Button>
         </CardFooter>
-      </div>
-    </Card>
+      </Card>
+    </div>
   );
 }
