@@ -16,11 +16,10 @@ import {
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Heart, MessageCircle, Bookmark, FileText } from "lucide-react";
+import { Heart, MessageCircle, Bookmark } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { CommentSheet } from "./CommentSheet";
 import { useUser } from "@/firebase";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "./ui/carousel";
 import { updateDoc, doc, increment, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 
@@ -34,23 +33,9 @@ export function PostCard({ post, user, car }: PostCardProps) {
   const { user: authUser } = useUser();
   const firestore = useFirestore();
   
-  const getImageUrls = () => {
-    let urls: {url: string, hint: string}[] = [];
-    if(post.imageUrls) {
-       urls = post.imageUrls.map(url => ({url, hint: 'uploaded image'}));
-    } else if (post.imageIds) {
-      post.imageIds.forEach(id => {
-        const placeholder = PlaceHolderImages.find(p => p.id === id);
-        if(placeholder) urls.push({url: placeholder.imageUrl, hint: placeholder.imageHint});
-      });
-    } else if (post.imageUrl) {
-      urls.push({ url: post.imageUrl, hint: "uploaded image" });
-    }
-    return urls;
-  }
-  
-  const finalImageUrls = getImageUrls();
+  const mainImage = post.imageUrl || post.imageUrls?.[0];
   const userAvatar = user.photoURL;
+
   const [formattedDate, setFormattedDate] = useState('');
   const [isCommentSheetOpen, setCommentSheetOpen] = useState(false);
   const [isLiked, setIsLiked] = useState(post.likedBy?.includes(authUser?.uid || '') || false);
@@ -113,38 +98,6 @@ export function PostCard({ post, user, car }: PostCardProps) {
         postId={post.id}
     />
     <Card className="overflow-hidden">
-      {finalImageUrls.length > 0 ? (
-          <Carousel className="w-full rounded-t-lg overflow-hidden bg-muted">
-            <CarouselContent>
-              {finalImageUrls.map((img, index) => (
-                <CarouselItem key={index}>
-                   <Link href={`/posts/${post.id}`} className="block">
-                      <div className="relative aspect-video">
-                        <Image
-                          src={img.url}
-                          alt={`${post.title} - image ${index + 1}`}
-                          fill
-                          className="object-cover"
-                          data-ai-hint={img.hint}
-                        />
-                      </div>
-                   </Link>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            {finalImageUrls.length > 1 && (
-              <>
-                <CarouselPrevious className="left-2" />
-                <CarouselNext className="right-2" />
-              </>
-            )}
-          </Carousel>
-        ) : (
-          <div className="aspect-video w-full bg-muted flex items-center justify-center rounded-t-lg">
-            <FileText className="h-16 w-16 text-muted-foreground/30" />
-          </div>
-        )
-      }
       <CardHeader>
         <div className="flex items-center space-x-3 mb-2">
           <Avatar>
@@ -162,20 +115,29 @@ export function PostCard({ post, user, car }: PostCardProps) {
               </Link>
             </p>
           </div>
-           {formattedDate && <p className="text-sm text-muted-foreground ml-auto">{formattedDate}</p>}
+           {formattedDate && <p className="text-sm text-muted-foreground ml-auto whitespace-nowrap">{formattedDate}</p>}
         </div>
         <CardTitle>
-            <Link href={`/posts/${post.id}`} className="text-2xl font-bold hover:underline">
+            <Link href={`/posts/${post.id}`} className="text-xl font-bold hover:underline">
                 {post.title}
             </Link>
         </CardTitle>
-        {post.type && <Badge variant="outline" className="w-fit">{post.type}</Badge>}
+        {post.type && <Badge variant="outline" className="w-fit mt-1">{post.type}</Badge>}
       </CardHeader>
       <CardContent>
+         {mainImage && (
+            <Link href={`/posts/${post.id}`} className="block mb-4 aspect-video relative rounded-lg overflow-hidden bg-muted">
+                <Image
+                    src={mainImage}
+                    alt={post.title}
+                    fill
+                    className="object-cover"
+                />
+            </Link>
+        )}
         <div 
-          className="text-card-foreground/80 line-clamp-4 whitespace-pre-line prose dark:prose-invert max-w-none"
-          dangerouslySetInnerHTML={{ __html: post.content }}
-        />
+          className="text-card-foreground/80 line-clamp-2 text-sm"
+        >{post.content.replace(/<[^>]*>?/gm, '')}</div>
         {post.tags && (
             <div className="flex flex-wrap gap-2 mt-4">
                 {post.tags.map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
@@ -203,3 +165,5 @@ export function PostCard({ post, user, car }: PostCardProps) {
     </>
   );
 }
+
+    

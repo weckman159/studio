@@ -178,6 +178,7 @@ export const posts: Post[] = [
     carId: '1',
     title: 'Новая выхлопная система!',
     content: 'Установил полный титановый выхлоп от Akrapovič. Звук просто космос! Машина стала дышать легче, а отстрелы радуют слух. \n\nДальше в планах чип-тюнинг Stage 2.',
+    imageUrl: 'https://images.unsplash.com/photo-1615644359756-d1058b89608a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxjYXIlMjBleGhhdXN0fGVufDB8fHx8MTc2MzkxNjA3MHww&ixlib=rb-4.1.0&q=80&w=1080',
     imageUrls: ['https://images.unsplash.com/photo-1615644359756-d1058b89608a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxjYXIlMjBleGhhdXN0fGVufDB8fHx8MTc2MzkxNjA3MHww&ixlib=rb-4.1.0&q=80&w=1080', 'https://images.unsplash.com/photo-1628519592419-bf288f08cef5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxzcG9ydHMlMjBjYXJ8ZW58MHx8fHwxNzYzOTc2NTgyfDA&ixlib=rb-4.1.0&q=80&w=1080'],
     tags: ['тюнинг', 'ремонт'],
     type: 'Блог',
@@ -208,6 +209,7 @@ export const posts: Post[] = [
     carId: '2',
     title: 'Подготовка к дрифт-сезону',
     content: 'Начинаем готовить Silvia к летнему дрифт-сезону. Полностью перебрали подвеску, установили выворот. \n\nВпереди настройка и первые тесты на треке.',
+    imageUrl: 'https://images.unsplash.com/photo-1541443724873-8ba49db7a737?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxjYXIlMjBkcmlmdHxlbnwwfHx8fDE3NjQwMDQ1MTV8MA&ixlib=rb-4.1.0&q=80&w=1080',
     imageUrls: ['https://images.unsplash.com/photo-1541443724873-8ba49db7a737?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxjYXIlMjBkcmlmdHxlbnwwfHx8fDE3NjQwMDQ1MTV8MA&ixlib=rb-4.1.0&q=80&w=1080', 'https://images.unsplash.com/photo-1605906457463-5eb60f753738?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxqZG0lMjBjYXJ8ZW58MHx8fHwxNzYzOTE5NTE0fDA&ixlib=rb-4.1.0&q=80&w=1080'],
     tags: ['тюнинг', 'спорт'],
     type: 'Блог',
@@ -229,4 +231,5 @@ export const comments: Comment[] = [
 
 
 
+    
     
