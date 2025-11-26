@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Search, Wrench, MapPin, Star, MessageSquare } from 'lucide-react';
+import { Search, Wrench, MapPin, Star, MessageSquare, Plus } from 'lucide-react';
 import Image from 'next/image';
 
 // Интерфейс мастерской
@@ -85,7 +85,7 @@ export default function WorkshopsPage() {
   // UI загрузки
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div>
         <div className="flex items-center justify-center min-h-[300px]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
@@ -99,12 +99,21 @@ export default function WorkshopsPage() {
   return (
     <div>
       {/* Хедер */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">Мастерские</h1>
-        <p className="text-muted-foreground">
-          Найдите проверенный автосервис в вашем городе
-        </p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div>
+            <h1 className="text-4xl font-bold mb-2">Мастерские</h1>
+            <p className="text-muted-foreground">
+                Найдите проверенный автосервис в вашем городе
+            </p>
+        </div>
+        <Link href="/workshops/create">
+            <Button size="lg">
+                <Plus className="mr-2 h-5 w-5" />
+                Добавить мастерскую
+            </Button>
+        </Link>
       </div>
+
 
       {/* Поиск и фильтры */}
       <div className="mb-8 space-y-4">
@@ -144,42 +153,44 @@ export default function WorkshopsPage() {
       ) : (
         <div className="space-y-6">
           {filteredWorkshops.map(ws => (
-            <Card key={ws.id} className="hover:shadow-lg transition-shadow">
-              <CardContent className="p-4 flex flex-col sm:flex-row gap-4">
-                {ws.imageUrl ? (
-                  <div className="relative w-full sm:w-48 h-40 sm:h-auto flex-shrink-0">
-                    <Image
-                      src={ws.imageUrl}
-                      alt={ws.name}
-                      fill
-                      className="object-cover rounded-md"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-full sm:w-48 h-40 sm:h-auto flex-shrink-0 bg-muted rounded-md flex items-center justify-center">
-                    <Wrench className="w-12 h-12 text-muted-foreground" />
-                  </div>
-                )}
-                <div className="flex-1">
-                  <Badge variant="secondary" className="mb-2">{ws.specialization}</Badge>
-                  <h3 className="text-xl font-bold">{ws.name}</h3>
-                  <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                    <MapPin className="h-4 w-4" />
-                    {ws.address}
-                  </p>
-                  <div className="flex items-center gap-4 mt-3">
-                    <div className="flex items-center gap-1">
-                      <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
-                      <span className="font-bold">{ws.rating}</span>
+            <Link key={ws.id} href={`/workshops/${ws.id}`}>
+              <Card className="hover:shadow-lg transition-shadow">
+                <CardContent className="p-4 flex flex-col sm:flex-row gap-4">
+                  {ws.imageUrl ? (
+                    <div className="relative w-full sm:w-48 h-40 sm:h-auto flex-shrink-0">
+                      <Image
+                        src={ws.imageUrl}
+                        alt={ws.name}
+                        fill
+                        className="object-cover rounded-md"
+                      />
                     </div>
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <MessageSquare className="h-4 w-4" />
-                      <span>{ws.reviewsCount} отзывов</span>
+                  ) : (
+                    <div className="w-full sm:w-48 h-40 sm:h-auto flex-shrink-0 bg-muted rounded-md flex items-center justify-center">
+                      <Wrench className="w-12 h-12 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <Badge variant="secondary" className="mb-2">{ws.specialization}</Badge>
+                    <h3 className="text-xl font-bold">{ws.name}</h3>
+                    <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                      <MapPin className="h-4 w-4" />
+                      {ws.address}
+                    </p>
+                    <div className="flex items-center gap-4 mt-3">
+                      <div className="flex items-center gap-1">
+                        <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
+                        <span className="font-bold">{ws.rating.toFixed(1)}</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <MessageSquare className="h-4 w-4" />
+                        <span>{ws.reviewsCount} отзывов</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </Link>
           ))}
         </div>
       )}

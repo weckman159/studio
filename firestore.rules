@@ -254,12 +254,14 @@ service cloud.firestore {
      * @description Stores car workshop information.
      * @path /workshops/{workshopId}
      * @allow (read) Any user can read workshop data.
+     * @allow (create) An authenticated user can add a new workshop.
      * @deny (write) Data is managed by a trusted backend function, not by clients.
      * @principle Publicly readable, but write access is restricted to backend services.
      */
     match /workshops/{workshopId} {
       allow read: if true;
-      allow write: if false;
+      allow create: if isSignedIn() && isRequestingUser('createdBy');
+      allow update, delete: if false;
     }
     
     // ------------------------------------------------------------------------
@@ -280,5 +282,3 @@ service cloud.firestore {
     }
   }
 }
-
-    
