@@ -6,6 +6,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -48,6 +49,7 @@ export function UserListDialog({ isOpen, onOpenChange, title, users }: UserListD
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>Список пользователей, которые {title.toLowerCase().endsWith('и') ? 'подписаны на этого пользователя.' : 'на которых подписан этот пользователь.'}</DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[60vh] -mx-6">
           <div className="px-6 divide-y">

@@ -50,8 +50,6 @@ export function EditProfileModal({ isOpen, setIsOpen, user, onSave }: EditProfil
   const { toast } = useToast();
   const { user: authUser, auth } = useUser();
   const firestore = useFirestore();
-  const storage = useStorage();
-
   const { uploadFiles, uploading, progress, error: uploadError } = useFileUpload({ maxFiles: 1, maxSizeInMB: 5 });
 
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -91,7 +89,7 @@ export function EditProfileModal({ isOpen, setIsOpen, user, onSave }: EditProfil
   };
 
   const onSubmit = async (data: ProfileFormValues) => {
-    if (!authUser || !firestore || !storage || !auth) {
+    if (!authUser || !firestore || !auth) {
       toast({ variant: "destructive", title: "Ошибка", description: "Необходима авторизация." });
       return;
     }
