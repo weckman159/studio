@@ -35,7 +35,9 @@ export interface Car {
 
 export interface Post {
   id: string;
-  userId: string;
+  authorId: string; // userId
+  authorName: string;
+  authorAvatar?: string;
   carId: string;
   title: string;
   content: string;
@@ -45,8 +47,9 @@ export interface Post {
   imageIds?: string[];
   tags: string[];
   type: string; // 'Блог', 'Фотоотчет', 'Вопрос', 'Мой опыт', 'Обзор'
-  likes: number;
-  comments: number;
+  likesCount: number;
+  likedBy: string[];
+  commentsCount: number;
   createdAt: string;
   updatedAt?: string;
 }
@@ -54,8 +57,10 @@ export interface Post {
 export interface Comment {
     id: string;
     postId: string;
-    userId: string;
-    text: string;
+    authorId: string; // userId
+    authorName: string;
+    authorAvatar?: string;
+    content: string;
     createdAt: string;
 }
 
@@ -121,47 +126,53 @@ export const cars: Car[] = [
 export const posts: Post[] = [
   {
     id: '1',
-    userId: '1',
+    authorId: '1',
+    authorName: 'Alexey Novikov',
     carId: '1',
     title: 'Новая выхлопная система!',
     content: 'Установил полный титановый выхлоп от Akrapovič. Звук просто космос! Машина стала дышать легче, а отстрелы радуют слух. \n\nДальше в планах чип-тюнинг Stage 2.',
     imageIds: ['post1', 'car1'],
     tags: ['тюнинг', 'ремонт'],
     type: 'Блог',
-    likes: 152,
-    comments: 2,
+    likesCount: 152,
+    likedBy: ['2'],
+    commentsCount: 2,
     createdAt: '2024-05-20T10:00:00Z',
   },
   {
     id: '2',
-    userId: '2',
+    authorId: '2',
+    authorName: 'Elena Petrova',
     carId: '3',
     title: 'Поездка на Алтай',
     content: 'Совершили большое путешествие на Алтай. Land Cruiser показал себя отлично на бездорожье. Проехали более 5000 км, посетили самые красивые озера и перевалы. \n\nВ следующем году планируем поехать на Байкал!',
     imageId: 'post2',
     tags: ['путешествия'],
     type: 'Фотоотчет',
-    likes: 210,
-    comments: 1,
+    likesCount: 210,
+    likedBy: [],
+    commentsCount: 1,
     createdAt: '2024-05-18T15:30:00Z',
   },
    {
     id: '3',
-    userId: '1',
+    authorId: '1',
+    authorName: 'Alexey Novikov',
     carId: '2',
     title: 'Подготовка к дрифт-сезону',
     content: 'Начинаем готовить Silvia к летнему дрифт-сезону. Полностью перебрали подвеску, установили выворот. \n\nВпереди настройка и первые тесты на треке.',
     imageIds: ['post3', 'car2'],
     tags: ['тюнинг', 'спорт'],
     type: 'Блог',
-    likes: 98,
-    comments: 0,
+    likesCount: 98,
+    likedBy: [],
+    commentsCount: 0,
     createdAt: '2024-05-15T09:00:00Z',
   },
 ];
 
 export const comments: Comment[] = [
-    { id: '1', postId: '1', userId: '2', text: 'Звук наверное пушка! 🔥', createdAt: '2024-05-20T11:00:00Z' },
-    { id: '2', postId: '1', userId: '1', text: 'Да, очень доволен!', createdAt: '2024-05-20T11:05:00Z' },
-    { id: '3', postId: '2', userId: '1', text: 'Какие красивые места! Тоже мечтаю там побывать.', createdAt: '2024-05-18T16:00:00Z' },
+    { id: '1', postId: '1', authorId: '2', authorName: 'Elena Petrova', content: 'Звук наверное пушка! 🔥', createdAt: '2024-05-20T11:00:00Z' },
+    { id: '2', postId: '1', authorId: '1', authorName: 'Alexey Novikov', content: 'Да, очень доволен!', createdAt: '2024-05-20T11:05:00Z' },
+    { id: '3', postId: '2', authorId: '1', authorName: 'Alexey Novikov', content: 'Какие красивые места! Тоже мечтаю там побывать.', createdAt: '2024-05-18T16:00:00Z' },
 ]
