@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PostCard } from "@/components/PostCard";
-import { Award, Calendar, Wrench } from "lucide-react";
+import { Award, Calendar, Wrench, Car as CarIcon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 export default function CarProfilePage({ params }: { params: { id: string } }) {
@@ -18,7 +18,6 @@ export default function CarProfilePage({ params }: { params: { id: string } }) {
   // It attempts to find the car in the mock data. If it fails,
   // it uses the first mock car as a fallback to render the page,
   // preventing a crash while indicating that the data is not the correct one.
-  // The root cause is the data structure not allowing a direct fetch of a car by its ID.
   let car = cars.find((c) => c.id === params.id);
   let pageTitle: string;
 
@@ -27,11 +26,13 @@ export default function CarProfilePage({ params }: { params: { id: string } }) {
   } else {
     // If car not found in mock data, it's likely a Firestore ID.
     // Use a placeholder car to render the page structure and avoid a 404 error.
-    car = { ...cars[0], id: params.id };
+    car = { ...cars[0], id: params.id, brand: 'Загрузка данных...', model: '' };
     pageTitle = `Автомобиль ${params.id}`;
   }
 
-  const carImage = PlaceHolderImages.find((img) => img.id === car.imageId);
+  const carImage = car.photoUrl || PlaceHolderImages.find((img) => img.id === car.imageId)?.imageUrl;
+  const carImageHint = car.photoUrl ? "user uploaded car" : PlaceHolderImages.find((img) => img.id === car.imageId)?.imageHint;
+
   const owner = users.find((u) => u.id === car.userId);
   const relatedPosts = posts.filter((p) => p.carId === car.id);
   const isCarOfTheDay = car.isCarOfTheDay;
@@ -42,15 +43,20 @@ export default function CarProfilePage({ params }: { params: { id: string } }) {
         <div className="md:col-span-2">
           <Card className="overflow-hidden">
             <CardHeader className="p-0">
-               {carImage && (
-                <div className="relative aspect-video">
-                  <Image
-                    src={carImage.imageUrl}
-                    alt={pageTitle}
-                    fill
-                    className="object-cover"
-                    data-ai-hint={carImage.imageHint}
-                  />
+               <div className="relative aspect-video bg-muted">
+                  {carImage ? (
+                    <Image
+                      src={carImage}
+                      alt={pageTitle}
+                      fill
+                      className="object-cover"
+                      data-ai-hint={carImageHint}
+                    />
+                  ) : (
+                     <div className="flex items-center justify-center h-full">
+                       <CarIcon className="w-24 h-24 text-muted-foreground"/>
+                     </div>
+                  )}
                   {isCarOfTheDay && (
                      <div className="absolute top-4 right-4">
                         <Badge variant="destructive" className="text-base font-bold py-2 px-4 shadow-lg animate-pulse">
@@ -60,7 +66,6 @@ export default function CarProfilePage({ params }: { params: { id: string } }) {
                      </div>
                   )}
                 </div>
-              )}
             </CardHeader>
             <CardContent className="p-6">
                 <CardTitle className="text-4xl font-bold">{pageTitle}</CardTitle>
@@ -116,6 +121,15 @@ export default function CarProfilePage({ params }: { params: { id: string } }) {
                         <p className="font-semibold">{car.engine}</p>
                     </div>
                 </div>
+                 {car.description && (
+                  <>
+                    <Separator/>
+                    <div>
+                        <p className="text-sm text-muted-foreground mb-1">Описание</p>
+                        <p className="text-sm whitespace-pre-line">{car.description}</p>
+                    </div>
+                  </>
+                 )}
             </CardContent>
           </Card>
         </div>

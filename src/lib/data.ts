@@ -4,7 +4,8 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  avatarId: string;
+  avatarId: string; // Will be replaced by photoURL
+  photoURL?: string;
   bio: string;
   nickname?: string;
   currentCarIds?: string[];
@@ -23,8 +24,12 @@ export interface Car {
   brand: string;
   model: string;
   year: number;
-  imageId: string;
   engine: string;
+  description?: string;
+  // Deprecated, use photoUrl
+  imageId: string; 
+  photoUrl?: string;
+  photoPath?: string;
   isCarOfTheDay?: boolean;
 }
 
@@ -83,6 +88,7 @@ export const cars: Car[] = [
     model: 'M3 G80',
     year: 2023,
     imageId: 'car1',
+    photoUrl: 'https://images.unsplash.com/photo-1628519592419-bf288f08cef5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxzcG9ydHMlMjBjYXJ8ZW58MHx8fHwxNzYzOTc2NTgyfDA&ixlib=rb-4.1.0&q=80&w=1080',
     engine: '3.0 L S58 twin-turbo I6',
     isCarOfTheDay: true,
   },
@@ -93,6 +99,7 @@ export const cars: Car[] = [
     model: 'Silvia S15',
     year: 2002,
     imageId: 'car2',
+     photoUrl: 'https://images.unsplash.com/photo-1605906457463-5eb60f753738?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxqZG0lMjBjYXJ8ZW58MHx8fHwxNzYzOTE5NTE0fDA&ixlib=rb-4.1.0&q=80&w=1080',
     engine: '2.0 L SR20DET I4',
   },
   {
@@ -102,6 +109,7 @@ export const cars: Car[] = [
     model: 'Land Cruiser 300',
     year: 2022,
     imageId: 'car3',
+    photoUrl: 'https://images.unsplash.com/photo-1667029187427-7a018063cc53?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxzdXYlMjBtb3VudGFpbnN8ZW58MHx8fHwxNzYzOTYwMzUwfDA&ixlib=rb-4.1.0&q=80&w=1080',
     engine: '3.4 L V35A-FTS twin-turbo V6',
   },
 ];

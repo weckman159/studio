@@ -6,7 +6,7 @@ import Image from "next/image";
 import type { Car, User } from "@/lib/data";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Edit, Trash2 } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Car as CarIcon } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,22 +36,28 @@ interface GarageCardProps {
 }
 
 export function GarageCard({ car, user, onEdit, onDelete, variant = 'default' }: GarageCardProps) {
-  const carImage = PlaceHolderImages.find((img) => img.id === car.imageId);
+  const carImage = car.photoUrl || PlaceHolderImages.find((img) => img.id === car.imageId)?.imageUrl;
+  const carImageHint = car.photoUrl ? "user uploaded car" : PlaceHolderImages.find((img) => img.id === car.imageId)?.imageHint;
+
 
   if (variant === 'compact') {
     return (
         <div className="flex items-center p-3 rounded-md transition-all hover:bg-muted/50">
-            {carImage && (
+            {carImage ? (
                  <Link href={`/car/${car.id}`}>
                     <Image
-                        src={carImage.imageUrl}
+                        src={carImage}
                         alt={`${car.brand} ${car.model}`}
                         width={64}
                         height={40}
                         className="rounded-md object-cover w-16 h-10"
-                        data-ai-hint={carImage.imageHint}
+                        data-ai-hint={carImageHint}
                     />
                  </Link>
+            ) : (
+              <div className="flex items-center justify-center w-16 h-10 bg-muted rounded-md">
+                  <CarIcon className="w-6 h-6 text-muted-foreground" />
+              </div>
             )}
             <div className="flex-grow ml-4">
                 <Link href={`/car/${car.id}`} className="font-semibold hover:underline leading-tight">
@@ -118,15 +124,19 @@ export function GarageCard({ car, user, onEdit, onDelete, variant = 'default' }:
         </div>
       )}
       <CardHeader className="p-0">
-        <Link href={`/car/${car.id}`} className="block aspect-video relative">
-          {carImage && (
+        <Link href={`/car/${car.id}`} className="block aspect-video relative bg-muted">
+          {carImage ? (
             <Image
-              src={carImage.imageUrl}
+              src={carImage}
               alt={`${car.brand} ${car.model}`}
               fill
               className="object-cover"
-              data-ai-hint={carImage.imageHint}
+              data-ai-hint={carImageHint}
             />
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <CarIcon className="w-12 h-12 text-muted-foreground"/>
+            </div>
           )}
         </Link>
       </CardHeader>
