@@ -68,17 +68,27 @@ service cloud.firestore {
     }
 
     /**
-     * Validates that the creatorId field in a new document matches the authenticated user.
+     * Validates that a required field in a new document matches the authenticated user's UID.
      */
     function isRequestingUser(field) {
       return isSignedIn() && request.resource.data[field] == request.auth.uid;
     }
 
     /**
-     * Checks ownership of a document via a 'userId' field inside the document data.
+     * Checks ownership of a document via a 'userId' or 'authorId' field inside the document data.
      */
     function isDocumentOwner(doc) {
-      return isSignedIn() && request.auth.uid == doc.authorId;
+      return isSignedIn() && (request.auth.uid == doc.userId || request.auth.uid == doc.authorId);
+    }
+    
+    /**
+     * Validates required fields for a new post.
+     */
+    function isValidPost() {
+        let data = request.resource.data;
+        return data.title is string && data.title.size() > 0 &&
+               data.content is string && data.content.size() > 0 &&
+               data.authorId == request.auth.uid;
     }
 
     // ------------------------------------------------------------------------
@@ -87,13 +97,13 @@ service cloud.firestore {
     /**
      * @description Manages all posts for the main feed.
      * @path /posts/{postId}
-     * @allow (read) Any user, including anonymous, can read all posts.
-     * @allow (create) An authenticated user can create a post.
+     * @allow (get, list) Any user, including anonymous, can read all posts.
+     * @allow (create) An authenticated user can create a valid post.
      * @allow (update, delete) Only the author of the post can update or delete it.
      */
     match /posts/{postId} {
       allow get, list: if true;
-      allow create: if isSignedIn() && isRequestingUser('authorId');
+      allow create: if isSignedIn() && isValidPost();
       allow update, delete: if isSignedIn() && isDocumentOwner(resource.data);
     }
     
