@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PlaceholderPage } from "@/components/PlaceholderPage";

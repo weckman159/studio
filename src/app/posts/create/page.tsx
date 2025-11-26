@@ -1,19 +1,24 @@
+// src/app/posts/create/page.tsx
+// Страница создания нового пользовательского поста
+// Форма с редактором и загрузкой главного фото. После публикации — переход к посту.
+// Gemini: поддержка разных типов поста (блог, отчет, вопрос и т.д.)
 
 'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
-import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp, query, where } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useFirestore, useStorage, useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { Car } from '@/lib/data';
-import { Upload, X } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ArrowLeft, Upload, Loader2, AlertCircle } from 'lucide-react';
+import Link from 'next/link';
+import Image from 'next/image';
 import dynamic from 'next/dynamic';
 
 const CKEditorWrapper = dynamic(() => import('@/components/CKEditorWrapper'), {
@@ -22,157 +27,246 @@ const CKEditorWrapper = dynamic(() => import('@/components/CKEditorWrapper'), {
 });
 
 
+const postTypes = [
+  'Блог', 'Фотоотчет', 'Вопрос', 'Мой опыт', 'Обзор'
+];
+
 export default function CreatePostPage() {
   const router = useRouter();
-  const { user, isUserLoading } = useUser();
+  const { user } = useUser();
   const firestore = useFirestore();
-  const { toast } = useToast();
+  const storage = useStorage();
 
+
+  // Состояния формы
+  const [type, setType] = useState('');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [tags, setTags] = useState('');
-  const [carId, setCarId] = useState('');
-  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
   const [loading, setLoading] = useState(false);
-  
-  const userCarsQuery = useMemoFirebase(() => {
-    if (!user || !firestore) return null;
-    return query(collection(firestore, 'users', user.uid, 'cars'));
-  }, [user, firestore]);
+  const [error, setError] = useState('');
 
-  const { data: userCars, isLoading: carsLoading } = useCollection<Car>(userCarsQuery);
+  // Валидация
+  const validate = () => {
+    if (!type) {
+      setError('Выберите тип поста');
+      return false;
+    }
+    if (!title.trim()) {
+      setError('Укажите заголовок');
+      return false;
+    }
+    if (title.length < 5) {
+      setError('Заголовок слишком короткий');
+      return false;
+    }
+    if (content.trim().length < 20) {
+      setError('Минимальная длина текста — 20 символов');
+      return false;
+    }
+    return true;
+  };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files) {
-      const newUrls: string[] = [];
-      Array.from(files).forEach(file => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          newUrls.push(reader.result as string);
-          if (newUrls.length === files.length) {
-            setImageUrls(prev => [...prev, ...newUrls]);
-          }
-        };
-        reader.readAsDataURL(file);
-      });
+  // Загрузка изображения
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        setError('Загрузите файл изображения');
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Изображение не больше 5 МБ');
+        return;
+      }
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setImagePreview(reader.result as string);
+      reader.readAsDataURL(file);
     }
   };
-  
-  const removeImage = (index: number) => {
-    setImageUrls(prev => prev.filter((_, i) => i !== index));
-  }
 
+  // Форма отправки
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !firestore) {
-      toast({ variant: 'destructive', title: 'Ошибка', description: 'Вы должны быть авторизованы.' });
+    setError('');
+
+    if (!user || !firestore || !storage) {
+      setError('Необходимо войти');
+      router.push('/auth');
       return;
     }
-    if (!title || !content || !carId) {
-      toast({ variant: 'destructive', title: 'Ошибка', description: 'Пожалуйста, заполните все обязательные поля.' });
-      return;
-    }
+    if (!validate()) return;
 
     setLoading(true);
     try {
-      const postData: any = {
-        title,
-        content,
-        carId,
-        userId: user.uid,
-        tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag),
-        likes: 0,
-        comments: 0,
+      let imageUrl = '';
+      if (imageFile) {
+        const name = `${Date.now()}_${imageFile.name}`;
+        const fileRef = ref(storage, `posts/images/${name}`);
+        await uploadBytes(fileRef, imageFile);
+        imageUrl = await getDownloadURL(fileRef);
+      }
+      // Добавляем пост
+      const docRef = await addDoc(collection(firestore, 'posts'), {
+        type,
+        title: title.trim(),
+        content: content.trim(),
+        imageUrl,
+        authorId: user.uid,
+        authorName: user.displayName || 'Пользователь',
+        authorAvatar: user.photoURL,
         createdAt: serverTimestamp(),
-        // We won't save image URLs to avoid Firestore size limits for now.
-        // Instead we assign multiple placeholder image IDs.
-        imageIds: imageUrls.length > 0 ? Array.from({length: imageUrls.length}, () => `post${Math.floor(Math.random() * 3) + 1}`) : [`post${Math.floor(Math.random() * 3) + 1}`],
-      };
-
-      await addDoc(collection(firestore, 'posts'), postData);
-      toast({ title: 'Успех!', description: 'Ваш пост был создан.' });
-      router.push('/posts');
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Ошибка создания поста', description: error.message });
+        updatedAt: serverTimestamp(),
+        likesCount: 0,
+        likedBy: [],
+        commentsCount: 0
+      });
+      router.push(`/posts/${docRef.id}`);
+    } catch (err) {
+      setError('Ошибка публикации. Попробуйте ещё раз.');
+      console.error('Ошибка создания поста:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  if (isUserLoading || carsLoading) {
-    return <div className="container mx-auto px-4 py-8 text-center">Загрузка...</div>;
-  }
-
   if (!user) {
-    router.push('/auth');
-    return null;
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Для публикации поста необходимо войти.
+            <Link href="/auth" className="ml-2 underline">
+              Войти
+            </Link>
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
   }
 
   return (
-    <div className="container mx-auto max-w-3xl px-4 py-8">
-      <Card>
-        <CardHeader>
-          <CardTitle>Создать новый пост</CardTitle>
-          <CardDescription>Поделитесь чем-то новым о своем автомобиле.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="container mx-auto px-4 py-8 max-w-3xl">
+      <div className="mb-8">
+        <Link href="/posts">
+          <Button variant="ghost" size="sm" className="mb-4">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            К постам
+          </Button>
+        </Link>
+        <h1 className="text-4xl font-bold mb-2">Создать пост</h1>
+        <p className="text-muted-foreground">
+          Опишите ваш опыт, задайте вопрос или просто поделитесь историей.
+        </p>
+      </div>
+      {error && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      <form onSubmit={handleSubmit}>
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Параметры поста</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Тип поста */}
             <div className="space-y-2">
-              <Label htmlFor="cover-image">Изображения</Label>
-              <Input id="cover-image" type="file" accept="image/*" onChange={handleImageUpload} multiple />
-               <div className="mt-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
-                {imageUrls.map((url, index) => (
-                  <div key={index} className="relative group">
-                    <Image src={url} alt={`Предпросмотр изображения ${index + 1}`} width={150} height={100} className="object-cover rounded-md aspect-video" />
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="icon"
-                      className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100"
-                      onClick={() => removeImage(index)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-             <div className="space-y-2">
-              <Label htmlFor="car">Выберите автомобиль</Label>
-              <Select onValueChange={setCarId} value={carId}>
-                <SelectTrigger id="car">
-                  <SelectValue placeholder="Ваш автомобиль" />
+              <Label>Тип поста *</Label>
+              <Select
+                value={type}
+                onValueChange={setType}
+                disabled={loading}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Выберите тип" />
                 </SelectTrigger>
                 <SelectContent>
-                  {userCars && userCars.length > 0 ? (
-                    userCars.map(car => (
-                      <SelectItem key={car.id} value={car.id}>{car.brand} {car.model}</SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="disabled" disabled>У вас нет автомобилей</SelectItem>
-                  )}
+                  {postTypes.map(pt => (
+                    <SelectItem value={pt} key={pt}>{pt}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
+            {/* Заголовок */}
             <div className="space-y-2">
-              <Label htmlFor="title">Заголовок</Label>
-              <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Например, 'Новые диски'" required />
+              <Label htmlFor="title">Заголовок *</Label>
+              <Input
+                id="title"
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+                maxLength={120}
+                disabled={loading}
+                required
+              />
+              <p className="text-sm text-muted-foreground">{title.length}/120</p>
             </div>
+            {/* Главная картинка */}
             <div className="space-y-2">
-              <Label htmlFor="content">Содержание</Label>
-               <CKEditorWrapper initialData={content} onChange={setContent} />
+              <Label>Главное фото</Label>
+              <div className="flex items-center gap-4">
+                {imagePreview ? (
+                  <Image src={imagePreview} alt="Фото" width={128} height={128} className="w-32 h-32 rounded-lg object-cover border" />
+                ) : (
+                  <div className="w-32 h-32 rounded-lg border-2 border-dashed border-muted-foreground flex items-center justify-center">
+                    <Upload className="h-8 w-8 text-muted-foreground/50" />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    disabled={loading}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Макс. 5 МБ, оптимально 800x600px
+                  </p>
+                </div>
+              </div>
             </div>
-             <div className="space-y-2">
-              <Label htmlFor="tags">Теги (через запятую)</Label>
-              <Input id="tags" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="тюнинг, ремонт, jdm" />
+            {/* Контент (текст или ckeditor) */}
+            <div className="space-y-2">
+              <Label htmlFor="content">Содержание *</Label>
+               <CKEditorWrapper
+                initialData={content}
+                onChange={(data) => setContent(data)}
+              />
             </div>
-            <Button type="submit" disabled={loading || !carId}>
-              {loading ? 'Публикация...' : 'Опубликовать'}
+          </CardContent>
+        </Card>
+        <div className="flex gap-4">
+          <Button
+            type="submit"
+            size="lg"
+            disabled={loading}
+            className="flex-1"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Публикуем...
+              </>
+            ) : (
+              'Опубликовать'
+            )}
+          </Button>
+          <Link href="/posts">
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              disabled={loading}
+            >
+              Отмена
             </Button>
-          </form>
-        </CardContent>
-      </Card>
+          </Link>
+        </div>
+      </form>
     </div>
   );
 }
