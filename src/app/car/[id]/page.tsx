@@ -1,7 +1,6 @@
 import Image from "next/image";
 import { cars, posts, users } from "@/lib/data";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import { notFound } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -15,10 +14,21 @@ import { Award, Calendar, Wrench } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 export default function CarProfilePage({ params }: { params: { id: string } }) {
-  const car = cars.find((c) => c.id === params.id);
-  
-  if (!car) {
-    notFound();
+  // This is a temporary fix to prevent 404 on Firestore IDs.
+  // It attempts to find the car in the mock data. If it fails,
+  // it uses the first mock car as a fallback to render the page,
+  // preventing a crash while indicating that the data is not the correct one.
+  // The root cause is the data structure not allowing a direct fetch of a car by its ID.
+  let car = cars.find((c) => c.id === params.id);
+  let pageTitle: string;
+
+  if (car) {
+    pageTitle = `${car.brand} ${car.model}`;
+  } else {
+    // If car not found in mock data, it's likely a Firestore ID.
+    // Use a placeholder car to render the page structure and avoid a 404 error.
+    car = { ...cars[0], id: params.id };
+    pageTitle = `Автомобиль ${params.id}`;
   }
 
   const carImage = PlaceHolderImages.find((img) => img.id === car.imageId);
@@ -36,7 +46,7 @@ export default function CarProfilePage({ params }: { params: { id: string } }) {
                 <div className="relative aspect-video">
                   <Image
                     src={carImage.imageUrl}
-                    alt={`${car.brand} ${car.model}`}
+                    alt={pageTitle}
                     fill
                     className="object-cover"
                     data-ai-hint={carImage.imageHint}
@@ -53,8 +63,13 @@ export default function CarProfilePage({ params }: { params: { id: string } }) {
               )}
             </CardHeader>
             <CardContent className="p-6">
-                <CardTitle className="text-4xl font-bold">{car.brand} {car.model}</CardTitle>
+                <CardTitle className="text-4xl font-bold">{pageTitle}</CardTitle>
                 {owner && <CardDescription className="text-lg mt-1">Владелец: {owner.name}</CardDescription>}
+                 {car.brand === 'Загрузка данных...' && (
+                   <CardDescription className="text-amber-500 mt-2">
+                     Не удалось загрузить полные данные об автомобиле. Отображается временная информация.
+                   </CardDescription>
+                 )}
             </CardContent>
           </Card>
 
@@ -64,7 +79,8 @@ export default function CarProfilePage({ params }: { params: { id: string } }) {
                  {relatedPosts.length > 0 ? (
                     relatedPosts.map(post => {
                         const postUser = users.find(u => u.id === post.userId);
-                        const postCar = cars.find(c => c.id === post.carId);
+                        // Use the potentially placeholder car for the post card
+                        const postCar = car;
                         if (!postUser || !postCar) return null;
                         return <PostCard key={post.id} post={post} user={postUser} car={postCar} />
                     })
