@@ -44,6 +44,7 @@ export interface Post {
   imageId?: string;
   imageIds?: string[];
   tags: string[];
+  type: string; // 'Блог', 'Фотоотчет', 'Вопрос', 'Мой опыт', 'Обзор'
   likes: number;
   comments: number;
   createdAt: string;
@@ -126,6 +127,7 @@ export const posts: Post[] = [
     content: 'Установил полный титановый выхлоп от Akrapovič. Звук просто космос! Машина стала дышать легче, а отстрелы радуют слух. \n\nДальше в планах чип-тюнинг Stage 2.',
     imageIds: ['post1', 'car1'],
     tags: ['тюнинг', 'ремонт'],
+    type: 'Блог',
     likes: 152,
     comments: 2,
     createdAt: '2024-05-20T10:00:00Z',
@@ -138,6 +140,7 @@ export const posts: Post[] = [
     content: 'Совершили большое путешествие на Алтай. Land Cruiser показал себя отлично на бездорожье. Проехали более 5000 км, посетили самые красивые озера и перевалы. \n\nВ следующем году планируем поехать на Байкал!',
     imageId: 'post2',
     tags: ['путешествия'],
+    type: 'Фотоотчет',
     likes: 210,
     comments: 1,
     createdAt: '2024-05-18T15:30:00Z',
@@ -150,6 +153,7 @@ export const posts: Post[] = [
     content: 'Начинаем готовить Silvia к летнему дрифт-сезону. Полностью перебрали подвеску, установили выворот. \n\nВпереди настройка и первые тесты на треке.',
     imageIds: ['post3', 'car2'],
     tags: ['тюнинг', 'спорт'],
+    type: 'Блог',
     likes: 98,
     comments: 0,
     createdAt: '2024-05-15T09:00:00Z',
