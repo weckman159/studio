@@ -9,19 +9,20 @@ import { notFound, useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from '@/components/ui/button';
-import { FileText, Award, Car as CarIcon, Edit3, Users as UsersIcon, Heart, MessageCircle, Plus, AtSign, Bookmark, UserCheck, UserPlus, MapPin, Calendar } from "lucide-react";
+import { FileText, Award, Car as CarIcon, Edit3, Users as UsersIcon, Heart, MessageCircle, Plus, AtSign, Bookmark, UserCheck, UserPlus, MapPin, Calendar, AlertCircle } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import type { User as UserData, Car, Post } from '@/lib/data';
 import { users, cars as mockCars, posts as mockPosts } from '@/lib/data';
 import { EditProfileModal } from '@/components/EditProfileModal';
 import { AddCarForm } from '@/components/AddCarForm';
 import { GarageCard } from '@/components/GarageCard';
-import { collection, query, where, doc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, doc, deleteDoc, getDoc } from 'firebase/firestore';
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PostCard } from '@/components/PostCard';
 import { UserListDialog } from '@/components/UserListDialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 
 function CompactPostItem({ post }: { post: Post }) {
@@ -108,7 +109,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     const fetchUser = async () => {
-        if (!id || !firestore) return;
+        if (!id || !firestore || id === 'undefined') return;
         const userDoc = await getDoc(doc(firestore, 'users', id));
         if (userDoc.exists()) {
             setUser({ id: userDoc.id, ...userDoc.data() } as UserData);
@@ -122,6 +123,19 @@ export default function ProfilePage() {
     fetchUser();
   }, [id, firestore]);
 
+
+  if (id === 'undefined') {
+    return (
+        <div className="container mx-auto px-4 py-8">
+            <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                    Некорректный профиль пользователя. ID не может быть 'undefined'.
+                </AlertDescription>
+            </Alert>
+        </div>
+    )
+  }
 
   const pageLoading = isAuthUserLoading || carsLoading || !user;
   

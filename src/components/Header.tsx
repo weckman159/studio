@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -53,7 +54,7 @@ export function Header() {
           <GlobalSearch />
           {isUserLoading ? (
              <div className="h-8 w-20 bg-muted rounded-md animate-pulse" />
-          ) : user ? (
+          ) : user && user.uid ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
