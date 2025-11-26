@@ -7,6 +7,7 @@ import { collection, query, orderBy } from 'firebase/firestore';
 import type { Post, User, Car } from '@/lib/data';
 import { users, cars } from "@/lib/data"; // Using mock users/cars for now
 import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 
 export default function Home() {
   const firestore = useFirestore();
