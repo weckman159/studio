@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useUser, useFirestore } from '@/firebase';
-import { collection, addDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -30,7 +30,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import type { Car } from '@/lib/data';
-import { uploadCarPhoto, deleteFile, extractPathFromURL } from '@/lib/storage';
+import { deleteFile } from '@/lib/storage';
+import { useCarPhotoUpload } from '@/hooks/use-file-upload';
 import { ImageUp, X } from 'lucide-react';
 
 
@@ -54,10 +55,10 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
   const { toast } = useToast();
   const { user } = useUser();
   const firestore = useFirestore();
+  const { uploading, progress, error, uploadedFile, upload, remove, reset, setUploadedFile } = useCarPhotoUpload();
 
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [localImageFile, setLocalImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   const form = useForm<CarFormValues>({
     resolver: zodResolver(carFormSchema),
@@ -71,6 +72,8 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
   });
 
   useEffect(() => {
+    reset();
+    setLocalImageFile(null);
     if (carToEdit) {
       form.reset({
         brand: carToEdit.brand,
@@ -79,34 +82,30 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
         engine: carToEdit.engine,
         description: carToEdit.description || '',
       });
-      if (carToEdit.photoUrl) {
-          setImagePreview(carToEdit.photoUrl);
+      if (carToEdit.photoUrl && carToEdit.photoPath) {
+        setUploadedFile({ url: carToEdit.photoUrl, path: carToEdit.photoPath, fileName: '' });
+        setImagePreview(carToEdit.photoUrl);
+      } else {
+        setImagePreview(null);
       }
     } else {
-      form.reset({
-        brand: '',
-        model: '',
-        year: undefined,
-        engine: '',
-        description: '',
-      });
-      setImageFile(null);
+      form.reset({ brand: '', model: '', year: undefined, engine: '', description: ''});
       setImagePreview(null);
     }
-    setUploadProgress(null);
-  }, [carToEdit, form, isOpen]);
+  }, [carToEdit, isOpen, form, reset, setUploadedFile]);
   
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setImageFile(file);
+      setLocalImageFile(file);
       setImagePreview(URL.createObjectURL(file));
     }
   };
 
   const removeImage = () => {
-    setImageFile(null);
+    setLocalImageFile(null);
     setImagePreview(null);
+    // Если было загруженное ранее фото, оно будет удалено при отправке формы
   }
 
   const onSubmit = async (data: CarFormValues) => {
@@ -116,60 +115,56 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
     }
 
     try {
-        let photoData = {
-            photoUrl: carToEdit?.photoUrl || '',
-            photoPath: carToEdit?.photoPath || '',
-        };
+      let finalPhotoUrl = carToEdit?.photoUrl || '';
+      let finalPhotoPath = carToEdit?.photoPath || '';
 
-        const carId = carToEdit ? carToEdit.id : doc(collection(firestore, 'temp')).id;
-        
-        if (imageFile) {
-            // Если есть новый файл, загружаем его
-            setUploadProgress(0);
-            
-            // Если у редактируемой машины было старое фото, удаляем его
-            if (carToEdit && carToEdit.photoPath) {
-                await deleteFile(carToEdit.photoPath);
-            }
-
-            const uploadResult = await uploadCarPhoto(imageFile, carId, {
-                onProgress: setUploadProgress
-            });
-
-            photoData = {
-                photoUrl: uploadResult.url,
-                photoPath: uploadResult.path,
-            };
-        } else if (!imagePreview && carToEdit?.photoPath) {
-            // Если превью удалено (нет ни нового файла, ни старого URL), удаляем старое фото
-            await deleteFile(carToEdit.photoPath);
-            photoData = { photoUrl: '', photoPath: '' };
-        }
+      const carId = carToEdit ? carToEdit.id : doc(collection(firestore, 'temp')).id;
       
-        const carData = {
-            ...data,
-            ...photoData,
-            userId: user.uid,
-        };
-
-        if (carToEdit) {
-            const carRef = doc(firestore, 'users', user.uid, 'cars', carToEdit.id);
-            await setDoc(carRef, carData, { merge: true });
-            toast({ title: 'Успех!', description: 'Данные автомобиля обновлены.' });
-        } else {
-            const carRef = doc(firestore, 'users', user.uid, 'cars', carId);
-            await setDoc(carRef, {
-                ...carData,
-                id: carId,
-                createdAt: serverTimestamp(),
-            });
-            toast({ title: 'Успех!', description: 'Новый автомобиль добавлен в ваш гараж.' });
+      // 1. Если выбрано новое локальное изображение
+      if (localImageFile) {
+        // Удаляем старое фото, если оно было
+        if (carToEdit && carToEdit.photoPath) {
+          await deleteFile(carToEdit.photoPath);
         }
+        const uploadResult = await upload(localImageFile, 'cars', carId);
+        if (uploadResult) {
+          finalPhotoUrl = uploadResult.url;
+          finalPhotoPath = uploadResult.path;
+        } else {
+          throw new Error(error || "Ошибка загрузки фото");
+        }
+      } 
+      // 2. Если превью было удалено (т.е. нет ни нового, ни старого фото)
+      else if (!imagePreview && carToEdit?.photoPath) {
+        await deleteFile(carToEdit.photoPath);
+        finalPhotoUrl = '';
+        finalPhotoPath = '';
+      }
+      
+      const carData = {
+        ...data,
+        photoUrl: finalPhotoUrl,
+        photoPath: finalPhotoPath,
+        userId: user.uid,
+      };
+
+      if (carToEdit) {
+        const carRef = doc(firestore, 'users', user.uid, 'cars', carToEdit.id);
+        await setDoc(carRef, carData, { merge: true });
+        toast({ title: 'Успех!', description: 'Данные автомобиля обновлены.' });
+      } else {
+        const carRef = doc(firestore, 'users', user.uid, 'cars', carId);
+        await setDoc(carRef, {
+            ...carData,
+            id: carId,
+            createdAt: serverTimestamp(),
+        });
+        toast({ title: 'Успех!', description: 'Новый автомобиль добавлен в ваш гараж.' });
+      }
       
       setIsOpen(false);
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Ошибка', description: error.message });
-      setUploadProgress(null);
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Ошибка сохранения', description: e.message });
     }
   };
 
@@ -192,7 +187,7 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
                         <div className="relative w-full aspect-video rounded-md overflow-hidden group">
                            <Image src={imagePreview} alt="Предпросмотр" fill className="object-cover" />
                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                                <Button type="button" variant="destructive" size="icon" onClick={removeImage} disabled={uploadProgress !== null}>
+                                <Button type="button" variant="destructive" size="icon" onClick={removeImage} disabled={uploading}>
                                     <X className="h-5 w-5" />
                                 </Button>
                            </div>
@@ -206,11 +201,12 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
                                 </p>
                                 <p className="text-xs text-muted-foreground">PNG, JPG, WEBP (до 5MB)</p>
                             </div>
-                            <Input type="file" className="hidden" onChange={handleImageChange} accept="image/png, image/jpeg, image/webp" />
+                            <Input type="file" className="hidden" onChange={handleImageChange} accept="image/png, image/jpeg, image/webp" disabled={uploading} />
                         </label>
                     )}
                 </FormControl>
-                {uploadProgress !== null && <Progress value={uploadProgress} className="w-full mt-2" />}
+                {uploading && <Progress value={progress} className="w-full mt-2" />}
+                {error && <p className="text-sm font-medium text-destructive mt-2">{error}</p>}
             </FormItem>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -221,7 +217,7 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
                   <FormItem>
                     <FormLabel>Бренд</FormLabel>
                     <FormControl>
-                      <Input placeholder="Например, BMW" {...field} />
+                      <Input placeholder="Например, BMW" {...field} disabled={uploading}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -234,7 +230,7 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
                   <FormItem>
                     <FormLabel>Модель</FormLabel>
                     <FormControl>
-                      <Input placeholder="Например, M3" {...field} />
+                      <Input placeholder="Например, M3" {...field} disabled={uploading}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -249,7 +245,7 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
                   <FormItem>
                     <FormLabel>Год выпуска</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="Например, 2023" {...field} />
+                      <Input type="number" placeholder="Например, 2023" {...field} disabled={uploading}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -262,7 +258,7 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
                   <FormItem>
                     <FormLabel>Двигатель</FormLabel>
                     <FormControl>
-                      <Input placeholder="Например, 3.0 L S58" {...field} />
+                      <Input placeholder="Например, 3.0 L S58" {...field} disabled={uploading}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -276,16 +272,16 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
                   <FormItem>
                     <FormLabel>Описание</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Расскажите об особенностях вашего автомобиля..." {...field} />
+                      <Textarea placeholder="Расскажите об особенностях вашего автомобиля..." {...field} disabled={uploading}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             <DialogFooter>
-               <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={form.formState.isSubmitting}>Отмена</Button>
-              <Button type="submit" disabled={form.formState.isSubmitting || uploadProgress !== null}>
-                {form.formState.isSubmitting ? (uploadProgress !== null ? `Загрузка: ${uploadProgress}%` : 'Сохранение...') : 'Сохранить'}
+               <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={uploading}>Отмена</Button>
+              <Button type="submit" disabled={uploading || form.formState.isSubmitting}>
+                {uploading ? `Загрузка: ${progress}%` : (form.formState.isSubmitting ? 'Сохранение...' : 'Сохранить')}
               </Button>
             </DialogFooter>
           </form>
