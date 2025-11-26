@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -20,6 +19,7 @@ import { users } from '@/lib/data';
 import { SidebarTrigger, useSidebar } from './ui/sidebar';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import GlobalSearch from './GlobalSearch';
 
 export function Header() {
   const { user, isUserLoading } = useUser();
@@ -48,7 +48,9 @@ export function Header() {
               <span className="sr-only">Toggle Sidebar</span>
             </Button>
         </div>
-        <div className="flex flex-1 items-center justify-end space-x-4">
+        <div className="flex-1" />
+        <div className="flex items-center justify-end space-x-4">
+          <GlobalSearch />
           {isUserLoading ? (
              <div className="h-8 w-20 bg-muted rounded-md animate-pulse" />
           ) : user ? (
