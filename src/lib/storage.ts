@@ -1,3 +1,4 @@
+
 // src/lib/storage.ts
 'use client';
 
@@ -9,7 +10,7 @@ import {
   uploadBytesResumable,
   UploadTaskSnapshot 
 } from 'firebase/storage';
-import { storage } from '@/firebase';
+import { useStorage } from '@/firebase'; // Use hook to get storage instance
 
 /**
  * Типы путей для Storage
@@ -140,6 +141,7 @@ export const uploadFile = async (
   options: UploadOptions = {}
 ): Promise<UploadResult> => {
   const { onProgress, maxSizeInMB = 5 } = options;
+  const storage = useStorage(); // Get storage instance via hook
 
   try {
     // Валидация
@@ -188,90 +190,27 @@ export const uploadFile = async (
   }
 };
 
-/**
- * Загрузка нескольких файлов
- */
-export const uploadMultipleFiles = async (
-  files: File[],
-  pathType: StoragePath,
-  entityId: string,
-  options: UploadOptions = {}
-): Promise<UploadResult[]> => {
-  const uploadPromises = files.map((file) => 
-    uploadFile(file, pathType, entityId, options)
-  );
-  
-  return Promise.all(uploadPromises);
-};
 
 /**
- * Удаление файла из Storage
+ * Удаление файла из Storage по URL
  */
-export const deleteFile = async (filePath: string): Promise<void> => {
+export const deleteFile = async (fileUrl: string): Promise<void> => {
+    const storage = useStorage();
+    if (!fileUrl.includes('firebasestorage.googleapis.com')) {
+        // Not a firebase storage URL, probably a blob URL for preview. Ignore.
+        return;
+    }
   try {
-    const storageRef = ref(storage, filePath);
+    const storageRef = ref(storage, fileUrl);
     await deleteObject(storageRef);
-  } catch (error) {
+  } catch (error: any) {
+    if (error.code === 'storage/object-not-found') {
+        console.warn(`File not found, could not delete: ${fileUrl}`);
+        return; // Ignore not found errors
+    }
     console.error('Ошибка удаления файла:', error);
     throw new Error('Не удалось удалить файл');
   }
-};
-
-/**
- * Удаление нескольких файлов
- */
-export const deleteMultipleFiles = async (filePaths: string[]): Promise<void> => {
-  const deletePromises = filePaths.map((path) => deleteFile(path));
-  await Promise.all(deletePromises);
-};
-
-/**
- * Получение URL файла по пути
- */
-export const getFileURL = async (filePath: string): Promise<string> => {
-  try {
-    const storageRef = ref(storage, filePath);
-    return await getDownloadURL(storageRef);
-  } catch (error) {
-    console.error('Ошибка получения URL:', error);
-    throw new Error('Не удалось получить URL файла');
-  }
-};
-
-/**
- * Загрузка аватара пользователя
- */
-export const uploadAvatar = async (
-  file: File,
-  userId: string,
-  options: UploadOptions = {}
-): Promise<UploadResult> => {
-  return uploadFile(file, 'avatars', userId, {
-    ...options,
-    maxSizeInMB: 2, // Лимит для аватаров - 2MB
-  });
-};
-
-/**
- * Загрузка фото автомобиля
- */
-export const uploadCarPhoto = async (
-  file: File,
-  carId: string,
-  options: UploadOptions = {}
-): Promise<UploadResult> => {
-  return uploadFile(file, 'cars', carId, options);
-};
-
-/**
- * Загрузка изображений для поста
- */
-export const uploadPostImages = async (
-  files: File[],
-  postId: string,
-  options: UploadOptions = {}
-): Promise<UploadResult[]> => {
-  return uploadMultipleFiles(files, 'posts', postId, options);
 };
 
 /**
@@ -311,17 +250,4 @@ export const migrateDataURItoStorage = async (
  */
 export const isDataURI = (str: string): boolean => {
   return str.startsWith('data:image/');
-};
-
-/**
- * Извлечение пути файла из URL Firebase Storage
- */
-export const extractPathFromURL = (url: string): string | null => {
-  try {
-    const urlObj = new URL(url);
-    const pathMatch = urlObj.pathname.match(/\/o\/(.+)\?/);
-    return pathMatch ? decodeURIComponent(pathMatch[1]) : null;
-  } catch {
-    return null;
-  }
 };

@@ -4,9 +4,7 @@
 import { useState, useCallback } from 'react';
 import { 
   uploadFile, 
-  uploadMultipleFiles, 
   deleteFile,
-  extractPathFromURL,
   StoragePath,
   UploadResult 
 } from '@/lib/storage';
@@ -22,9 +20,8 @@ interface UseFileUploadReturn {
   uploading: boolean;
   progress: number;
   error: string | null;
-  uploadSingle: (file: File, pathType: StoragePath, entityId: string) => Promise<UploadResult | null>;
-  uploadMultiple: (files: File[], pathType: StoragePath, entityId: string) => Promise<UploadResult[]>;
-  remove: (fileUrl: string) => Promise<void>;
+  uploadFiles: (files: File[], pathType: StoragePath, entityId: string) => Promise<UploadResult[]>;
+  removeFile: (fileUrl: string) => Promise<void>;
   reset: () => void;
 }
 
@@ -44,40 +41,9 @@ export const useFileUpload = (options: UseFileUploadOptions = {}): UseFileUpload
   const [error, setError] = useState<string | null>(null);
 
   /**
-   * Загрузка одного файла
-   */
-  const uploadSingle = useCallback(async (
-    file: File,
-    pathType: StoragePath,
-    entityId: string
-  ): Promise<UploadResult | null> => {
-    setUploading(true);
-    setError(null);
-    setProgress(0);
-
-    try {
-      const result = await uploadFile(file, pathType, entityId, {
-        maxSizeInMB,
-        onProgress: (p) => setProgress(p)
-      });
-      
-      onSuccess?.([result]);
-      return result;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Ошибка загрузки файла';
-      setError(errorMessage);
-      onError?.(err instanceof Error ? err : new Error(errorMessage));
-      return null;
-    } finally {
-      setUploading(false);
-      setProgress(0);
-    }
-  }, [maxSizeInMB, onSuccess, onError]);
-
-  /**
    * Загрузка нескольких файлов
    */
-  const uploadMultiple = useCallback(async (
+  const uploadFiles = useCallback(async (
     files: File[],
     pathType: StoragePath,
     entityId: string
@@ -91,15 +57,24 @@ export const useFileUpload = (options: UseFileUploadOptions = {}): UseFileUpload
         throw new Error(`Можно загрузить максимум ${maxFiles} файлов`);
       }
 
-      const results = await uploadMultipleFiles(
-        files,
-        pathType,
-        entityId,
-        {
-          maxSizeInMB,
-          onProgress: setProgress,
-        }
-      );
+      const uploadPromises: Promise<UploadResult>[] = [];
+      const totalFiles = files.length;
+      
+      files.forEach((file, index) => {
+        uploadPromises.push(
+          uploadFile(file, pathType, entityId, {
+            maxSizeInMB,
+            onProgress: (fileProgress) => {
+              // This progress logic is simplified. A more robust solution would
+              // track progress for each file individually.
+              const overallProgress = (index / totalFiles) * 100 + fileProgress / totalFiles;
+              setProgress(Math.round(overallProgress));
+            },
+          })
+        );
+      });
+
+      const results = await Promise.all(uploadPromises);
       
       onSuccess?.(results);
       return results;
@@ -110,27 +85,21 @@ export const useFileUpload = (options: UseFileUploadOptions = {}): UseFileUpload
       return [];
     } finally {
       setUploading(false);
-      setProgress(0);
+      setProgress(100); // Set to 100 on completion
     }
   }, [maxFiles, maxSizeInMB, onSuccess, onError]);
 
   /**
    * Удаление файла по URL
    */
-  const remove = useCallback(async (fileUrl: string): Promise<void> => {
-    const filePath = extractPathFromURL(fileUrl);
-    if (!filePath) {
-      const msg = "Неверный URL файла для удаления";
-      setError(msg);
-      onError?.(new Error(msg));
-      return;
-    }
-
+  const removeFile = useCallback(async (fileUrl: string): Promise<void> => {
     try {
-      await deleteFile(filePath);
+      await deleteFile(fileUrl);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Ошибка удаления файла';
-      setError(errorMessage);
+      // Don't set state error here as it might be confusing for the user
+      // if they are just clearing a preview
+      console.error(errorMessage);
       onError?.(err instanceof Error ? err : new Error(errorMessage));
     }
   }, [onError]);
@@ -148,12 +117,12 @@ export const useFileUpload = (options: UseFileUploadOptions = {}): UseFileUpload
     uploading,
     progress,
     error,
-    uploadSingle,
-    uploadMultiple,
-    remove,
+    uploadFiles,
+    removeFile,
     reset
   };
 };
+
 
 /**
  * Упрощенный хук для загрузки аватара

@@ -8,61 +8,41 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useFileUpload } from '@/hooks/use-file-upload';
-import type { StoragePath, UploadResult } from '@/lib/storage';
+import { deleteFile } from '@/lib/storage';
 
 interface ImageUploadProps {
   value?: string | string[];
-  onChange: (value: string | string[]) => void;
-  storagePath: StoragePath;
-  entityId: string;
+  onChange: (urls: string | string[]) => void;
+  onFilesSelected?: (files: File[]) => void;
   multiple?: boolean;
   maxFiles?: number;
   disabled?: boolean;
+  uploading?: boolean;
+  progress?: number;
   className?: string;
 }
 
 export const ImageUpload: React.FC<ImageUploadProps> = ({
   value,
   onChange,
-  storagePath,
-  entityId,
+  onFilesSelected,
   multiple = false,
   maxFiles = 1,
   disabled = false,
-  className,
+  uploading = false,
+  progress = 0,
+  className
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
-  
   const [previews, setPreviews] = useState<string[]>([]);
-
-  const {
-    uploading,
-    progress,
-    uploadSingle,
-    uploadMultiple,
-    remove,
-    error,
-  } = useFileUpload({
-    onSuccess: (results) => {
-        const newUrls = results.map(r => r.url);
-        if (multiple) {
-            onChange([...previews, ...newUrls]);
-        } else {
-            onChange(newUrls[0] || '');
-        }
-    },
-    onError: (err) => {
-        console.error("Upload error:", err);
-        // Optionally show a toast message here
-    }
-  });
+  const [localFiles, setLocalFiles] = useState<File[]>([]);
 
   useEffect(() => {
-    const urls = Array.isArray(value) ? value : value ? [value] : [];
+    const urls = Array.isArray(value) ? value : (value ? [value] : []);
     setPreviews(urls);
   }, [value]);
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
@@ -71,14 +51,11 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       return;
     }
 
-    if (multiple) {
-        await uploadMultiple(files, storagePath, entityId);
-    } else if (files[0]) {
-        if(previews.length > 0) {
-           await remove(previews[0]);
-        }
-        await uploadSingle(files[0], storagePath, entityId);
-    }
+    const newPreviews = files.map(file => URL.createObjectURL(file));
+    setPreviews(prev => [...prev, ...newPreviews]);
+    setLocalFiles(prev => [...prev, ...files]);
+    
+    onFilesSelected?.([...localFiles, ...files]);
 
     if (inputRef.current) {
       inputRef.current.value = '';
@@ -86,16 +63,33 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   };
 
   const handleRemove = async (urlToRemove: string) => {
-    await remove(urlToRemove);
-    const newUrls = previews.filter(url => url !== urlToRemove);
-    onChange(multiple ? newUrls : '');
+    const isLocalPreview = urlToRemove.startsWith('blob:');
+    
+    const newPreviews = previews.filter(url => url !== urlToRemove);
+    setPreviews(newPreviews);
+    
+    if (isLocalPreview) {
+        const fileIndex = previews.indexOf(urlToRemove) - (Array.isArray(value) ? value.length : (value ? 1 : 0));
+        if (fileIndex > -1) {
+            const newLocalFiles = localFiles.filter((_, i) => i !== fileIndex);
+            setLocalFiles(newLocalFiles);
+            onFilesSelected?.(newLocalFiles);
+        }
+    } else {
+        try {
+            await deleteFile(urlToRemove);
+        } catch (error) {
+            console.error("Failed to delete file from storage:", error);
+        }
+    }
+    
+    const finalUrls = newPreviews.filter(url => !url.startsWith('blob:'));
+    onChange(multiple ? finalUrls : (finalUrls[0] || ''));
   };
 
   const handleClick = () => {
     inputRef.current?.click();
   };
-  
-  const currentFilesCount = previews.length;
 
   return (
     <div className={cn('space-y-4', className)}>
@@ -114,7 +108,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
           type="button"
           variant="outline"
           onClick={handleClick}
-          disabled={disabled || uploading || (multiple && currentFilesCount >= maxFiles)}
+          disabled={disabled || uploading || (multiple && previews.length >= maxFiles)}
           className="w-full"
         >
           <Upload className="w-4 h-4 mr-2" />
@@ -123,12 +117,10 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
 
         {multiple && (
           <p className="text-xs text-muted-foreground mt-2">
-            Загружено: {currentFilesCount} / {maxFiles}
+            Загружено: {previews.length} / {maxFiles}
           </p>
         )}
       </div>
-
-      {error && <p className="text-sm font-medium text-destructive">{error}</p>}
       
       {uploading && <Progress value={progress} className="w-full" />}
 
@@ -137,16 +129,17 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
           'grid gap-4',
           multiple ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-1'
         )}>
-          {previews.map((url, index) => (
+          {previews.map((url) => (
             <div
               key={url}
               className="relative group aspect-video rounded-lg overflow-hidden border border-border bg-muted"
             >
               <Image
                 src={url}
-                alt={`Preview ${index + 1}`}
+                alt="Предпросмотр"
                 fill
                 className="object-cover"
+                onLoad={() => { if(url.startsWith('blob:')) URL.revokeObjectURL(url) }}
               />
               
               {!disabled && !uploading && (
@@ -180,6 +173,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     </div>
   );
 };
+
 
 /**
  * Компонент для загрузки одного изображения (аватар, обложка)

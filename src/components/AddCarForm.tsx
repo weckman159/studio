@@ -1,12 +1,12 @@
 
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useUser, useFirestore } from '@/firebase';
-import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,6 +29,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import type { Car } from '@/lib/data';
 import { MultipleImageUpload } from './ImageUpload';
+import { useCarPhotosUpload } from '@/hooks/use-file-upload';
 
 
 const carFormSchema = z.object({
@@ -37,7 +38,6 @@ const carFormSchema = z.object({
   year: z.coerce.number().min(1900, { message: 'Неверный год' }).max(new Date().getFullYear() + 1, { message: 'Неверный год'}),
   engine: z.string().min(1, { message: 'Двигатель обязателен'}),
   description: z.string().optional(),
-  photos: z.array(z.string()).optional().default([]),
 });
 
 type CarFormValues = z.infer<typeof carFormSchema>;
@@ -53,6 +53,12 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
   const { user } = useUser();
   const firestore = useFirestore();
 
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [filesToUpload, setFilesToUpload] = useState<File[]>([]);
+  
+  const { uploadFiles, uploading, progress, error: uploadError } = useCarPhotosUpload();
+
+
   const form = useForm<CarFormValues>({
     resolver: zodResolver(carFormSchema),
     defaultValues: {
@@ -61,7 +67,6 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
       year: undefined,
       engine: '',
       description: '',
-      photos: [],
     },
   });
   
@@ -76,11 +81,13 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
                 year: carToEdit.year,
                 engine: carToEdit.engine,
                 description: carToEdit.description || '',
-                photos: carToEdit.photos || [],
             });
+            setImageUrls(carToEdit.photos || []);
         } else {
-            form.reset({ brand: '', model: '', year: undefined, engine: '', description: '', photos: [] });
+            form.reset({ brand: '', model: '', year: undefined, engine: '', description: ''});
+            setImageUrls([]);
         }
+        setFilesToUpload([]);
     }
   }, [carToEdit, isOpen, form]);
   
@@ -91,26 +98,40 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
     }
 
     try {
-      const carData: Omit<Car, 'imageId'> = {
-        ...data,
-        id: carId,
-        userId: user.uid,
-        photoUrl: data.photos?.[0] || '', // Main photo is the first one
-      };
-
       const carRef = doc(firestore, 'users', user.uid, 'cars', carId);
 
       if (carToEdit) {
-        await setDoc(carRef, carData, { merge: true });
+        await updateDoc(carRef, data);
         toast({ title: 'Успех!', description: 'Данные автомобиля обновлены.' });
       } else {
-        await setDoc(carRef, {
-            ...carData,
-            createdAt: serverTimestamp(),
-        });
-        toast({ title: 'Успех!', description: 'Новый автомобиль добавлен в ваш гараж.' });
+        const carData: Omit<Car, 'imageId' | 'photoUrl'> & { createdAt: any } = {
+          ...data,
+          id: carId,
+          userId: user.uid,
+          photos: [],
+          createdAt: serverTimestamp(),
+        };
+        await setDoc(carRef, carData);
       }
       
+      if(filesToUpload.length > 0) {
+        const uploadedImages = await uploadFiles(filesToUpload, 'cars', carId);
+        const newImageUrls = uploadedImages.map(img => img.url);
+        const finalImageUrls = [...imageUrls, ...newImageUrls];
+
+        await updateDoc(carRef, {
+            photos: finalImageUrls,
+            photoUrl: finalImageUrls[0] || '',
+        });
+      } else if (carToEdit) {
+        // Handle case where images might have been removed but none added
+        await updateDoc(carRef, {
+            photos: imageUrls,
+            photoUrl: imageUrls[0] || '',
+        });
+      }
+      
+      toast({ title: 'Успех!', description: carToEdit ? 'Автомобиль обновлен.' : 'Автомобиль добавлен.' });
       setIsOpen(false);
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Ошибка сохранения', description: e.message });
@@ -129,26 +150,21 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             
-            <FormField
-              control={form.control}
-              name="photos"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Фотографии (первое фото будет главным)</FormLabel>
-                  <FormControl>
-                    <MultipleImageUpload
-                        storagePath="cars"
-                        entityId={carId}
-                        value={field.value}
-                        onChange={(urls) => field.onChange(urls as string[])}
-                        disabled={form.formState.isSubmitting}
-                        maxFiles={10}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <FormItem>
+              <FormLabel>Фотографии (первое фото будет главным)</FormLabel>
+              <FormControl>
+                <MultipleImageUpload
+                    value={imageUrls}
+                    onChange={(urls) => setImageUrls(urls as string[])}
+                    onFilesSelected={setFilesToUpload}
+                    uploading={uploading}
+                    progress={progress}
+                    disabled={form.formState.isSubmitting || uploading}
+                    maxFiles={10}
+                />
+              </FormControl>
+              <FormMessage>{uploadError}</FormMessage>
+            </FormItem>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
@@ -158,7 +174,7 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
                   <FormItem>
                     <FormLabel>Бренд</FormLabel>
                     <FormControl>
-                      <Input placeholder="Например, BMW" {...field} disabled={form.formState.isSubmitting}/>
+                      <Input placeholder="Например, BMW" {...field} disabled={uploading}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -171,7 +187,7 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
                   <FormItem>
                     <FormLabel>Модель</FormLabel>
                     <FormControl>
-                      <Input placeholder="Например, M3" {...field} disabled={form.formState.isSubmitting}/>
+                      <Input placeholder="Например, M3" {...field} disabled={uploading}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -186,7 +202,7 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
                   <FormItem>
                     <FormLabel>Год выпуска</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="Например, 2023" {...field} disabled={form.formState.isSubmitting}/>
+                      <Input type="number" placeholder="Например, 2023" {...field} disabled={uploading}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -199,7 +215,7 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
                   <FormItem>
                     <FormLabel>Двигатель</FormLabel>
                     <FormControl>
-                      <Input placeholder="Например, 3.0 L S58" {...field} disabled={form.formState.isSubmitting}/>
+                      <Input placeholder="Например, 3.0 L S58" {...field} disabled={uploading}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -213,16 +229,16 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
                   <FormItem>
                     <FormLabel>Описание</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Расскажите об особенностях вашего автомобиля..." {...field} disabled={form.formState.isSubmitting}/>
+                      <Textarea placeholder="Расскажите об особенностях вашего автомобиля..." {...field} disabled={uploading}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             <DialogFooter>
-               <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={form.formState.isSubmitting}>Отмена</Button>
-              <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'Сохранение...' : 'Сохранить'}
+               <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={uploading}>Отмена</Button>
+              <Button type="submit" disabled={uploading}>
+                {uploading ? `Сохранение... ${progress}%` : 'Сохранить'}
               </Button>
             </DialogFooter>
           </form>

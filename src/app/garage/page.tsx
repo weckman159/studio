@@ -11,6 +11,7 @@ import { Plus } from "lucide-react";
 import Link from 'next/link';
 import { AddCarForm } from '@/components/AddCarForm';
 import { useToast } from "@/hooks/use-toast";
+import { deleteFile } from '@/lib/storage';
 
 
 export default function GaragePage() {
@@ -34,10 +35,23 @@ export default function GaragePage() {
     setAddCarOpen(true);
   };
   
-  const handleDelete = async (carId: string) => {
+  const handleDelete = async (car: Car) => {
     if (!user || !firestore) return;
     try {
-      await deleteDoc(doc(firestore, 'users', user.uid, 'cars', carId));
+      // Delete photos from storage first
+      if (car.photos) {
+        for (const photoUrl of car.photos) {
+          try {
+            await deleteFile(photoUrl);
+          } catch (storageError) {
+            console.warn(`Could not delete file ${photoUrl} from storage:`, storageError)
+          }
+        }
+      }
+      
+      // Then delete firestore document
+      await deleteDoc(doc(firestore, 'users', user.uid, 'cars', car.id));
+      
       toast({ title: "Успех!", description: "Автомобиль был удален." });
     } catch (error: any) {
        toast({ variant: 'destructive', title: "Ошибка", description: "Не удалось удалить автомобиль." });
@@ -85,7 +99,7 @@ export default function GaragePage() {
       {userCars && userCars.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {userCars.map(car => (
-            <GarageCard key={car.id} car={car} user={user as unknown as User} onEdit={handleEdit} onDelete={() => handleDelete(car.id)}/>
+            <GarageCard key={car.id} car={car} user={user as unknown as User} onEdit={handleEdit} onDelete={() => handleDelete(car)}/>
           ))}
         </div>
       ) : (

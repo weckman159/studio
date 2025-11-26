@@ -4,7 +4,6 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Car, User } from "@/lib/data";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal, Edit, Trash2, Car as CarIcon } from "lucide-react";
 import {
@@ -21,7 +20,6 @@ import {
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -31,14 +29,12 @@ interface GarageCardProps {
   car: Car;
   user: User;
   onEdit?: (car: Car) => void;
-  onDelete?: (carId: string) => void;
+  onDelete?: (car: Car) => void;
   variant?: 'default' | 'compact';
 }
 
 export function GarageCard({ car, user, onEdit, onDelete, variant = 'default' }: GarageCardProps) {
-  const carImage = car.photoUrl || car.photos?.[0] || PlaceHolderImages.find((img) => img.id === car.imageId)?.imageUrl;
-  const carImageHint = car.photoUrl ? "user uploaded car" : PlaceHolderImages.find((img) => img.id === car.imageId)?.imageHint;
-
+  const carImage = car.photoUrl || car.photos?.[0];
 
   if (variant === 'compact') {
     return (
@@ -51,7 +47,6 @@ export function GarageCard({ car, user, onEdit, onDelete, variant = 'default' }:
                         width={64}
                         height={40}
                         className="rounded-md object-cover w-16 h-10"
-                        data-ai-hint={carImageHint}
                     />
                  </Link>
             ) : (
@@ -85,7 +80,7 @@ export function GarageCard({ car, user, onEdit, onDelete, variant = 'default' }:
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                             <AlertDialogCancel>Отмена</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => onDelete(car.id)}>Удалить</AlertDialogAction>
+                            <AlertDialogAction onClick={() => onDelete(car)}>Удалить</AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>
@@ -117,7 +112,7 @@ export function GarageCard({ car, user, onEdit, onDelete, variant = 'default' }:
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                   <AlertDialogCancel>Отмена</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => onDelete(car.id)}>Удалить</AlertDialogAction>
+                  <AlertDialogAction onClick={() => onDelete(car)}>Удалить</AlertDialogAction>
                   </AlertDialogFooter>
               </AlertDialogContent>
           </AlertDialog>
@@ -131,7 +126,6 @@ export function GarageCard({ car, user, onEdit, onDelete, variant = 'default' }:
               alt={`${car.brand} ${car.model}`}
               fill
               className="object-cover"
-              data-ai-hint={carImageHint}
             />
           ) : (
             <div className="flex items-center justify-center h-full">
