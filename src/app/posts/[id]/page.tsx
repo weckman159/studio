@@ -127,7 +127,8 @@ export default function PostDetailPage() {
       } as Comment));
       
       // Сортировка на клиенте
-      commentsData.sort((a, b) => b.createdAt?.toDate() - a.createdAt?.toDate());
+      commentsData.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
+
 
       setComments(commentsData);
     } catch (error) {
@@ -328,7 +329,7 @@ export default function PostDetailPage() {
               <div className="flex items-center gap-3 hover:opacity-80 cursor-pointer">
                 <Avatar className="h-12 w-12">
                   <AvatarImage src={post.authorAvatar} />
-                  <AvatarFallback>{post.authorName[0]}</AvatarFallback>
+                  <AvatarFallback>{post.authorName ? post.authorName[0] : 'A'}</AvatarFallback>
                 </Avatar>
                 <div>
                   <p className="font-semibold">{post.authorName}</p>

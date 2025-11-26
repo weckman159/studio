@@ -143,9 +143,9 @@ export default function PostsPage() {
                 </CardHeader>
                 <CardContent>
                   <Skeleton className="h-6 w-3/4 mb-4" />
-                  <Skeleton className="aspect-video w-full rounded-lg" />
+                   <Skeleton className="aspect-video w-full rounded-lg" />
                 </CardContent>
-                <CardFooter className="flex justify-between">
+                 <CardFooter className="flex justify-between">
                    <Skeleton className="h-8 w-24" />
                    <Skeleton className="h-8 w-24" />
                 </CardFooter>
