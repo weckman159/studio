@@ -248,6 +248,33 @@
       "required": [
         "userId"
       ]
+    },
+    "Voting": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Voting",
+      "type": "object",
+      "description": "Represents a user-created poll or voting session.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the voting." },
+        "question": { "type": "string", "description": "The main question of the poll." },
+        "options": {
+          "type": "array",
+          "description": "An array of selectable options for the poll.",
+          "items": { "type": "string" }
+        },
+        "isActive": { "type": "boolean", "description": "Indicates if the poll is currently active." },
+        "totalVotes": { "type": "number", "description": "Total number of votes cast." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the poll was created." },
+        "endsAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the poll is scheduled to end." }
+      },
+      "required": [
+        "id",
+        "question",
+        "options",
+        "isActive",
+        "totalVotes",
+        "createdAt"
+      ]
     }
   },
   "auth": {
@@ -369,8 +396,25 @@
             }
           ]
         }
+      },
+       {
+        "path": "/votings/{votingId}",
+        "definition": {
+          "entityName": "Voting",
+          "schema": {
+            "$ref": "#/backend/entities/Voting"
+          },
+          "description": "Stores user-created polls and voting sessions.",
+          "params": [
+            {
+              "name": "votingId",
+              "description": "The unique identifier of the voting poll."
+            }
+          ]
+        }
       }
     ],
     "reasoning": "The Firestore data structure is designed to support the features of the AutoSphere application, focusing on user profiles, car management, posts, and community interaction. Key considerations include authorization independence, data consistency, and efficient querying. The structure leverages path-based ownership for user-specific data and denormalization where needed for authorization.\n\n*   **Users Collection:** Stores user profiles with basic information (name, email, profile visibility). Profile visibility settings are duplicated to the `users` collection to avoid a `get()` call to the `/userSettings/{userId}` collection.\n*   **Cars Collection:** Stores car information, using a subcollection under each user to ensure easy management and querying of a user's cars.\n*   **Posts Collection:** Stores user-generated posts. Posts are stored in a subcollection under each user.\n*   **Comments Collection:** Stores comments related to each post, located as a subcollection under the post.\n*   **FeaturedCars Collection:** Stores the 'Car of the Day' information, keyed by date.  It includes references to the car and user.\n*   **UserSettings Collection:** Stores user-specific settings for notifications and privacy.\n\nThis structure ensures Authorization Independence by:\n\n*   Storing ownership information directly within each document (e.g., `userId` in `cars`, `posts`, and `comments`).\n*   Duplicating profile visibility settings from `userSettings` to the `users` collection.\n\nThis approach avoids the need for complex `get()` calls in security rules and enables atomic operations.\n\nQAPs (Rules are not Filters) are supported by:\n\n*   Structural Segregation:  Data with different access control needs (e.g., public vs. private profiles) are stored in separate collections or subcollections (e.g., user profiles vs. user settings).\n*   Path-Based Ownership: Using paths like `/users/{userId}/cars/{carId}` provides inherent ownership context, simplifying security rules for listing and accessing user-owned resources."
   }
 }
+    

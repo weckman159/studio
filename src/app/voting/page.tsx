@@ -1,113 +1,187 @@
+// src/app/voting/page.tsx
+// Страница всех опросов/голосований
+// Можно увидеть активные/архивные опросы, перейти к деталям или создать свой опрос
+// Gemini: опросы хранятся в Firestore, сортируются по дате и активности
 
 'use client';
 
-import { useState } from 'react';
-import Image from 'next/image';
+import { useState, useEffect } from 'react';
+import { collection, query, orderBy, getDocs, where } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
 import Link from 'next/link';
-import { cars, users } from '@/lib/data';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ThumbsUp } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Search, Plus, BarChart, Calendar, Archive } from 'lucide-react';
 
-// Initialize votes state with random numbers for demonstration
-const initialVotes = cars.reduce((acc, car) => {
-  acc[car.id] = Math.floor(Math.random() * 150);
-  return acc;
-}, {} as Record<string, number>);
-
+// Интерфейс опроса
+interface VotingShort {
+  id: string;
+  question: string;
+  isActive: boolean;
+  options: string[]; // ["BMW", "Toyota",...]
+  totalVotes: number;
+  createdAt: any;
+  endsAt?: any;
+}
 
 export default function VotingPage() {
-    const { toast } = useToast();
-    const [votes, setVotes] = useState<Record<string, number>>(initialVotes);
-    const [votedCarId, setVotedCarId] = useState<string | null>(null);
+  const firestore = useFirestore();
+  const [polls, setPolls] = useState<VotingShort[]>([]);
+  const [filteredPolls, setFilteredPolls] = useState<VotingShort[]>([]);
+  const [showArchive, setShowArchive] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
 
-    const handleVote = (carId: string) => {
-        if (votedCarId) {
-            toast({
-                variant: 'destructive',
-                title: 'Вы уже проголосовали!',
-                description: 'Вы можете отдать только один голос в этом голосовании.',
-            });
-            return;
-        }
-        setVotes(prevVotes => ({
-            ...prevVotes,
-            [carId]: (prevVotes[carId] || 0) + 1,
-        }));
-        setVotedCarId(carId);
-        toast({
-            title: 'Ваш голос учтён!',
-            description: 'Спасибо за участие в голосовании.',
-        });
-    };
+  useEffect(() => {
+    if(firestore) {
+        fetchPolls();
+    }
+  }, [firestore]);
 
-    return (
-        <div className="container mx-auto px-4 py-8">
-            <div className="text-center mb-8">
-                <h1 className="text-4xl font-bold">Голосование за Автомобиль Дня</h1>
-                <p className="text-muted-foreground mt-2 text-lg">Выберите автомобиль, который, по вашему мнению, достоин стать следующим "Автомобилем дня"!</p>
-            </div>
+  // Загрузка опросов из Firestore
+  const fetchPolls = async () => {
+    if (!firestore) return;
+    setLoading(true);
+    try {
+      const q = query(
+        collection(firestore, 'votings'),
+        orderBy('createdAt', 'desc')
+      );
+      const querySnapshot = await getDocs(q);
+      const arr: VotingShort[] = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as VotingShort));
+      setPolls(arr);
+      setFilteredPolls(arr);
+    } catch (e) {
+      console.error('Ошибка загрузки опросов:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {cars.map(car => {
-                    const carImage = PlaceHolderImages.find(img => img.id === car.imageId);
-                    const owner = users.find(u => u.id === car.userId);
-                    const ownerAvatar = owner ? PlaceHolderImages.find(img => img.id === owner.avatarId) : null;
-                    const carVotes = votes[car.id] || 0;
+  // Фильтрация и поиск
+  useEffect(() => {
+    let arr = showArchive ? polls.filter(p => !p.isActive) : polls.filter(p => p.isActive);
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      arr = arr.filter(p =>
+        p.question.toLowerCase().includes(q) ||
+        p.options.some(opt => opt.toLowerCase().includes(q))
+      );
+    }
+    setFilteredPolls(arr);
+  }, [polls, showArchive, searchQuery]);
 
-                    return (
-                        <Card key={car.id} className="flex flex-col overflow-hidden transition-all hover:shadow-xl">
-                             <CardHeader className="p-0">
-                                <Link href={`/car/${car.id}`} className="block aspect-video relative">
-                                {carImage && (
-                                    <Image
-                                    src={carImage.imageUrl}
-                                    alt={`${car.brand} ${car.model}`}
-                                    fill
-                                    className="object-cover"
-                                    data-ai-hint={carImage.imageHint}
-                                    />
-                                )}
-                                </Link>
-                            </CardHeader>
-                            <CardContent className="p-4 flex-1 flex flex-col">
-                                 <CardTitle className="text-xl mb-1">
-                                    <Link href={`/car/${car.id}`} className="hover:text-primary transition-colors">
-                                        {car.brand} {car.model}
-                                    </Link>
-                                </CardTitle>
-                               {owner && (
-                                 <div className="flex items-center text-sm text-muted-foreground mb-4">
-                                     <Avatar className="h-5 w-5 mr-2">
-                                        {ownerAvatar && <AvatarImage src={ownerAvatar.imageUrl} data-ai-hint={ownerAvatar.imageHint}/>}
-                                        <AvatarFallback>{owner.name.charAt(0)}</AvatarFallback>
-                                    </Avatar>
-                                    <Link href={`/profile/${owner.id}`} className="hover:underline">{owner.name}</Link>
-                                 </div>
-                               )}
-                               <div className="flex-1" />
-                               <div className="flex items-center font-bold text-lg text-primary">
-                                 <ThumbsUp className="h-5 w-5 mr-2"/>
-                                 <span>{carVotes} голосов</span>
-                               </div>
-                            </CardContent>
-                            <CardFooter className="p-4 pt-0">
-                                <Button 
-                                    className="w-full"
-                                    onClick={() => handleVote(car.id)}
-                                    disabled={!!votedCarId}
-                                >
-                                    <ThumbsUp className="mr-2 h-4 w-4"/>
-                                    {votedCarId === car.id ? 'Ваш голос' : 'Голосовать'}
-                                </Button>
-                            </CardFooter>
-                        </Card>
-                    );
-                })}
-            </div>
+  const formatDate = (timestamp: any) => {
+    if (!timestamp) return '';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    return new Intl.DateTimeFormat('ru-RU', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    }).format(date);
+  };
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      {/* Хедер */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div>
+          <h1 className="text-4xl font-bold mb-2">Голосования</h1>
+          <p className="text-muted-foreground">
+            Актуальные и завершённые опросы автосообщества
+          </p>
         </div>
-    );
+        <Link href="/voting/create">
+          <Button size="lg">
+            <Plus className="mr-2 h-5 w-5" />
+            Создать опрос
+          </Button>
+        </Link>
+      </div>
+
+      {/* Фильтры */}
+      <div className="mb-6 flex gap-4 flex-wrap">
+        <Button
+          variant={!showArchive ? 'default' : 'outline'}
+          onClick={() => setShowArchive(false)}
+          size="sm"
+        >
+          <BarChart className="h-4 w-4 mr-2" />
+          Активные опросы
+        </Button>
+        <Button
+          variant={showArchive ? 'default' : 'outline'}
+          onClick={() => setShowArchive(true)}
+          size="sm"
+        >
+          <Archive className="h-4 w-4 mr-2" />
+          Архив
+        </Button>
+      </div>
+      {/* Поиск */}
+      <div className="relative mb-8">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
+        <Input
+          type="text"
+          placeholder="Поиск по вопросу или вариантам"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          className="pl-10 h-12"
+        />
+      </div>
+      {/* Лента опросов */}
+      {loading ? (
+        <div className="flex items-center justify-center min-h-[250px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Загрузка опросов...</p>
+          </div>
+        </div>
+      ) : filteredPolls.length === 0 ? (
+        <div className="text-center py-12">
+          <BarChart className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+          <h3 className="text-xl font-semibold mb-2">
+            {showArchive ? 'Опросов в архиве нет' : 'Активных опросов нет'}
+          </h3>
+          <p className="text-muted-foreground mb-6">
+            Попробуйте другой фильтр/поиск или создайте новый опрос
+          </p>
+          <Link href="/voting/create">
+            <Button>
+              <Plus className="mr-2 h-5 w-5" />
+              Новый опрос
+            </Button>
+          </Link>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredPolls.map(poll => (
+            <Link key={poll.id} href={`/voting/${poll.id}`}>
+              <Card className="h-full hover:shadow-lg cursor-pointer transition-shadow">
+                <CardHeader>
+                  <CardTitle className="text-lg">{poll.question}</CardTitle>
+                  <div className="flex flex-wrap gap-2 my-2">
+                    {poll.options.map((opt, i) => (
+                      <Badge key={i} variant="secondary">{opt}</Badge>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Calendar className="h-4 w-4" />
+                    {formatDate(poll.createdAt)}
+                    {poll.totalVotes > 0 && <span>• проголосовало {poll.totalVotes}</span>}
+                  </div>
+                </CardHeader>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
+    

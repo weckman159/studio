@@ -207,5 +207,26 @@ service cloud.firestore {
       allow update: if isExistingOwner(userId);
       allow delete: if isExistingOwner(userId);
     }
+    
+    // ------------------------------------------------------------------------
+    // Collection: votings
+    // ------------------------------------------------------------------------
+
+    /**
+     * @description Manages user-created polls and voting sessions.
+     * @path /votings/{votingId}
+     * @allow (read) Any user can read poll data.
+     * @allow (create) Any authenticated user can create a new poll.
+     * @allow (update) Only authenticated users can vote (update vote counts).
+     * @deny (delete) Deletion is not allowed from the client-side.
+     * @principle Publicly readable, but creation and voting are restricted to authenticated users.
+     */
+    match /votings/{votingId} {
+        allow read: if true;
+        allow create: if isSignedIn();
+        allow update: if isSignedIn(); 
+        allow delete: if false;
+    }
   }
 }
+    
