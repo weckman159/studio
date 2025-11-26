@@ -311,5 +311,20 @@ service cloud.firestore {
        allow create: if isSignedIn() && isRequestingUser('authorId');
        allow update, delete: if false;
     }
+
+    // ------------------------------------------------------------------------
+    // Collection: feedback
+    // ------------------------------------------------------------------------
+    /**
+     * @description Allows any user (authenticated or anonymous) to submit feedback.
+     * @path /feedback/{feedbackId}
+     * @allow (create) Any user can create a feedback document.
+     * @deny (read, update, delete) Only backend services can access feedback.
+     * @principle Open write access for feedback submission, but secured for reading and management.
+     */
+    match /feedback/{feedbackId} {
+      allow create: if true;
+      allow read, update, delete: if false;
+    }
   }
 }

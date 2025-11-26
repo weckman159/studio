@@ -354,6 +354,19 @@
         "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the message was created." }
       },
       "required": ["id", "dialogId", "authorId", "text", "createdAt"]
+    },
+    "Feedback": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Feedback",
+      "type": "object",
+      "description": "Represents a user-submitted feedback message.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the feedback message." },
+        "email": { "type": "string", "format": "email", "description": "The email address of the user submitting feedback (optional)." },
+        "msg": { "type": "string", "description": "The content of the feedback message." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the feedback was submitted." }
+      },
+      "required": ["id", "msg", "createdAt"]
     }
   },
   "auth": {
@@ -552,6 +565,22 @@
             {
               "name": "messageId",
               "description": "The unique identifier for the message."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/feedback/{feedbackId}",
+        "definition": {
+          "entityName": "Feedback",
+          "schema": {
+            "$ref": "#/backend/entities/Feedback"
+          },
+          "description": "Stores user-submitted feedback messages.",
+          "params": [
+            {
+              "name": "feedbackId",
+              "description": "The unique identifier for the feedback message."
             }
           ]
         }
