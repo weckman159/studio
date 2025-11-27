@@ -134,7 +134,7 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
         });
       } else {
         // 3b. Create new car
-        const carData: Omit<Car, 'imageId'> & { createdAt: any } = {
+        const carData = {
           ...data,
           id: carId,
           userId: user.uid,
