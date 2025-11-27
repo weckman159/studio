@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -13,7 +12,6 @@ import { doc, getDoc, collection, query, where } from 'firebase/firestore';
 import type { Car, User } from '@/lib/data';
 import { users as mockUsers } from '@/lib/data';
 import { EditProfileModal } from '@/components/EditProfileModal';
-import { useCar } from '@/hooks/useCar';
 
 function ProfilePageClient({ userId }: { userId: string }) {
   const { user: authUser, isUserLoading } = useUser();
@@ -64,7 +62,7 @@ function ProfilePageClient({ userId }: { userId: string }) {
     setIsOwner(!!authUser && authUser.uid === userId);
   }, [authUser, userId]);
   
-  const totalLoading = loading || isUserLoading || (carsQuery && carsLoading);
+  const totalLoading = loading || isUserLoading || carsLoading;
 
   if (totalLoading && !profile) {
      return (
@@ -112,6 +110,7 @@ function ProfilePageClient({ userId }: { userId: string }) {
             profile={displayProfile} 
             isOwner={isOwner} 
             onEditClick={() => setEditModalOpen(true)}
+            loading={totalLoading}
         />
         
         <div className="container mx-auto px-4 py-8">
@@ -196,11 +195,14 @@ function ProfilePageClient({ userId }: { userId: string }) {
 
 export default function ProfilePage() {
   const params = useParams();
-  const userId = params.id as string;
+  const userId = params?.id as string;
 
   if (!userId) {
-    // Optionally, render a loading state or a message
-    return <div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
   }
   
   return <ProfilePageClient userId={userId} />;

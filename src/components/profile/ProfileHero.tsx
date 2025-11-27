@@ -14,6 +14,7 @@ import {
   Send,
   Edit
 } from 'lucide-react'
+import { Skeleton } from '../ui/skeleton'
 
 interface UserProfile {
   id: string
@@ -38,7 +39,7 @@ interface UserProfile {
   }
 }
 
-export function ProfileHero({ profile, isOwner = false, onEditClick }: { profile: UserProfile, isOwner?: boolean, onEditClick: () => void }) {
+export function ProfileHero({ profile, isOwner = false, onEditClick, loading }: { profile: UserProfile, isOwner?: boolean, onEditClick: () => void, loading?: boolean }) {
   const [isFollowing, setIsFollowing] = useState(false)
   
   const tierColors = {
@@ -46,6 +47,10 @@ export function ProfileHero({ profile, isOwner = false, onEditClick }: { profile
     silver: 'from-gray-400 to-gray-200',
     gold: 'from-yellow-500 to-yellow-300',
     platinum: 'from-purple-500 to-pink-400',
+  }
+  
+  if (loading) {
+      return <Skeleton className="h-[500px] w-full" />
   }
 
   return (
