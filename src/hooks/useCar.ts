@@ -1,11 +1,12 @@
 
 'use client'
 import { useEffect, useState } from 'react'
-import { doc, getDoc, collection, getDocs, query, orderBy, increment, updateDoc } from 'firebase/firestore'
-import { useFirestore } from '@/firebase'
+import { doc, getDoc, collection, getDocs, query, orderBy, increment, updateDoc, where } from 'firebase/firestore'
+import { useFirestore, useUser } from '@/firebase'
 import type { Car, TimelineEntry, InventoryItem } from '@/lib/types/car'
 
 export function useCar(carId: string) {
+  const { user } = useUser();
   const [car, setCar] = useState<Car | null>(null)
   const [timeline, setTimeline] = useState<TimelineEntry[]>([])
   const [inventory, setInventory] = useState<InventoryItem[]>([])
@@ -20,36 +21,36 @@ export function useCar(carId: string) {
       }
       try {
         setLoading(true);
-        // Загрузить основные данные авто
-        // First, try to get from the root 'cars' collection
+        // 1. Try to get from root `cars` collection (if we have public cars)
         let carRef = doc(firestore, 'cars', carId);
         let carSnap = await getDoc(carRef);
 
-        if (!carSnap.exists()) {
-          // Fallback to searching in user subcollections
-           const usersSnap = await getDocs(collection(firestore, 'users'));
-           for (const userDoc of usersSnap.docs) {
-               const userCarRef = doc(firestore, 'users', userDoc.id, 'cars', carId);
-               const userCarSnap = await getDoc(userCarRef);
-               if (userCarSnap.exists()) {
-                   carSnap = userCarSnap;
-                   carRef = userCarRef;
-                   break;
-               }
+        // 2. If not found, try to get from the currently authenticated user's subcollection
+        if (!carSnap.exists() && user) {
+           const userCarRef = doc(firestore, 'users', user.uid, 'cars', carId);
+           const userCarSnap = await getDoc(userCarRef);
+           if (userCarSnap.exists()) {
+               carSnap = userCarSnap;
+               carRef = userCarRef;
            }
         }
         
+        // 3. If still not found, we give up
         if (!carSnap.exists()) {
-            throw new Error('Car not found')
+            // To find a car for any user (e.g. when viewing another profile), this part is tricky
+            // and inefficient. A better approach would be to have car ownership info directly on the car doc.
+            // For now, we'll assume we can't find it if it's not public or the owner's.
+            console.warn("Car not found in public collection or current user's garage.");
+            throw new Error('Car not found');
         }
         
         const carData = { id: carSnap.id, ...carSnap.data() } as Car
         setCar(carData)
         
-        // Увеличить счётчик просмотров
+        // Increment views count
         await updateDoc(carRef, { views: increment(1) })
         
-        // Загрузить timeline
+        // Load timeline
         const timelineRef = collection(carRef, 'timeline')
         const timelineQuery = query(timelineRef, orderBy('date', 'desc'))
         const timelineSnap = await getDocs(timelineQuery)
@@ -59,7 +60,7 @@ export function useCar(carId: string) {
         })) as TimelineEntry[]
         setTimeline(timelineData)
         
-        // Загрузить инвентарь
+        // Load inventory
         const inventoryRef = collection(carRef, 'inventory')
         const inventorySnap = await getDocs(inventoryRef)
         const inventoryData = inventorySnap.docs.map(doc => ({
@@ -70,6 +71,7 @@ export function useCar(carId: string) {
         
       } catch (error) {
         console.error('Error loading car:', error)
+        setCar(null); // Explicitly set to null on error
       } finally {
         setLoading(false)
       }
@@ -80,7 +82,9 @@ export function useCar(carId: string) {
     } else {
         setLoading(false);
     }
-  }, [carId, firestore])
+  }, [carId, firestore, user]) // Add user to dependency array
 
   return { car, timeline, inventory, loading }
 }
+
+    

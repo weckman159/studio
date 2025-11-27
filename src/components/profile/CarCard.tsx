@@ -1,4 +1,5 @@
 
+
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { Zap, Gauge, Wrench } from 'lucide-react'
@@ -73,3 +74,5 @@ export function CarCard({ car }: CarCardProps) {
     </Link>
   )
 }
+
+    
