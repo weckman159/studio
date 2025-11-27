@@ -15,19 +15,19 @@ import { PostFilters } from "@/components/PostFilters";
 function PostFeed({ posts, loading }: { posts: Post[], loading?: boolean }) {
   if (loading) {
     return (
-      <div className="space-y-6">
-        {[1, 2, 3].map(i => (
-          <div key={i} className="border rounded-xl p-4">
-            <div className="flex items-center gap-3 mb-4">
-              <Skeleton className="h-12 w-12 rounded-full" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className="border rounded-xl p-4 space-y-4">
+            <Skeleton className="aspect-video w-full rounded-lg" />
+             <div className="flex items-center gap-3">
+              <Skeleton className="h-10 w-10 rounded-full" />
               <div className="flex-1">
-                <Skeleton className="h-4 w-32 mb-2" />
-                <Skeleton className="h-3 w-48" />
+                <Skeleton className="h-4 w-24 mb-2" />
+                <Skeleton className="h-3 w-32" />
               </div>
             </div>
-            <Skeleton className="h-6 w-3/4 mb-2" />
-            <Skeleton className="h-4 w-full mb-4" />
-            <Skeleton className="aspect-video w-full rounded-lg" />
+            <Skeleton className="h-5 w-3/4" />
+            <Skeleton className="h-4 w-full" />
           </div>
         ))}
       </div>
@@ -35,7 +35,7 @@ function PostFeed({ posts, loading }: { posts: Post[], loading?: boolean }) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
       {posts.map(post => (
         <PostCard key={post.id} post={post} />
       ))}
@@ -56,19 +56,13 @@ export default function Home() {
 
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
-            <CarOfTheDay />
-        </div>
-        <div className="lg:col-span-1">
-          <PostFilters 
-            activeType={activeType}
-            onTypeChange={setActiveType}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-          />
-        </div>
-      </div>
+      <CarOfTheDay />
+      <PostFilters 
+        activeType={activeType}
+        onTypeChange={setActiveType}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+      />
       <div>
         <h1 className="text-3xl font-bold mb-6">Лента постов</h1>
         <PostFeed posts={filteredPosts} loading={false} />
@@ -76,5 +70,3 @@ export default function Home() {
     </div>
   );
 }
-
-    

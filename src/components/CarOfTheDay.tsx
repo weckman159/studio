@@ -51,64 +51,35 @@ export function CarOfTheDay() {
 
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center"><Award className="mr-2 h-5 w-5 text-amber-400"/>Автомобиль дня</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="h-40 w-full rounded-md" />
-          <Skeleton className="h-6 w-3/4 mt-4" />
-          <Skeleton className="h-4 w-1/2 mt-2" />
-        </CardContent>
-        <CardFooter className="flex flex-col items-stretch gap-2">
-            <Skeleton className="h-10 w-full" />
-        </CardFooter>
-      </Card>
+      <Skeleton className="h-[250px] w-full rounded-2xl" />
     )
   }
 
   if (!car || !owner) return null;
 
-  const carImage = car.photoUrl;
-  const ownerAvatar = owner.photoURL;
+  const carImage = car.photoUrl || car.photos?.[0];
 
   return (
-    <div className="relative group">
-      <div className="absolute -inset-0.5 bg-gradient-to-r from-primary to-blue-600 rounded-lg blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
-      <Card className="relative overflow-hidden">
-        <CardHeader>
-          <CardTitle className="flex items-center text-primary">
-              <Award className="mr-2 h-6 w-6"/>Победитель "Авто дня"
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {carImage && (
-              <Link href={`/car/${car.id}`} className="relative aspect-video block">
-                  <Image 
-                      src={carImage} 
-                      alt={`${car.brand} ${car.model}`}
-                      fill
-                      className="object-cover"
-                  />
-              </Link>
-          )}
-          <div className="p-4">
-              <h3 className="text-xl font-bold">{car.brand} {car.model}</h3>
-              <div className="flex items-center mt-2">
-                  <Avatar className="h-6 w-6 mr-2">
-                      {ownerAvatar && <AvatarImage src={ownerAvatar} />}
-                      <AvatarFallback>{owner.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm text-muted-foreground">Владелец: {owner.name}</span>
-              </div>
-          </div>
-        </CardContent>
-        <CardFooter className="flex flex-col items-stretch gap-2">
-          <Button asChild className="w-full">
-              <Link href={`/car-of-the-day`}>Страница голосования</Link>
-          </Button>
-        </CardFooter>
-      </Card>
+    <div className="relative group overflow-hidden rounded-2xl h-[250px]">
+        {carImage && (
+            <Image 
+                src={carImage} 
+                alt={`${car.brand} ${car.model}`}
+                fill
+                className="object-cover w-full h-full"
+            />
+        )}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+      <div className="absolute bottom-4 left-4 right-4 text-white">
+        <h2 className="text-2xl font-bold flex items-center">
+            <Award className="mr-2 h-6 w-6 text-amber-300"/>
+            Автомобиль дня
+        </h2>
+        <p className="text-lg">{car.brand} {car.model}</p>
+        <Button size="sm" className="mt-2" asChild>
+            <Link href="/car-of-the-day">Страница голосования</Link>
+        </Button>
+      </div>
     </div>
   );
 }
