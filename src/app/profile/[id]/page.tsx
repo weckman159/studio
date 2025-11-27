@@ -155,7 +155,7 @@ export default function ProfilePage() {
     return query(collection(firestore, 'users', id, 'cars'));
   }, [id, firestore]);
 
-  const { data: userCars, isLoading: carsLoading } = useCollection<Car>(carsQuery || undefined);
+  const { data: userCars, isLoading: carsLoading } = useCollection<Car>(carsQuery);
   const userPosts = mockPosts.filter(p => p.authorId === id);
   const favoritePosts = mockPosts.filter(p => ['1', '3'].includes(p.id));
 
