@@ -9,7 +9,7 @@ import { notFound, useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from '@/components/ui/button';
-import { FileText, Award, Car as CarIcon, Edit3, Users as UsersIcon, Heart, MessageCircle, Plus, AtSign, Bookmark, UserCheck, UserPlus, MapPin, Calendar, AlertCircle, Repeat2 } from "lucide-react";
+import { FileText, Award, Car as CarIcon, Edit3, Users as UsersIcon, Heart, MessageCircle, Plus, AtSign, Bookmark, UserCheck, UserPlus, MapPin, Calendar, AlertCircle, Repeat2, Settings, Instagram, Send, Youtube } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import type { User as UserData, Car, Post } from '@/lib/data';
 import { users, cars as mockCars, posts as mockPosts } from '@/lib/data';
@@ -23,6 +23,116 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PostCard } from '@/components/PostCard';
 import { UserListDialog } from '@/components/UserListDialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Separator } from '@/components/ui/separator';
+
+
+function ProfileHero({ user, isOwner }: { user: UserData, isOwner: boolean }) {
+    const [isSubscribed, setIsSubscribed] = useState(false);
+    
+     const handleSubscribe = () => {
+      // Placeholder for subscription logic
+      setIsSubscribed(!isSubscribed);
+  }
+
+  return (
+    <div className="relative h-[40vh] min-h-[300px] w-full rounded-2xl overflow-hidden mb-8 shadow-lg">
+      {/* Background Image/Video */}
+      <Image 
+        src={user.coverPhotoURL || 'https://images.unsplash.com/photo-1553440569-bcc63803a83d?q=80&w=2025&auto=format&fit=crop'} 
+        alt={`${user.name}'s cover photo`}
+        fill
+        className="object-cover"
+        priority
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
+      
+      {/* Info Block */}
+      <div className="absolute bottom-6 left-6 right-6">
+        <div className="flex items-end gap-6">
+          <Avatar className="h-32 w-32 rounded-2xl border-4 border-primary/80 shadow-2xl">
+            <AvatarImage src={user.photoURL} />
+            <AvatarFallback className="text-4xl">{user.name?.[0]}</AvatarFallback>
+          </Avatar>
+          <div className="flex-1">
+            <h1 className="text-3xl font-bold text-white shadow-text">{user.name}</h1>
+            <p className="text-muted-foreground text-white/80 shadow-text">@{user.nickname}</p>
+            <div className="flex flex-wrap items-center gap-4 text-sm text-white/90 mt-2 shadow-text">
+                <span>{user.stats?.followers || 0} подписчиков</span>
+                <span>•</span>
+                <span>{user.stats?.posts || 0} записей</span>
+                <span>•</span>
+                <span>{user.stats?.likes || 0} лайков</span>
+            </div>
+          </div>
+          <div className="hidden md:flex gap-2">
+             {isOwner ? (
+                <Button variant="outline" size="lg" className="bg-white/10 text-white border-white/20 backdrop-blur-md">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Настройки
+                </Button>
+            ) : (
+                <>
+                    <Button size="lg" onClick={handleSubscribe} className="bg-white/90 text-black hover:bg-white">
+                        {isSubscribed ? <UserCheck className="mr-2 h-4 w-4"/> : <UserPlus className="mr-2 h-4 w-4"/>}
+                        {isSubscribed ? 'Вы подписаны' : 'Подписаться'}
+                    </Button>
+                    <Button variant="outline" size="lg" className="bg-white/10 text-white border-white/20 backdrop-blur-md">
+                        <MessageCircle className="mr-2 h-4 w-4" />
+                        Сообщение
+                    </Button>
+                </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProfileSidebar({ user }: { user: UserData }) {
+    const skills = ["#Сварка", "#НастройкаECU", "#Детейлинг", "#Винил", "#Покраска"];
+    const achievements = [
+        { icon: '🏆', label: 'Машина Дня' },
+        { icon: '✍️', label: 'Автор 10+ постов' },
+        { icon: '🔥', label: 'Топ-10 региона' },
+        { icon: '⭐', label: 'Легенда клуба' }
+    ]
+
+    return (
+        <aside className="w-full lg:w-1/4 lg:sticky top-24 space-y-6">
+            <Card>
+                <CardHeader><CardTitle>Обо мне</CardTitle></CardHeader>
+                <CardContent>
+                    <p className="text-sm text-muted-foreground">{user.bio}</p>
+                </CardContent>
+            </Card>
+             <Card>
+                <CardHeader><CardTitle>Социальные сети</CardTitle></CardHeader>
+                <CardContent className="flex gap-2">
+                    <Button variant="outline" size="icon"><Instagram className="h-4 w-4" /></Button>
+                    <Button variant="outline" size="icon"><Send className="h-4 w-4" /></Button>
+                    <Button variant="outline" size="icon"><Youtube className="h-4 w-4" /></Button>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader><CardTitle>Навыки</CardTitle></CardHeader>
+                <CardContent className="flex flex-wrap gap-2">
+                    {skills.map(skill => <Badge key={skill} variant="secondary">{skill}</Badge>)}
+                </CardContent>
+            </Card>
+             <Card>
+                <CardHeader><CardTitle>Достижения</CardTitle></CardHeader>
+                <CardContent className="grid grid-cols-4 gap-2">
+                     {achievements.map(ach => (
+                         <div key={ach.label} title={ach.label} className="flex items-center justify-center p-2 bg-muted rounded-md text-xl cursor-pointer">
+                            {ach.icon}
+                         </div>
+                     ))}
+                </CardContent>
+            </Card>
+        </aside>
+    )
+}
 
 
 export default function ProfilePage() {
@@ -35,12 +145,9 @@ export default function ProfilePage() {
   
   const isOwner = authUser && authUser.uid === id;
   
-  const [user, setUser] = useState<UserData | undefined>(undefined);
-  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [user, setUser] = useState<UserData | null>(null);
   const [isEditModalOpen, setEditModalOpen] = useState(false);
   const [isCarModalOpen, setCarModalOpen] = useState(false);
-  const [isFollowersModalOpen, setFollowersModalOpen] = useState(false);
-  const [isFollowingModalOpen, setFollowingModalOpen] = useState(false);
   const [editingCar, setEditingCar] = useState<Car | null>(null);
 
   const carsQuery = useMemoFirebase(() => {
@@ -50,7 +157,7 @@ export default function ProfilePage() {
 
   const { data: userCars, isLoading: carsLoading } = useCollection<Car>(carsQuery);
   const userPosts = mockPosts.filter(p => p.authorId === id);
-  const favoritePosts = mockPosts.filter(p => ['1', '3'].includes(p.id)); // Mock favorites
+  const favoritePosts = mockPosts.filter(p => ['1', '3'].includes(p.id));
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -60,7 +167,7 @@ export default function ProfilePage() {
             setUser({ id: userDoc.id, ...userDoc.data() } as UserData);
         } else {
             const mockUser = users.find(u => u.id === id);
-            setUser(mockUser);
+            setUser(mockUser || null);
             if(!mockUser) notFound();
         }
     }
@@ -87,6 +194,10 @@ export default function ProfilePage() {
     return <div className="container mx-auto px-4 py-8 text-center">Загрузка профиля...</div>;
   }
   
+  if (!user) {
+    return notFound();
+  }
+
   const handleProfileSave = (updatedUser: UserData) => {
     setUser(updatedUser);
   };
@@ -101,22 +212,6 @@ export default function ProfilePage() {
     setCarModalOpen(true);
   }
   
-  const handleSubscribe = () => {
-      if (!authUser) return;
-      setIsSubscribed(!isSubscribed);
-      setUser(prevUser => {
-          if (!prevUser) return prevUser;
-          const currentFollowers = prevUser.stats?.followers || 0;
-          return {
-              ...prevUser,
-              stats: {
-                  ...prevUser.stats,
-                  followers: currentFollowers + (isSubscribed ? -1 : 1),
-              }
-          }
-      })
-  }
-
   const handleDeleteCar = async (carId: string) => {
     if (!authUser || !firestore) return;
     try {
@@ -127,8 +222,6 @@ export default function ProfilePage() {
     }
   };
 
-  const currentCarName = userCars && userCars.length > 0 ? `${userCars[0].brand} ${userCars[0].model}` : 'пока нет';
-  const otherCars = userCars ? userCars.slice(1) : [];
 
   return (
       <>
@@ -138,196 +231,94 @@ export default function ProfilePage() {
         user={user}
         onSave={handleProfileSave}
       />
-      {userCars && (
-        <AddCarForm
-          isOpen={isCarModalOpen}
-          setIsOpen={(open) => {
-            if (!open) setEditingCar(null);
-            setCarModalOpen(open);
-          }}
-          carToEdit={editingCar}
-        />
-      )}
-      <UserListDialog isOpen={isFollowersModalOpen} onOpenChange={setFollowersModalOpen} title="Подписчики" users={users} />
-      <UserListDialog isOpen={isFollowingModalOpen} onOpenChange={setFollowingModalOpen} title="Подписки" users={users.slice(1)} />
+      <AddCarForm
+        isOpen={isCarModalOpen}
+        setIsOpen={(open) => {
+          if (!open) setEditingCar(null);
+          setCarModalOpen(open);
+        }}
+        carToEdit={editingCar}
+      />
+     
+      <div className="container mx-auto py-8">
+        <ProfileHero user={user} isOwner={isOwner}/>
 
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        {/* Шапка профиля */}
-        <div className="flex flex-col sm:flex-row gap-6 items-start mb-6">
-          <Avatar className="h-32 w-32 border-4 border-background shadow-md">
-            <AvatarImage src={user.photoURL} />
-            <AvatarFallback className="text-4xl">{user.name[0]}</AvatarFallback>
-          </Avatar>
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold">{user.name}, {user.age}</h1>
-            <p className="text-muted-foreground">
-              Я езжу на <b>{currentCarName}</b>
-            </p>
-            <p className="text-sm text-muted-foreground">{user.location}</p>
-            
-            {/* Статистика */}
-            <div className="flex gap-4 mt-4">
-              <div className="flex flex-col items-center">
-                <div className="rounded-full border-4 border-primary/80 h-20 w-20 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold">{user.stats?.drive || 0}</div>
-                    <div className="text-xs">драйв</div>
-                  </div>
-                </div>
-              </div>
-              <button onClick={() => setFollowersModalOpen(true)} className="flex flex-col items-center">
-                <div className="rounded-full border-4 border-border h-20 w-20 flex items-center justify-center hover:border-primary/50 transition-colors">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold">{user.stats?.followers || 0}</div>
-                    <div className="text-xs">читают</div>
-                  </div>
-                </div>
-              </button>
-              <div className="flex flex-col items-center">
-                <div className="rounded-full border-4 border-border h-20 w-20 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold">{userPosts.length}</div>
-                    <div className="text-xs">записей</div>
-                  </div>
-                </div>
-              </div>
-            </div>
+        <div className="flex flex-col lg:flex-row gap-8">
+            <ProfileSidebar user={user} />
+            <main className="flex-1">
+                <Tabs defaultValue="garage" className="w-full">
+                    <TabsList className="mb-6 grid w-full grid-cols-3">
+                    <TabsTrigger value="garage"><CarIcon className="w-4 h-4 mr-2" />Гараж</TabsTrigger>
+                    <TabsTrigger value="posts"><FileText className="w-4 h-4 mr-2" />Бортжурнал</TabsTrigger>
+                    <TabsTrigger value="favorites"><Bookmark className="w-4 h-4 mr-2" />Избранное</TabsTrigger>
+                    </TabsList>
+                    
+                     <TabsContent value="garage">
+                         <div className="flex justify-end mb-4">
+                            {isOwner && (
+                                <Button variant="outline" size="sm" onClick={handleAddCar}>
+                                    <Plus className="h-4 w-4 mr-2"/>
+                                    Добавить автомобиль
+                                </Button>
+                            )}
+                         </div>
+                         {userCars && userCars.length > 0 ? (
+                            <div className="space-y-4">
+                            {userCars.map((car) => (
+                                <GarageCard
+                                key={car.id} 
+                                car={car}
+                                user={user!}
+                                onEdit={isOwner ? handleEditCar : undefined}
+                                onDelete={isOwner ? handleDeleteCar : undefined}
+                                variant='compact'
+                                />
+                            ))}
+                            </div>
+                        ) : (
+                            <Card>
+                            <CardContent className="p-10 text-center text-muted-foreground">
+                                <p>В гараже пока нет автомобилей.</p>
+                                {isOwner && <Button onClick={handleAddCar} className="mt-4">Добавить автомобиль</Button>}
+                            </CardContent>
+                            </Card>
+                        )}
+                    </TabsContent>
+                    
+                    <TabsContent value="posts">
+                        {userPosts && userPosts.length > 0 ? (
+                        <div className="space-y-4">
+                            {userPosts.map((post) => (
+                                <PostCard key={post.id} post={post}/>
+                            ))}
+                        </div>
+                        ) : (
+                        <Card>
+                            <CardContent className="p-10 text-center text-muted-foreground">
+                            <p>У этого пользователя пока нет записей в бортжурнале.</p>
+                            {isOwner && <Button onClick={() => router.push('/posts/create')} className="mt-4">Создать пост</Button>}
+                            </CardContent>
+                        </Card>
+                        )}
+                    </TabsContent>
 
-            {/* Кнопки */}
-            <div className="flex gap-2 mt-4">
-               {isOwner ? (
-                  <Button variant="outline" onClick={() => setEditModalOpen(true)}>
-                    <Edit3 className="mr-2 h-4 w-4" />
-                    Редактировать
-                  </Button>
-                ) : (
-                  <>
-                    {authUser && (
-                        <Button onClick={handleSubscribe}>
-                          {isSubscribed ? <UserCheck className="mr-2 h-4 w-4"/> : <UserPlus className="mr-2 h-4 w-4"/>}
-                          {isSubscribed ? 'Вы подписаны' : 'Подписаться'}
-                      </Button>
+                    <TabsContent value="favorites">
+                    {favoritePosts.length > 0 ? (
+                        <div className="space-y-6">
+                        {favoritePosts.map(post => <PostCard key={post.id} post={post} />)}
+                        </div>
+                    ) : (
+                        <Card>
+                            <CardContent className="p-10 text-center text-muted-foreground">
+                            <p>Пользователь еще не добавлял посты в избранное.</p>
+                            </CardContent>
+                        </Card>
                     )}
-                     <Button variant="outline">Сообщение</Button>
-                  </>
-                )}
-            </div>
-          </div>
+                    </TabsContent>
+                </Tabs>
+            </main>
         </div>
-
-        {/* Гараж (dropdown) */}
-        {userCars && userCars.length > 0 && (
-          <details className="mb-6 bg-muted rounded-lg p-4">
-            <summary className="font-semibold cursor-pointer">
-              {currentCarName} ▼
-            </summary>
-            <ul className="mt-2 ml-4 space-y-1 text-sm list-disc list-inside">
-              {otherCars.map((car) => (
-                 <li key={car.id} className="hover:underline cursor-pointer">
-                   <Link href={`/car/${car.id}`}>{car.brand} {car.model}</Link>
-                </li>
-              ))}
-            </ul>
-          </details>
-        )}
-        
-        {/* Активность */}
-        <div className="flex gap-6 mb-8 text-sm text-muted-foreground border-b pb-4">
-          <div className="flex items-center gap-1">
-            <Heart className="h-4 w-4" /> {user.stats?.likes || 0}
-          </div>
-          <div className="flex items-center gap-1">
-            <MessageCircle className="h-4 w-4" /> {userPosts.reduce((sum, p) => sum + p.commentsCount, 0)}
-          </div>
-          <div className="flex items-center gap-1">
-            <Repeat2 className="h-4 w-4" /> {user.stats?.reposts || 0}
-          </div>
-          <div className="flex items-center gap-1">
-            <Bookmark className="h-4 w-4" /> {favoritePosts.length}
-          </div>
-        </div>
-
-        
-        <Tabs defaultValue="posts" className="w-full">
-            <TabsList className="mb-6 grid w-full grid-cols-3">
-              <TabsTrigger value="posts"><FileText className="w-4 h-4 mr-2" />Бортжурнал</TabsTrigger>
-              <TabsTrigger value="garage"><CarIcon className="w-4 h-4 mr-2" />Гараж</TabsTrigger>
-              <TabsTrigger value="favorites"><Bookmark className="w-4 h-4 mr-2" />Избранное</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="posts">
-                 {userPosts && userPosts.length > 0 ? (
-                  <div className="space-y-4">
-                    {userPosts.map((post) => {
-                      const postUser = users.find(u => u.id === post.authorId);
-                      const postCar = userCars?.find(c => c.id === post.carId) || mockCars.find(c => c.id === post.carId);
-                      if (!postUser || !postCar) return null;
-                      return <PostCard key={post.id} post={post} user={postUser} car={postCar} />
-                    })}
-                  </div>
-                ) : (
-                   <Card>
-                    <CardContent className="p-10 text-center text-muted-foreground">
-                      <p>У этого пользователя пока нет записей в бортжурнале.</p>
-                       {isOwner && <Button onClick={() => router.push('/posts/create')} className="mt-4">Создать пост</Button>}
-                    </CardContent>
-                  </Card>
-                )}
-            </TabsContent>
-            
-            <TabsContent value="garage">
-                 <div className="flex justify-end mb-4">
-                    {isOwner && (
-                        <Button variant="outline" size="sm" onClick={handleAddCar}>
-                            <Plus className="h-4 w-4 mr-2"/>
-                            Добавить автомобиль
-                        </Button>
-                    )}
-                 </div>
-                 {userCars && userCars.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                    {userCars.map((car) => (
-                        <GarageCard
-                        key={car.id} 
-                        car={car}
-                        user={user}
-                        onEdit={isOwner ? handleEditCar : undefined}
-                        onDelete={isOwner ? handleDeleteCar : undefined}
-                        />
-                    ))}
-                    </div>
-                ) : (
-                    <Card>
-                      <CardContent className="p-10 text-center text-muted-foreground">
-                          <p>В гараже пока нет автомобилей.</p>
-                          {isOwner && <Button onClick={handleAddCar} className="mt-4">Добавить автомобиль</Button>}
-                      </CardContent>
-                    </Card>
-                )}
-            </TabsContent>
-
-            <TabsContent value="favorites">
-              {favoritePosts.length > 0 ? (
-                <div className="space-y-6">
-                  {favoritePosts.map(post => {
-                     const postUser = users.find(u => u.id === post.authorId);
-                     const postCar = mockCars.find(c => c.id === post.carId);
-                     if (!postUser || !postCar) return null;
-                     return <PostCard key={post.id} post={post} user={postUser} car={postCar} />
-                  })}
-                </div>
-              ) : (
-                 <Card>
-                    <CardContent className="p-10 text-center text-muted-foreground">
-                      <p>Пользователь еще не добавлял посты в избранное.</p>
-                    </CardContent>
-                  </Card>
-              )}
-            </TabsContent>
-        </Tabs>
       </div>
       </>
   );
 }
-
-    

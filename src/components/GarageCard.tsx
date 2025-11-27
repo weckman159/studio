@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Link from "next/link";
@@ -24,12 +25,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Badge } from "./ui/badge";
 
 interface GarageCardProps {
   car: Car;
   user: User;
   onEdit?: (car: Car) => void;
-  onDelete?: (car: Car) => void;
+  onDelete?: (carId: string) => void;
   variant?: 'default' | 'compact';
 }
 
@@ -38,30 +40,36 @@ export function GarageCard({ car, user, onEdit, onDelete, variant = 'default' }:
 
   if (variant === 'compact') {
     return (
-        <div className="flex items-center p-3 rounded-md transition-all hover:bg-muted/50">
-            {carImage ? (
-                 <Link href={`/car/${car.id}`}>
+        <div className="relative group flex items-center p-4 rounded-lg transition-all bg-card border hover:shadow-md">
+            <div className="relative w-32 h-20 flex-shrink-0">
+                 {carImage ? (
                     <Image
                         src={carImage}
                         alt={`${car.brand} ${car.model}`}
-                        width={64}
-                        height={40}
-                        className="rounded-md object-cover w-16 h-10"
+                        fill
+                        className="rounded-md object-cover"
                     />
-                 </Link>
-            ) : (
-              <div className="flex items-center justify-center w-16 h-10 bg-muted rounded-md">
-                  <CarIcon className="w-6 h-6 text-muted-foreground" />
-              </div>
-            )}
+                 ) : (
+                  <div className="flex items-center justify-center w-full h-full bg-muted rounded-md">
+                      <CarIcon className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                )}
+            </div>
+
             <div className="flex-grow ml-4">
-                <Link href={`/car/${car.id}`} className="font-semibold hover:underline leading-tight">
+                <Badge variant="secondary" className="mb-1">{car.year}</Badge>
+                <Link href={`/car/${car.id}`} className="block font-semibold hover:underline leading-tight text-lg">
                     {car.brand} {car.model}
                 </Link>
-                <p className="text-sm text-muted-foreground">{car.year}</p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                    <span>{car.engine}</span>
+                    <span>•</span>
+                    <span>{car.specs?.currentHP || 'N/A'} л.с.</span>
+                </div>
             </div>
+
             {onEdit && onDelete && (
-                 <div className="flex items-center">
+                 <div className="absolute top-2 right-2 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button size="icon" variant="ghost" className="h-8 w-8 flex-shrink-0" onClick={() => onEdit(car)}>
                         <Edit className="h-4 w-4" />
                     </Button>
@@ -80,7 +88,7 @@ export function GarageCard({ car, user, onEdit, onDelete, variant = 'default' }:
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                             <AlertDialogCancel>Отмена</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => onDelete(car)}>Удалить</AlertDialogAction>
+                            <AlertDialogAction onClick={() => onDelete(car.id)}>Удалить</AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>
@@ -112,7 +120,7 @@ export function GarageCard({ car, user, onEdit, onDelete, variant = 'default' }:
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                   <AlertDialogCancel>Отмена</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => onDelete(car)}>Удалить</AlertDialogAction>
+                  <AlertDialogAction onClick={() => onDelete(car.id)}>Удалить</AlertDialogAction>
                   </AlertDialogFooter>
               </AlertDialogContent>
           </AlertDialog>
