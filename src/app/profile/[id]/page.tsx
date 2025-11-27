@@ -195,7 +195,6 @@ function ProfilePageClient({ userId }: { userId: string }) {
 }
 
 
-export default async function ProfilePage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  return <ProfilePageClient userId={id} />;
+export default async function ProfilePage({ params }: { params: { id: string } }) {
+  return <ProfilePageClient userId={params.id} />;
 }

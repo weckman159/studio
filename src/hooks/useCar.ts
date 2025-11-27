@@ -37,9 +37,6 @@ export function useCar(carId: string) {
         
         // 3. If still not found, we give up
         if (!carSnap.exists()) {
-            // To find a car for any user (e.g. when viewing another profile), this part is tricky
-            // and inefficient. A better approach would be to have car ownership info directly on the car doc.
-            // For now, we'll assume we can't find it if it's not public or the owner's.
             console.warn("Car not found in public collection or current user's garage.");
             throw new Error('Car not found');
         }

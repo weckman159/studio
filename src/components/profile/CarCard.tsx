@@ -74,5 +74,4 @@ export function CarCard({ car }: CarCardProps) {
     </Link>
   )
 }
-
     
