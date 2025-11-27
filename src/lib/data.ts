@@ -1,3 +1,4 @@
+import type { Timestamp } from 'firebase/firestore';
 
 export interface User {
   id: string;
@@ -35,16 +36,25 @@ export interface Car {
   photoUrl?: string; // mainPhotoURL
   photos?: string[]; // gallery
   isCarOfTheDay?: boolean;
+  
+  // Garage 2.0 fields
+  generation?: string;
   nickname?: string;
-  stockHP?: number;
-  currentHP?: number;
-  acceleration?: string;
-  clearance?: string;
-  mileage?: string;
+  coverImage?: string;
+  badges?: string[];
+  specs?: {
+    stockHP: number;
+    currentHP: number;
+    acceleration: number;
+    clearance: number;
+    mileage: number;
+    lastMileageUpdate: Timestamp;
+  };
   views?: number;
   comments?: number;
   likes?: number;
 }
+
 
 export interface Post {
   id: string;
@@ -158,17 +168,32 @@ export const cars: Car[] = [
     userId: '1',
     brand: 'BMW',
     model: 'M3 G80',
+    generation: 'G80',
     year: 2023,
     photoUrl: 'https://images.unsplash.com/photo-1628519592419-bf288f08cef5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxzcG9ydHMlMjBjYXJ8ZW58MHx8fHwxNzYzOTc2NTgyfDA&ixlib=rb-4.1.0&q=80&w=1080',
     photos: ['https://images.unsplash.com/photo-1628519592419-bf288f08cef5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxzcG9ydHMlMjBjYXJ8ZW58MHx8fHwxNzYzOTc2NTgyfDA&ixlib=rb-4.1.0&q=80&w=1080'],
     engine: '3.0 L S58 twin-turbo I6',
     isCarOfTheDay: true,
+    nickname: 'Зверь',
+    badges: ['car-of-the-day', 'stage-2'],
+    specs: {
+        stockHP: 510,
+        currentHP: 720,
+        acceleration: 3.9,
+        clearance: 12.1,
+        mileage: 15000,
+        lastMileageUpdate: new Date() as unknown as Timestamp,
+    },
+    views: 25800,
+    likes: 1200,
+    comments: 142,
   },
   {
     id: '2',
     userId: '1',
     brand: 'Nissan',
     model: 'Silvia S15',
+    generation: 'S15',
     year: 2002,
     photoUrl: 'https://images.unsplash.com/photo-1605906457463-5eb60f753738?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxqZG0lMjBjYXJ8ZW58MHx8fHwxNzYzOTE5NTE0fDA&ixlib=rb-4.1.0&q=80&w=1080',
     photos: ['https://images.unsplash.com/photo-1605906457463-5eb60f753738?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxqZG0lMjBjYXJ8ZW58MHx8fHwxNzYzOTE5NTE0fDA&ixlib=rb-4.1.0&q=80&w=1080'],
@@ -179,6 +204,7 @@ export const cars: Car[] = [
     userId: '2',
     brand: 'Toyota',
     model: 'Land Cruiser 300',
+    generation: 'J300',
     year: 2022,
     photoUrl: 'https://images.unsplash.com/photo-1667029187427-7a018063cc53?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxzdXYlMjBtb3VudGFpbnN8ZW58MHx8fHwxNzYzOTYwMzUwfDA&ixlib=rb-4.1.0&q=80&w=1080',
     photos: ['https://images.unsplash.com/photo-1667029187427-7a018063cc53?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxzdXYlMjBtb3VudGFpbnN8ZW58MHx8fHwxNzYzOTYwMzUwfDA&ixlib=rb-4.1.0&q=80&w=1080'],
@@ -241,14 +267,3 @@ export const comments: Comment[] = [
     { id: '2', postId: '1', authorId: '1', authorName: 'Alexey Novikov', content: 'Да, очень доволен!', createdAt: '2024-05-20T11:05:00Z' },
     { id: '3', postId: '2', authorId: '1', authorName: 'Alexey Novikov', content: 'Какие красивые места! Тоже мечтаю там побывать.', createdAt: '2024-05-18T16:00:00Z' },
 ]
-
-
-
-
-
-
-    
-    
-
-    
-
