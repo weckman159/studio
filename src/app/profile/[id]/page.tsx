@@ -8,10 +8,11 @@ import { ProfileSidebar } from '@/components/profile/ProfileSidebar';
 import { CarCard } from '@/components/profile/CarCard';
 import { Wrench, Calendar, Camera, ShoppingBag, Loader2 } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, getDoc, collection, query } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where } from 'firebase/firestore';
 import type { Car, User } from '@/lib/data';
 import { users as mockUsers } from '@/lib/data';
 import { EditProfileModal } from '@/components/EditProfileModal';
+import { useCar } from '@/hooks/useCar';
 
 export default function ProfilePage({ params }: { params: { id: string } }) {
   const { id: userId } = params;
@@ -22,6 +23,12 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
   const [loading, setLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
   const [isEditModalOpen, setEditModalOpen] = useState(false);
+  
+  // Note: This useCar hook is not ideal for this page as it's designed for a single car.
+  // We are using useCollection below which is more appropriate for fetching all cars for a user.
+  // This is kept here to demonstrate we might have other hooks.
+  // In a real scenario, we might have a `useUserCars` hook.
+  // const { car: sampleCar, loading: carLoading } = useCar(userId); // This is not correct logic, just for demo
 
   const carsQuery = useMemoFirebase(() => {
     if (!userId || !firestore) return null;
@@ -29,7 +36,7 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
   }, [userId, firestore]);
 
   const { data: userCars, isLoading: carsLoading } = useCollection<Car>(carsQuery);
-
+  
   useEffect(() => {
     const fetchProfile = async () => {
       if (!firestore) {
@@ -40,6 +47,7 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
       };
       
       try {
+        setLoading(true);
         const userDoc = await getDoc(doc(firestore, 'users', userId));
         if (userDoc.exists()) {
           setProfile({ id: userDoc.id, ...userDoc.data() } as User);
@@ -56,7 +64,6 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
       }
     };
     
-    setLoading(true);
     fetchProfile();
   }, [userId, firestore]);
 
@@ -64,9 +71,9 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
     setIsOwner(!!authUser && authUser.uid === userId);
   }, [authUser, userId]);
   
-  const totalLoading = loading || isUserLoading;
+  const totalLoading = loading || isUserLoading || carsLoading;
 
-  if (totalLoading) {
+  if (totalLoading && !profile) {
      return (
         <div className="flex justify-center items-center h-screen">
             <Loader2 className="h-8 w-8 animate-spin" />

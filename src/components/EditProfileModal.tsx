@@ -68,7 +68,7 @@ export function EditProfileModal({ isOpen, setIsOpen, user, onSave }: EditProfil
   useEffect(() => {
     if (user && isOpen) {
       form.reset({
-        name: user.name || '',
+        name: user.name || user.displayName || '',
         nickname: user.nickname || '',
         bio: user.bio || '',
         location: user.location || '',
@@ -109,6 +109,7 @@ export function EditProfileModal({ isOpen, setIsOpen, user, onSave }: EditProfil
       const updatedUserData = {
         ...user,
         name: data.name,
+        displayName: data.name,
         nickname: data.nickname,
         bio: data.bio,
         location: data.location,
