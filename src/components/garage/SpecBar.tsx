@@ -1,7 +1,8 @@
+
 'use client'
 
 import { Badge } from '@/components/ui/badge'
-import { TrendingUp, Zap, Gauge, Road } from 'lucide-react'
+import { TrendingUp, Zap, Gauge, Route } from 'lucide-react'
 import type { Car } from '@/lib/types/car'
 
 export function SpecBar({ specs }: { specs: Car['specs'] }) {
@@ -53,7 +54,7 @@ export function SpecBar({ specs }: { specs: Car['specs'] }) {
       
       {/* Пробег */}
       <div className="bg-card border rounded-2xl p-6 hover:shadow-xl transition-all group">
-        <Road className="h-8 w-8 text-purple-500 mb-3 group-hover:text-purple-400 transition-colors" />
+        <Route className="h-8 w-8 text-purple-500 mb-3 group-hover:text-purple-400 transition-colors" />
         <div className="text-3xl font-bold mb-1">{(specs.mileage || 0).toLocaleString()}</div>
         <div className="text-sm text-muted-foreground">Пробег (км)</div>
       </div>
