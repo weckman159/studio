@@ -15,55 +15,26 @@ import {
 import { Settings, User, LogOut, CarFront, Menu, Shield } from 'lucide-react';
 import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
-import { users } from '@/lib/data';
 import { SidebarTrigger, useSidebar } from './ui/sidebar';
 import { useToast } from '@/hooks/use-toast';
 import GlobalSearch from './GlobalSearch';
-import { useEffect, useState } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
-import type { User as UserData } from '@/lib/data';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { ThemeToggle } from './ThemeToggle';
 
 
 export function Header() {
-  const { user, isUserLoading } = useUser();
+  const { user: authUser, isUserLoading } = useUser();
   const auth = useAuth();
-  const firestore = useFirestore();
   const { toast } = useToast();
   const { toggleSidebar } = useSidebar();
-  const [profile, setProfile] = useState<UserData | null>(null);
+  
+  // Use the centralized hook to get the profile of the currently authenticated user
+  const { profile, isLoading: isProfileLoading } = useUserProfile(authUser?.uid);
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-        if (user && firestore) {
-            try {
-                const docRef = doc(firestore, 'users', user.uid);
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    setProfile({ id: docSnap.id, ...docSnap.data() } as UserData);
-                } else {
-                    // Fallback to mock data if not in Firestore (for demo purposes)
-                    const mockUser = users.find(u => u.id === user.uid);
-                    setProfile(mockUser || null);
-                }
-            } catch (error) {
-                console.error("Error fetching user profile:", error);
-                // Fallback to mock data on error
-                const mockUser = users.find(u => u.id === user.uid);
-                setProfile(mockUser || null);
-            }
-        } else {
-            setProfile(null);
-        }
-    };
-    if (firestore) {
-      fetchProfile();
-    }
-  }, [user, firestore]);
+  const isLoading = isUserLoading || isProfileLoading;
 
-  const userAvatar = profile?.photoURL || user?.photoURL;
-  const userName = profile?.name || user?.displayName || user?.email;
+  const userAvatar = profile?.photoURL || authUser?.photoURL;
+  const userName = profile?.name || authUser?.displayName || authUser?.email;
 
 
   const handleLogout = () => {
@@ -87,9 +58,9 @@ export function Header() {
         <div className="flex items-center justify-end space-x-2">
           <GlobalSearch />
           <ThemeToggle />
-          {isUserLoading ? (
+          {isLoading ? (
              <div className="h-8 w-20 bg-muted rounded-md animate-pulse" />
-          ) : user && user.uid ? (
+          ) : authUser ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
@@ -106,14 +77,14 @@ export function Header() {
                       {userName}
                     </p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      {user.email}
+                      {authUser.email}
                     </p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {user.uid && (
+                {authUser.uid && (
                     <DropdownMenuItem asChild>
-                        <Link href={`/profile/${user.uid}`}>
+                        <Link href={`/profile/${authUser.uid}`}>
                             <User className="mr-2 h-4 w-4" />
                             <span>Профиль</span>
                         </Link>
