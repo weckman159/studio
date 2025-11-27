@@ -12,13 +12,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAuth } from "@/firebase";
+import { useAuth, useFirestore } from "@/firebase";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
 } from "firebase/auth";
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 
@@ -37,6 +38,7 @@ export default function AuthPage() {
   const { toast } = useToast();
   const router = useRouter();
   const auth = useAuth();
+  const firestore = useFirestore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -50,9 +52,56 @@ export default function AuthPage() {
     }
     try {
       if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
+        const loginCredential = await signInWithEmailAndPassword(auth, email, password);
+        // Check if user document exists, create if not
+        const loginUser = loginCredential.user;
+        const userDocRef = doc(firestore, 'users', loginUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (!userDocSnap.exists()) {
+          // Create user document for existing Firebase Auth user
+          await setDoc(userDocRef, {
+            id: loginUser.uid,
+            name: loginUser.displayName || email.split('@')[0],
+            email: loginUser.email,
+            displayName: loginUser.displayName || email.split('@')[0],
+            photoURL: loginUser.photoURL || '',
+            role: 'user',
+            bio: '',
+            location: '',
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+            stats: {
+              posts: 0,
+              likes: 0,
+              wins: 0,
+              followers: 0,
+              following: 0
+            }
+          });
+        }
       } else {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                // Create user document in Firestore
+                const user = userCredential.user;
+                await setDoc(doc(firestore, 'users', user.uid), {
+                  id: user.uid,
+                  name: user.displayName || email.split('@')[0],
+                  email: user.email,
+                  displayName: user.displayName || email.split('@')[0],
+                  photoURL: user.photoURL || '',
+                  role: 'user',
+                  bio: '',
+                  location: '',
+                  createdAt: serverTimestamp(),
+                  updatedAt: serverTimestamp(),
+                  stats: {
+                    posts: 0,
+                    likes: 0,
+                    wins: 0,
+                    followers: 0,
+                    following: 0
+                  }
+                });
       }
       toast({ title: "Success", description: `Successfully ${isLogin ? 'logged in' : 'registered'}!` });
       router.push('/');

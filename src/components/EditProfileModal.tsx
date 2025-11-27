@@ -46,9 +46,10 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
-export function EditProfileModal({ isOpen, setIsOpen, user, onSave }: EditProfileModalProps) {
+export function EditProfileModal({ isOpen, setIsOpen, user: userProp, onSave }: EditProfileModalProps) {
   const { toast } = useToast();
-  const { user: authUser, auth } = useUser();
+  const { user } = useUser();
+  const auth = useAuth();
   const firestore = useFirestore();
   const { uploadFiles, uploading, progress, error: uploadError } = useFileUpload({ maxFiles: 1, maxSizeInMB: 5 });
 
@@ -66,17 +67,17 @@ export function EditProfileModal({ isOpen, setIsOpen, user, onSave }: EditProfil
   });
 
   useEffect(() => {
-    if (user && isOpen) {
+    if (userProp && isOpen) {
       form.reset({
-        name: user.name || user.displayName || '',
-        nickname: user.nickname || '',
-        bio: user.bio || '',
-        location: user.location || '',
+        name: userProp.name || userProp.displayName || '',
+        nickname: userProp.nickname || '',
+        bio: userProp.bio || '',
+        location: userProp.location || '',
       });
-      setAvatarPreview(user.photoURL || '');
+      setAvatarPreview(userProp.photoURL || '');
       setAvatarFile(null);
     }
-  }, [user, isOpen, form]);
+  }, [userProp, isOpen, form]);
 
   const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -89,16 +90,16 @@ export function EditProfileModal({ isOpen, setIsOpen, user, onSave }: EditProfil
   };
 
   const onSubmit = async (data: ProfileFormValues) => {
-    if (!authUser || !firestore || !auth) {
+    if (!user || !firestore || !auth) {
       toast({ variant: "destructive", title: "Ошибка", description: "Необходима авторизация." });
       return;
     }
 
     try {
-      let newAvatarUrl = user.photoURL || '';
+      let newAvatarUrl = userProp.photoURL || '';
 
       if (avatarFile) {
-        const uploadResult = await uploadFiles([avatarFile], 'avatars', authUser.uid);
+        const uploadResult = await uploadFiles([avatarFile], 'avatars', user.uid);
         if (uploadResult.length > 0) {
           newAvatarUrl = uploadResult[0].url;
         } else {
@@ -106,8 +107,8 @@ export function EditProfileModal({ isOpen, setIsOpen, user, onSave }: EditProfil
         }
       }
 
-      const updatedUserData = {
-        ...user,
+      const updatedUserData: UserData = {
+        ...userProp,
         name: data.name,
         displayName: data.name,
         nickname: data.nickname,
@@ -118,7 +119,7 @@ export function EditProfileModal({ isOpen, setIsOpen, user, onSave }: EditProfil
       };
       
       // Update Firestore
-      const userRef = doc(firestore, 'users', authUser.uid);
+      const userRef = doc(firestore, 'users', user.uid);
       await setDoc(userRef, { 
         displayName: updatedUserData.name,
         name: updatedUserData.name,
@@ -137,7 +138,7 @@ export function EditProfileModal({ isOpen, setIsOpen, user, onSave }: EditProfil
         });
       }
       
-      onSave(updatedUserData as UserData);
+      onSave(updatedUserData);
       toast({ title: "Профиль обновлен", description: "Ваши изменения были сохранены." });
       setIsOpen(false);
 

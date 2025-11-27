@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import type { User } from '@/lib/data';
 import { users as mockUsers } from '@/lib/data'; // Keep for fallback if needed, but primary logic won't use it.
