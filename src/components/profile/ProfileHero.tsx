@@ -1,3 +1,4 @@
+
 'use client'
 import { useState } from 'react'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
@@ -10,7 +11,8 @@ import {
   MoreHorizontal,
   Instagram,
   Youtube,
-  Send
+  Send,
+  Edit
 } from 'lucide-react'
 
 interface UserProfile {
@@ -36,7 +38,7 @@ interface UserProfile {
   }
 }
 
-export function ProfileHero({ profile, isOwner = false }: { profile: UserProfile, isOwner?: boolean }) {
+export function ProfileHero({ profile, isOwner = false, onEditClick }: { profile: UserProfile, isOwner?: boolean, onEditClick: () => void }) {
   const [isFollowing, setIsFollowing] = useState(false)
   
   const tierColors = {
@@ -134,8 +136,9 @@ export function ProfileHero({ profile, isOwner = false }: { profile: UserProfile
                 {/* Кнопки действий */}
                 <div className="flex flex-wrap gap-3">
                   {isOwner ? (
-                    <Button size="lg" className="bg-white text-black hover:bg-white/90 font-semibold">
-                      Редактировать профиль
+                    <Button size="lg" className="bg-white text-black hover:bg-white/90 font-semibold" onClick={onEditClick}>
+                      <Edit className="mr-2 h-5 w-5" />
+                      Редактировать
                     </Button>
                   ) : (
                     <>

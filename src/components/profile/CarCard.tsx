@@ -1,22 +1,18 @@
+
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { Zap, Gauge, Wrench } from 'lucide-react'
+import type { Car } from '@/lib/data';
+import Image from 'next/image';
 
-interface Car {
-  id: string
-  brand: string
-  model: string
-  image: string
-  status: 'daily' | 'project' | 'weekend'
-  specs: {
-    hp: number
-    stage: string
-    wheels: string
-  }
+
+interface CarCardProps {
+  car: Car;
 }
 
-export function CarCard({ car }: { car: Car }) {
-  const statusConfig = {
+
+export function CarCard({ car }: CarCardProps) {
+  const statusConfig: Record<string, { label: string, color: string }> = {
     daily: { label: 'Дейли', color: 'bg-green-500' },
     project: { label: 'В постройке', color: 'bg-yellow-500' },
     weekend: { label: 'Проект выходного дня', color: 'bg-purple-500' },
@@ -26,11 +22,16 @@ export function CarCard({ car }: { car: Car }) {
     <Link href={`/car/${car.id}`}>
       <div className="group relative h-48 rounded-2xl overflow-hidden hover:shadow-2xl transition-all duration-300">
         {/* Фон */}
-        <img 
-          src={car.image}
-          alt={`${car.brand} ${car.model}`}
-          className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-        />
+        {car.photoUrl ? (
+          <Image 
+            src={car.photoUrl}
+            alt={`${car.brand} ${car.model}`}
+            fill
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+          />
+        ) : (
+           <div className="absolute inset-0 w-full h-full bg-muted" />
+        )}
         
         {/* Градиент */}
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
@@ -39,9 +40,9 @@ export function CarCard({ car }: { car: Car }) {
         <div className="absolute inset-0 p-6 flex flex-col justify-between">
           {/* Статус */}
           <div>
-            <Badge className={`${statusConfig[car.status].color} border-0 text-white`}>
+            {/* <Badge className={`${statusConfig[car.status].color} border-0 text-white`}>
               {statusConfig[car.status].label}
-            </Badge>
+            </Badge> */}
           </div>
           
           {/* Название и спеки */}
@@ -52,15 +53,11 @@ export function CarCard({ car }: { car: Car }) {
             <div className="flex items-center gap-4 text-white/90 text-sm">
               <div className="flex items-center gap-1">
                 <Zap className="h-4 w-4" />
-                <span>{car.specs.hp} л.с.</span>
+                <span>{car.engine || '?'}</span>
               </div>
               <div className="flex items-center gap-1">
                 <Wrench className="h-4 w-4" />
-                <span>{car.specs.stage}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Gauge className="h-4 w-4" />
-                <span>{car.specs.wheels}</span>
+                <span>{car.year}</span>
               </div>
             </div>
           </div>
