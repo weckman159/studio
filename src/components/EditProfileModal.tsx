@@ -120,6 +120,7 @@ export function EditProfileModal({ isOpen, setIsOpen, user, onSave }: EditProfil
       const userRef = doc(firestore, 'users', authUser.uid);
       await setDoc(userRef, { 
         displayName: updatedUserData.name,
+        name: updatedUserData.name,
         nickname: updatedUserData.nickname,
         bio: updatedUserData.bio,
         location: updatedUserData.location,

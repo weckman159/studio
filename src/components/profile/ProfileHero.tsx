@@ -165,5 +165,3 @@ export function ProfileHero({ profile, isOwner = false, onEditClick }: { profile
     </div>
   )
 }
-
-    
