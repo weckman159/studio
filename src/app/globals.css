@@ -127,3 +127,9 @@
     @apply min-h-[200px];
   }
 }
+
+@layer components {
+  .timeline-item:last-child .timeline-connector {
+    @apply h-4;
+  }
+}

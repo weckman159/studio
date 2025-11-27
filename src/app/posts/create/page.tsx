@@ -30,7 +30,7 @@ const CKEditorWrapper = dynamic(() => import('@/components/CKEditorWrapper'), {
 
 
 const postTypes = [
-  'Блог', 'Фотоотчет', 'Вопрос', 'Мой опыт', 'Обзор'
+  'Блог', 'Фотоотчет', 'Вопрос', 'Мой опыт', 'Обзор', 'Обслуживание'
 ];
 
 export default function CreatePostPage() {

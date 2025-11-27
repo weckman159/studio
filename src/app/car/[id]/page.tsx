@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from "react";
@@ -15,7 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PostCard } from "@/components/PostCard";
-import { Award, Calendar, Wrench, Car as CarIcon, ImageIcon, FileText, GalleryHorizontal } from "lucide-react";
+import { Award, Calendar, Wrench, Car as CarIcon, ImageIcon, FileText, GalleryHorizontal, BookCheck } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { doc, collection, query, where } from 'firebase/firestore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -23,6 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { notFound } from "next/navigation";
+import { Timeline, TimelineItem, TimelineConnector, TimelineHeader, TimelineTitle, TimelineIcon, TimelineDescription, TimelineContent, TimelineTime } from "@/components/ui/timeline";
 
 
 function CarProfilePageSkeleton() {
@@ -100,6 +100,7 @@ export default function CarProfilePage({ params }: { params: { id: string } }) {
   const mainImage = car.photoUrl || car.photos?.[0];
   const galleryPhotos = car.photos?.slice(0, 4) || [];
   const relatedPosts = mockPosts.filter(p => p.carId === car.id).slice(0, 3);
+  const serviceHistory = mockPosts.filter(p => p.carId === car.id && p.type === 'Обслуживание');
   
   const navLinks = [
     { href: '#photos', label: 'Фото' },
@@ -140,6 +141,60 @@ export default function CarProfilePage({ params }: { params: { id: string } }) {
                 </div>
                 <Button className="absolute top-4 right-4">Записать в гараж</Button>
             </div>
+
+             <Tabs defaultValue="posts" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="posts">
+                        <FileText className="w-4 h-4 mr-2" />
+                        Бортжурнал
+                    </TabsTrigger>
+                    <TabsTrigger value="history">
+                        <BookCheck className="w-4 h-4 mr-2" />
+                        История обслуживания
+                    </TabsTrigger>
+                </TabsList>
+                <TabsContent value="posts" className="mt-6">
+                    <div className="space-y-6">
+                        {relatedPosts.map(post => {
+                           const postUser = users.find(u => u.id === post.authorId);
+                           const postCar = mockCars.find(c => c.id === post.carId);
+                           if (!postUser || !postCar) return null;
+                           return <PostCard key={post.id} post={post} user={postUser} car={postCar} />
+                        })}
+                    </div>
+                </TabsContent>
+                <TabsContent value="history" className="mt-6">
+                    <Timeline>
+                        {serviceHistory.map(item => (
+                            <TimelineItem key={item.id}>
+                                <TimelineConnector />
+                                <TimelineHeader>
+                                <TimelineTime>
+                                    {new Date(item.createdAt).toLocaleDateString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric' })}
+                                </TimelineTime>
+                                <TimelineIcon>
+                                    <Wrench className="h-4 w-4" />
+                                </TimelineIcon>
+                                <TimelineTitle>{item.title}</TimelineTitle>
+                                </TimelineHeader>
+                                <TimelineContent>
+                                    <TimelineDescription>
+                                        {item.content.replace(/<[^>]*>?/gm, '').substring(0, 100)}...
+                                         <Link href={`/posts/${item.id}`} className="text-primary hover:underline ml-2">Подробнее</Link>
+                                    </TimelineDescription>
+                                </TimelineContent>
+                            </TimelineItem>
+                        ))}
+                         {serviceHistory.length === 0 && (
+                            <Card>
+                                <CardContent className="p-8 text-center text-muted-foreground">
+                                    История обслуживания для этого автомобиля еще не велась.
+                                </CardContent>
+                            </Card>
+                        )}
+                    </Timeline>
+                </TabsContent>
+            </Tabs>
             
             {/* Галерея фото */}
             <section id="photos">
@@ -161,22 +216,6 @@ export default function CarProfilePage({ params }: { params: { id: string } }) {
                 }
             </section>
             
-            {/* Блок постов от владельцев */}
-            <section id="posts">
-                <h2 className="text-2xl font-bold mb-4">Новое от владельцев {pageTitle}</h2>
-                <div className="space-y-6">
-                    {relatedPosts.map(post => {
-                       const postUser = users.find(u => u.id === post.authorId);
-                       const postCar = mockCars.find(c => c.id === post.carId);
-                       if (!postUser || !postCar) return null;
-                       return <PostCard key={post.id} post={post} user={postUser} car={postCar} />
-                    })}
-                </div>
-                {mockPosts.filter(p => p.carId === car.id).length > 3 && 
-                    <Button variant="link" className="mt-2 px-0">Показать всё →</Button>
-                }
-            </section>
-
             {/* Характеристики */}
             <section id="specs">
                 <h2 className="text-2xl font-bold mb-4">Характеристики</h2>
