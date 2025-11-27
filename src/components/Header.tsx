@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import Link from 'next/link';
@@ -58,7 +57,9 @@ export function Header() {
             setProfile(null);
         }
     };
-    fetchProfile();
+    if (firestore) {
+      fetchProfile();
+    }
   }, [user, firestore]);
 
   const userAvatar = profile?.photoURL || user?.photoURL;
@@ -155,5 +156,3 @@ export function Header() {
     </header>
   );
 }
-
-    

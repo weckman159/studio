@@ -100,7 +100,9 @@ function UserListAdmin() {
     };
     
     useEffect(() => {
-        fetchUsers();
+        if (firestore) {
+            fetchUsers();
+        }
     }, [firestore]);
 
     const handleRoleChange = async (userId: string, role: 'admin' | 'user') => {
@@ -186,7 +188,9 @@ function WorkshopListAdmin() {
   };
 
   useEffect(() => {
-    fetchWorkshops();
+    if (firestore) {
+        fetchWorkshops();
+    }
   }, [firestore]);
   
   const handleDelete = async (id: string) => {
@@ -283,7 +287,7 @@ export default function AdminPage() {
             const fetchProfile = async () => {
                 const userDoc = await getDoc(doc(firestore, 'users', user.uid));
                 if (userDoc.exists()) {
-                    setProfile(userDoc.data() as UserData);
+                    setProfile({id: userDoc.id, ...userDoc.data()} as UserData);
                 }
             };
             fetchProfile();

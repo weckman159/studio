@@ -64,7 +64,9 @@ function AppSidebar() {
             setProfile(null);
         }
     };
-    fetchProfile();
+    if (firestore) {
+      fetchProfile();
+    }
   }, [user, firestore]);
 
   return (
