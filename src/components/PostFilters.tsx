@@ -15,6 +15,10 @@ interface PostFiltersProps {
 
 const postTypes = [
   'Все',
+  'Тюнинг',
+  'Путешествия',
+  'Спорт',
+  'Ремонт',
   'Блог',
   'Фотоотчет',
   'Вопрос',
@@ -60,3 +64,5 @@ export function PostFilters({
     </Card>
   );
 }
+
+    

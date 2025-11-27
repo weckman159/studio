@@ -7,58 +7,68 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, getDocs, where } from 'firebase/firestore';
-import { useFirestore, useMemoFirebase } from '@/firebase';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Search, Plus, MessageCircle, FileText } from 'lucide-react';
-import type { Post as PostData, User, Car } from '@/lib/data';
-import { users, cars } from '@/lib/data'; // Using mock users/cars for now
+import { Plus, MessageCircle } from 'lucide-react';
+import type { Post as PostData } from '@/lib/data';
+import { posts as mockPosts } from '@/lib/data';
 import { PostCard } from '@/components/PostCard';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { PostFilters } from '@/components/PostFilters';
 
+function PostFeed({ posts, loading }: { posts: PostData[], loading?: boolean }) {
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="border rounded-xl p-4">
+            <div className="flex items-center gap-3 mb-4">
+              <Skeleton className="h-12 w-12 rounded-full" />
+              <div className="flex-1">
+                <Skeleton className="h-4 w-32 mb-2" />
+                <Skeleton className="h-3 w-48" />
+              </div>
+            </div>
+            <Skeleton className="h-6 w-3/4 mb-2" />
+            <Skeleton className="h-4 w-full mb-4" />
+            <Skeleton className="aspect-video w-full rounded-lg" />
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {posts.map(post => (
+        <PostCard key={post.id} post={post} />
+      ))}
+    </div>
+  )
+}
+
 export default function PostsPage() {
-  const firestore = useFirestore();
   const [posts, setPosts] = useState<PostData[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState('Все');
   const [loading, setLoading] = useState(true);
 
-  // Загрузка постов из Firestore
+  // Загрузка постов
   useEffect(() => {
-    if (!firestore) return;
-    
-    const fetchPosts = async () => {
-      try {
-        setLoading(true);
-        const q = query(
-          collection(firestore, 'posts'),
-          orderBy('createdAt', 'desc')
-        );
-        const querySnapshot = await getDocs(q);
-        const data: PostData[] = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        } as PostData));
-        setPosts(data);
-      } catch (e) {
-        console.error('Ошибка загрузки постов:', e);
-      } finally {
+    setLoading(true);
+    // Simulate fetching posts
+    setTimeout(() => {
+        setPosts(mockPosts);
         setLoading(false);
-      }
-    };
-    fetchPosts();
-  }, [firestore]);
+    }, 1000);
+  }, []);
 
   // Фильтрация постов
   const filteredPosts = posts
-    .filter(p => selectedType === 'Все' || p.type === selectedType)
+    .filter(p => selectedType === 'Все' || p.category === selectedType)
     .filter(p => 
       p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.content.toLowerCase().includes(searchQuery.toLowerCase())
+      p.excerpt.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
 
@@ -90,31 +100,7 @@ export default function PostsPage() {
       </div>
       
       {/* Лента постов */}
-      {loading ? (
-        <div className="space-y-6">
-          {[...Array(3)].map((_, i) => (
-             <Card key={i}>
-                <CardHeader>
-                  <div className="flex items-center space-x-3">
-                    <Skeleton className="h-10 w-10 rounded-full" />
-                    <div className="space-y-1">
-                      <Skeleton className="h-4 w-48" />
-                      <Skeleton className="h-3 w-64" />
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <Skeleton className="h-6 w-3/4 mb-4" />
-                   <Skeleton className="aspect-video w-full rounded-lg" />
-                </CardContent>
-                 <CardFooter className="flex justify-between">
-                   <Skeleton className="h-8 w-24" />
-                   <Skeleton className="h-8 w-24" />
-                </CardFooter>
-              </Card>
-          ))}
-        </div>
-      ) : filteredPosts.length === 0 ? (
+      {filteredPosts.length === 0 && !loading ? (
         <div className="text-center py-12">
           <MessageCircle className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
           <h3 className="text-xl font-semibold mb-2">Постов нет</h3>
@@ -123,15 +109,10 @@ export default function PostsPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-6">
-          {filteredPosts.map(post => {
-            const user = users.find(u => u.id === post.authorId) || users[0];
-            const car = cars.find(c => c.id === post.carId) || cars[0];
-            if (!user || !car) return null;
-            return <PostCard key={post.id} post={post} user={user} car={car} />;
-          })}
-        </div>
+        <PostFeed posts={filteredPosts} loading={loading} />
       )}
     </div>
   );
 }
+
+    

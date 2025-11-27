@@ -41,7 +41,8 @@ export interface Car {
   generation?: string;
   nickname?: string;
   coverImage?: string;
-  badges?: string[];
+  coverVideo?: string;
+  badges?: string[]; // ['car-of-the-day', 'top-10-region', 'stage-2']
   specs?: {
     stockHP: number;
     currentHP: number;
@@ -58,21 +59,29 @@ export interface Car {
 
 export interface Post {
   id: string;
-  authorId: string; // userId
+  authorId: string;
   authorName: string;
   authorAvatar?: string;
   carId: string;
+  carBrand?: string;
+  carModel?: string;
   title: string;
+  excerpt: string;
   content: string;
+  coverImage?: string;
   imageUrl?: string;
   imageUrls?: string[];
-  imageIds?: string[];
-  tags: string[];
-  type: string; // 'Блог', 'Фотоотчет', 'Вопрос', 'Мой опыт', 'Обзор'
-  likesCount: number;
-  likedBy: string[];
-  commentsCount: number;
-  createdAt: string;
+  tags?: string[];
+  category: string;
+  likes: number;
+  comments: number;
+  views: number;
+  bookmarks: number;
+  createdAt: Date;
+  isLiked?: boolean;
+  isBookmarked?: boolean;
+  likedBy?: string[];
+  commentsCount?: number;
   updatedAt?: string;
 }
 
@@ -170,7 +179,7 @@ export const cars: Car[] = [
     model: 'M3 G80',
     generation: 'G80',
     year: 2023,
-    photoUrl: 'https://images.unsplash.com/photo-1628519592419-bf288f08cef5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxzcG9ydHMlMjBjYXJ8ZW58MHx8fHwxNzYzOTc2NTgyfDA&ixlib=rb-4.1.0&q=80&w=1080',
+    coverImage: 'https://images.unsplash.com/photo-1628519592419-bf288f08cef5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxzcG9ydHMlMjBjYXJ8ZW58MHx8fHwxNzYzOTc2NTgyfDA&ixlib=rb-4.1.0&q=80&w=1080',
     photos: ['https://images.unsplash.com/photo-1628519592419-bf288f08cef5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxzcG9ydHMlMjBjYXJ8ZW58MHx8fHwxNzYzOTc2NTgyfDA&ixlib=rb-4.1.0&q=80&w=1080'],
     engine: '3.0 L S58 twin-turbo I6',
     isCarOfTheDay: true,
@@ -195,7 +204,7 @@ export const cars: Car[] = [
     model: 'Silvia S15',
     generation: 'S15',
     year: 2002,
-    photoUrl: 'https://images.unsplash.com/photo-1605906457463-5eb60f753738?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxqZG0lMjBjYXJ8ZW58MHx8fHwxNzYzOTE5NTE0fDA&ixlib=rb-4.1.0&q=80&w=1080',
+    coverImage: 'https://images.unsplash.com/photo-1605906457463-5eb60f753738?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxqZG0lMjBjYXJ8ZW58MHx8fHwxNzYzOTE5NTE0fDA&ixlib=rb-4.1.0&q=80&w=1080',
     photos: ['https://images.unsplash.com/photo-1605906457463-5eb60f753738?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxqZG0lMjBjYXJ8ZW58MHx8fHwxNzYzOTE5NTE0fDA&ixlib=rb-4.1.0&q=80&w=1080'],
     engine: '2.0 L SR20DET I4',
   },
@@ -206,7 +215,7 @@ export const cars: Car[] = [
     model: 'Land Cruiser 300',
     generation: 'J300',
     year: 2022,
-    photoUrl: 'https://images.unsplash.com/photo-1667029187427-7a018063cc53?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxzdXYlMjBtb3VudGFpbnN8ZW58MHx8fHwxNzYzOTYwMzUwfDA&ixlib=rb-4.1.0&q=80&w=1080',
+    coverImage: 'https://images.unsplash.com/photo-1667029187427-7a018063cc53?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxzdXYlMjBtb3VudGFpbnN8ZW58MHx8fHwxNzYzOTYwMzUwfDA&ixlib=rb-4.1.0&q=80&w=1080',
     photos: ['https://images.unsplash.com/photo-1667029187427-7a018063cc53?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxzdXYlMjBtb3VudGFpbnN8ZW58MHx8fHwxNzYzOTYwMzUwfDA&ixlib=rb-4.1.0&q=80&w=1080'],
     engine: '3.4 L V35A-FTS twin-turbo V6',
   },
@@ -217,48 +226,61 @@ export const posts: Post[] = [
     id: '1',
     authorId: '1',
     authorName: 'Alexey Novikov',
+    authorAvatar: users[0].photoURL,
     carId: '1',
+    carBrand: 'BMW',
+    carModel: 'M3 G80',
     title: 'Новая выхлопная система!',
+    excerpt: 'Установил полный титановый выхлоп от Akrapovič. Звук просто космос! Машина стала дышать легче, а отстрелы радуют слух.',
     content: 'Установил полный титановый выхлоп от Akrapovič. Звук просто космос! Машина стала дышать легче, а отстрелы радуют слух. \n\nДальше в планах чип-тюнинг Stage 2.',
-    imageUrl: 'https://images.unsplash.com/photo-1615644359756-d1058b89608a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxjYXIlMjBleGhhdXN0fGVufDB8fHx8MTc2MzkxNjA3MHww&ixlib=rb-4.1.0&q=80&w=1080',
-    imageUrls: ['https://images.unsplash.com/photo-1615644359756-d1058b89608a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxjYXIlMjBleGhhdXN0fGVufDB8fHx8MTc2MzkxNjA3MHww&ixlib=rb-4.1.0&q=80&w=1080', 'https://images.unsplash.com/photo-1628519592419-bf288f08cef5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxzcG9ydHMlMjBjYXJ8ZW58MHx8fHwxNzYzOTc2NTgyfDA&ixlib=rb-4.1.0&q=80&w=1080'],
+    coverImage: 'https://images.unsplash.com/photo-1615644359756-d1058b89608a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxjYXIlMjBleGhhdXN0fGVufDB8fHx8MTc2MzkxNjA3MHww&ixlib=rb-4.1.0&q=80&w=1080',
     tags: ['тюнинг', 'ремонт'],
-    type: 'Блог',
-    likesCount: 152,
-    likedBy: ['2'],
-    commentsCount: 2,
-    createdAt: '2024-05-20T10:00:00Z',
+    category: 'Тюнинг',
+    likes: 152,
+    comments: 2,
+    views: 1240,
+    bookmarks: 22,
+    createdAt: new Date('2024-05-20T10:00:00Z'),
   },
   {
     id: '2',
     authorId: '2',
     authorName: 'Elena Petrova',
+    authorAvatar: users[1].photoURL,
     carId: '3',
+    carBrand: 'Toyota',
+    carModel: 'Land Cruiser 300',
     title: 'Поездка на Алтай',
+    excerpt: 'Совершили большое путешествие на Алтай. Land Cruiser показал себя отлично на бездорожье. Проехали более 5000 км.',
     content: 'Совершили большое путешествие на Алтай. Land Cruiser показал себя отлично на бездорожье. Проехали более 5000 км, посетили самые красивые озера и перевалы. \n\nВ следующем году планируем поехать на Байкал!',
-    imageUrl: 'https://images.unsplash.com/photo-1629538745524-5b748fddac9f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxjYXIlMjByb2FkfGVufDB8fHx8MTc2MzkyNDg1MHww&ixlib=rb-4.1.0&q=80&w=1080',
+    coverImage: 'https://images.unsplash.com/photo-1629538745524-5b748fddac9f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxjYXIlMjByb2FkfGVufDB8fHx8MTc2MzkyNDg1MHww&ixlib=rb-4.1.0&q=80&w=1080',
     tags: ['путешествия'],
-    type: 'Фотоотчет',
-    likesCount: 210,
-    likedBy: [],
-    commentsCount: 1,
-    createdAt: '2024-05-18T15:30:00Z',
+    category: 'Путешествия',
+    likes: 210,
+    comments: 1,
+    views: 3400,
+    bookmarks: 45,
+    createdAt: new Date('2024-05-18T15:30:00Z'),
   },
    {
     id: '3',
     authorId: '1',
     authorName: 'Alexey Novikov',
+    authorAvatar: users[0].photoURL,
     carId: '2',
+    carBrand: 'Nissan',
+    carModel: 'Silvia S15',
     title: 'Подготовка к дрифт-сезону',
+    excerpt: 'Начинаем готовить Silvia к летнему дрифт-сезону. Полностью перебрали подвеску, установили выворот.',
     content: 'Начинаем готовить Silvia к летнему дрифт-сезону. Полностью перебрали подвеску, установили выворот. \n\nВпереди настройка и первые тесты на треке.',
-    imageUrl: 'https://images.unsplash.com/photo-1541443724873-8ba49db7a737?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxjYXIlMjBkcmlmdHxlbnwwfHx8fDE3NjQwMDQ1MTV8MA&ixlib=rb-4.1.0&q=80&w=1080',
-    imageUrls: ['https://images.unsplash.com/photo-1541443724873-8ba49db7a737?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxjYXIlMjBkcmlmdHxlbnwwfHx8fDE3NjQwMDQ1MTV8MA&ixlib=rb-4.1.0&q=80&w=1080', 'https://images.unsplash.com/photo-1605906457463-5eb60f753738?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxqZG0lMjBjYXJ8ZW58MHx8fHwxNzYzOTE5NTE0fDA&ixlib=rb-4.1.0&q=80&w=1080'],
+    coverImage: 'https://images.unsplash.com/photo-1541443724873-8ba49db7a737?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxjYXIlMjBkcmlmdHxlbnwwfHx8fDE3NjQwMDQ1MTV8MA&ixlib=rb-4.1.0&q=80&w=1080',
     tags: ['тюнинг', 'спорт'],
-    type: 'Блог',
-    likesCount: 98,
-    likedBy: [],
-    commentsCount: 0,
-    createdAt: '2024-05-15T09:00:00Z',
+    category: 'Спорт',
+    likes: 98,
+    comments: 0,
+    views: 980,
+    bookmarks: 15,
+    createdAt: new Date('2024-05-15T09:00:00Z'),
   },
 ];
 
@@ -267,3 +289,5 @@ export const comments: Comment[] = [
     { id: '2', postId: '1', authorId: '1', authorName: 'Alexey Novikov', content: 'Да, очень доволен!', createdAt: '2024-05-20T11:05:00Z' },
     { id: '3', postId: '2', authorId: '1', authorName: 'Alexey Novikov', content: 'Какие красивые места! Тоже мечтаю там побывать.', createdAt: '2024-05-18T16:00:00Z' },
 ]
+
+    
