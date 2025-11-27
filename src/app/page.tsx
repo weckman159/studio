@@ -15,8 +15,8 @@ import { PostFilters } from "@/components/PostFilters";
 function PostFeed({ posts, loading }: { posts: Post[], loading?: boolean }) {
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        {[1, 2, 3, 4].map(i => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {[1, 2, 3, 4, 5, 6].map(i => (
           <div key={i} className="border rounded-xl p-4 space-y-4">
             <Skeleton className="aspect-video w-full rounded-lg" />
              <div className="flex items-center gap-3">
@@ -35,7 +35,7 @@ function PostFeed({ posts, loading }: { posts: Post[], loading?: boolean }) {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       {posts.map(post => (
         <PostCard key={post.id} post={post} />
       ))}

@@ -118,7 +118,7 @@ export function PostCard({ post }: { post: Post }) {
         {/* Header: Автор */}
         <div className="flex items-center gap-3 mb-3">
             <Link href={`/profile/${post.authorId}`} className="flex-shrink-0">
-                <Avatar className="h-8 w-8">
+                <Avatar className="h-10 w-10">
                     <AvatarImage src={post.authorAvatar} alt={post.authorName} />
                     <AvatarFallback>{post.authorName[0]}</AvatarFallback>
                 </Avatar>
@@ -131,10 +131,10 @@ export function PostCard({ post }: { post: Post }) {
 
         {/* Заголовок и текст */}
         <Link href={`/posts/${post.id}`} className="flex-1">
-            <h3 className="font-bold text-base mb-2 line-clamp-2 leading-snug group-hover:text-primary transition-colors">
+            <h3 className="font-bold text-md mb-2 line-clamp-2 leading-snug group-hover:text-primary transition-colors">
                 {post.title}
             </h3>
-            <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+            <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">
                 {post.excerpt}
             </p>
         </Link>
