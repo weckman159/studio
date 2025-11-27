@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import type { Metadata } from "next";
@@ -18,6 +19,7 @@ import type { User as UserData } from '@/lib/data';
 import { useEffect, useState } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { users } from '@/lib/data';
+import { CookieConsent } from "@/components/CookieConsent";
 
 
 const navLinks = [
@@ -160,7 +162,10 @@ export default function RootLayout({
             </SidebarProvider>
           </FirebaseClientProvider>
         </ThemeProvider>
+        <CookieConsent />
       </body>
     </html>
   );
 }
+
+    
