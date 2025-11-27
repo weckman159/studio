@@ -14,8 +14,7 @@ import { users as mockUsers } from '@/lib/data';
 import { EditProfileModal } from '@/components/EditProfileModal';
 import { useCar } from '@/hooks/useCar';
 
-export default function ProfilePage({ params }: { params: { id: string } }) {
-  const { id: userId } = params;
+function ProfilePageClient({ userId }: { userId: string }) {
   const { user: authUser, isUserLoading } = useUser();
   const firestore = useFirestore();
 
@@ -24,12 +23,6 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
   const [isOwner, setIsOwner] = useState(false);
   const [isEditModalOpen, setEditModalOpen] = useState(false);
   
-  // Note: This useCar hook is not ideal for this page as it's designed for a single car.
-  // We are using useCollection below which is more appropriate for fetching all cars for a user.
-  // This is kept here to demonstrate we might have other hooks.
-  // In a real scenario, we might have a `useUserCars` hook.
-  // const { car: sampleCar, loading: carLoading } = useCar(userId); // This is not correct logic, just for demo
-
   const carsQuery = useMemoFirebase(() => {
     if (!userId || !firestore) return null;
     return query(collection(firestore, 'users', userId, 'cars'));
@@ -199,4 +192,10 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
       </div>
     </>
   )
+}
+
+
+export default async function ProfilePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  return <ProfilePageClient userId={id} />;
 }

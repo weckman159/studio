@@ -56,12 +56,10 @@ interface Member {
   joinedAt: any;
 }
 
-export default function CommunityDetailPage() {
-  const params = useParams();
+function CommunityDetailClient({ communityId }: { communityId: string }) {
   const router = useRouter();
   const { user } = useUser(); // Получаем текущего пользователя через хук
   const firestore = useFirestore(); // Получаем экземпляр Firestore
-  const communityId = params.id as string;
 
   // Состояния компонента
   const [community, setCommunity] = useState<Community | null>(null);
@@ -491,3 +489,7 @@ export default function CommunityDetailPage() {
   );
 }
 
+export default async function CommunityDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
+    return <CommunityDetailClient communityId={id} />
+}

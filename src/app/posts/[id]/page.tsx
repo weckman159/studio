@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { 
   doc, 
   getDoc, 
@@ -103,13 +103,11 @@ function PostPageSkeleton() {
     )
 }
 
-export default function PostDetailPage() {
-  const params = useParams();
+function PostDetailClient({ postId }: { postId: string }) {
   const router = useRouter();
   const { user } = useUser();
   const firestore = useFirestore();
-  const postId = params.id as string;
-
+  
   const [post, setPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -496,4 +494,9 @@ export default function PostDetailPage() {
       </div>
     </div>
   );
+}
+
+export default async function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
+    return <PostDetailClient postId={id} />
 }

@@ -6,7 +6,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { doc, getDoc, collection, query, where, getDocs, orderBy, addDoc, serverTimestamp, updateDoc, increment } from 'firebase/firestore';
 import { useFirestore, useUser } from '@/firebase';
@@ -50,13 +50,11 @@ interface Review {
   createdAt: any;
 }
 
-export default function WorkshopPage() {
-  const params = useParams();
+function WorkshopClient({ workshopId }: { workshopId: string }) {
   const router = useRouter();
   const { user } = useUser();
   const firestore = useFirestore();
-  const workshopId = params.id as string;
-
+  
   const [workshop, setWorkshop] = useState<Workshop|null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
@@ -316,4 +314,9 @@ export default function WorkshopPage() {
        </Card>
     </div>
   );
+}
+
+export default async function WorkshopPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
+    return <WorkshopClient workshopId={id} />
 }

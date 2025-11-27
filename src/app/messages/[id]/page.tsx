@@ -23,8 +23,7 @@ interface Message {
     createdAt: any;
 }
 
-export default function DialogPage() {
-  const { id: dialogId } = useParams();
+function DialogClient({ dialogId }: { dialogId: string }) {
   const { user } = useUser();
   const firestore = useFirestore();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -124,3 +123,7 @@ export default function DialogPage() {
   );
 }
 
+export default async function DialogPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
+    return <DialogClient dialogId={id} />
+}

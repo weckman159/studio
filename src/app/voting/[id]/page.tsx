@@ -6,7 +6,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { doc, getDoc, updateDoc, arrayUnion, increment } from 'firebase/firestore';
 import { useFirestore, useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
@@ -29,13 +29,11 @@ interface Voting {
   totalVotes: number;
 }
 
-export default function VotingDetailPage() {
-  const { id } = useParams();
+function VotingDetailClient({ votingId }: { votingId: string }) {
   const router = useRouter();
   const { user } = useUser();
   const firestore = useFirestore();
-  const votingId = id as string;
-
+  
   const [voting, setVoting] = useState<Voting | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -242,4 +240,9 @@ export default function VotingDetailPage() {
       </Card>
     </div>
   );
+}
+
+export default async function VotingDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
+    return <VotingDetailClient votingId={id} />
 }

@@ -12,9 +12,7 @@ import type { MarketplaceItem } from '@/lib/data';
 import { useFirestore } from '@/firebase';
 
 
-export default function EditMarketplaceItemPage() {
-  const { id } = useParams();
-  const itemId = id as string;
+function EditMarketplaceItemClient({ itemId }: { itemId: string }) {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 
@@ -56,4 +54,9 @@ export default function EditMarketplaceItemPage() {
   }
   
   return <MarketplaceItemForm itemToEdit={item} />;
+}
+
+export default async function EditMarketplaceItemPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
+    return <EditMarketplaceItemClient itemId={id} />
 }

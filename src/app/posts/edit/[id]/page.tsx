@@ -2,6 +2,11 @@
 
 import { PlaceholderPage } from "@/components/PlaceholderPage";
 
-export default function EditPostPage({ params }: { params: { id: string } }) {
-    return <PlaceholderPage title={`Редактирование поста #${params.id}`} />
+function EditPostClient({ postId }: { postId: string }) {
+    return <PlaceholderPage title={`Редактирование поста #${postId}`} />
+}
+
+export default async function EditPostPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
+    return <EditPostClient postId={id} />
 }

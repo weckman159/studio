@@ -7,7 +7,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, increment, collection, query, where, getDocs } from 'firebase/firestore';
 import { useFirestore, useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
@@ -63,12 +63,10 @@ interface Participant {
   registeredAt?: any;
 }
 
-export default function EventDetailPage() {
-  const params = useParams();
+function EventDetailClient({ eventId }: { eventId: string }) {
   const router = useRouter();
   const { user } = useUser();
   const firestore = useFirestore();
-  const eventId = params.id as string;
 
   // Состояния
   const [event, setEvent] = useState<Event | null>(null);
@@ -589,4 +587,9 @@ export default function EventDetailPage() {
       </div>
     </div>
   );
+}
+
+export default async function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
+    return <EventDetailClient eventId={id} />
 }

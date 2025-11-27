@@ -6,7 +6,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { useFirestore, useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
@@ -52,12 +52,10 @@ interface MarketplaceItem {
   views?: number; // Количество просмотров
 }
 
-export default function MarketplaceItemPage() {
-  const params = useParams();
+function MarketplaceItemClient({ itemId }: { itemId: string }) {
   const router = useRouter();
   const { user } = useUser();
   const firestore = useFirestore();
-  const itemId = params.id as string;
 
   const [item, setItem] = useState<MarketplaceItem | null>(null);
   const [loading, setLoading] = useState(true);
@@ -342,4 +340,9 @@ export default function MarketplaceItemPage() {
       </div>
     </div>
   );
+}
+
+export default async function MarketplaceItemPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
+    return <MarketplaceItemClient itemId={id} />
 }

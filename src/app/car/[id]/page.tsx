@@ -112,8 +112,9 @@ function GarageClient({ carId }: { carId: string }) {
   )
 }
 
-export default function CarPage({ params }: { params: { id: string } }) {
+export default async function CarPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   return (
-    <GarageClient carId={params.id} />
+    <GarageClient carId={id} />
   )
 }
