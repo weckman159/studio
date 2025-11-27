@@ -2,11 +2,12 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useParams } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ProfileHero } from '@/components/profile/ProfileHero';
 import { ProfileSidebar } from '@/components/profile/ProfileSidebar';
 import { CarCard } from '@/components/profile/CarCard';
-import { Wrench, Calendar, Camera, ShoppingBag, Loader2 } from 'lucide-react';
+import { Wrench, Calendar, Camera, ShoppingBag, Loader2, Edit } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, getDoc, collection, query, where } from 'firebase/firestore';
 import type { Car, User } from '@/lib/data';
@@ -33,7 +34,6 @@ function ProfilePageClient({ userId }: { userId: string }) {
   useEffect(() => {
     const fetchProfile = async () => {
       if (!firestore) {
-        // Fallback to mock if firestore is not ready
         setProfile(mockUsers.find(u => u.id === userId) || null);
         setLoading(false);
         return;
@@ -45,26 +45,26 @@ function ProfilePageClient({ userId }: { userId: string }) {
         if (userDoc.exists()) {
           setProfile({ id: userDoc.id, ...userDoc.data() } as User);
         } else {
-          // If not found in Firestore, fallback to mock data for demo purposes
           setProfile(mockUsers.find(u => u.id === userId) || null);
         }
       } catch (error) {
         console.error("Error fetching profile:", error);
-        // Fallback on error as well
         setProfile(mockUsers.find(u => u.id === userId) || null);
       } finally {
         setLoading(false);
       }
     };
     
-    fetchProfile();
+    if (userId) {
+      fetchProfile();
+    }
   }, [userId, firestore]);
 
   useEffect(() => {
     setIsOwner(!!authUser && authUser.uid === userId);
   }, [authUser, userId]);
   
-  const totalLoading = loading || isUserLoading || carsLoading;
+  const totalLoading = loading || isUserLoading || (carsQuery && carsLoading);
 
   if (totalLoading && !profile) {
      return (
@@ -78,7 +78,6 @@ function ProfilePageClient({ userId }: { userId: string }) {
     return <div className="container text-center py-10">Профиль не найден.</div>;
   }
   
-  // Create a comprehensive profile object for UI components
   const displayProfile = {
       id: profile.id,
       displayName: profile.name || profile.displayName || 'No Name',
@@ -195,6 +194,14 @@ function ProfilePageClient({ userId }: { userId: string }) {
 }
 
 
-export default async function ProfilePage({ params }: { params: { id: string } }) {
-  return <ProfilePageClient userId={params.id} />;
+export default function ProfilePage() {
+  const params = useParams();
+  const userId = params.id as string;
+
+  if (!userId) {
+    // Optionally, render a loading state or a message
+    return <div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+  }
+  
+  return <ProfilePageClient userId={userId} />;
 }
