@@ -19,6 +19,7 @@ export function useCar(carId: string) {
         return;
       }
       try {
+        setLoading(true);
         // Загрузить основные данные авто
         // First, try to get from the root 'cars' collection
         let carRef = doc(firestore, 'cars', carId);
@@ -74,7 +75,7 @@ export function useCar(carId: string) {
       }
     }
     
-    if (carId) {
+    if (carId && firestore) {
         loadCar()
     } else {
         setLoading(false);

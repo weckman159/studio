@@ -38,7 +38,7 @@ function ProfileHero({ user, isOwner }: { user: UserData, isOwner: boolean }) {
     <div className="relative h-[40vh] min-h-[300px] w-full rounded-2xl overflow-hidden mb-8 shadow-lg">
       {/* Background Image/Video */}
       <Image 
-        src={user.coverPhotoURL || 'https://images.unsplash.com/photo-1553440569-bcc63803a83d?q=80&w=2025&auto=format&fit=crop'} 
+        src={user.photoURL || 'https://images.unsplash.com/photo-1553440569-bcc63803a83d?q=80&w=2025&auto=format&fit=crop'} 
         alt={`${user.name}'s cover photo`}
         fill
         className="object-cover"
@@ -171,7 +171,9 @@ export default function ProfilePage() {
             if(!mockUser) notFound();
         }
     }
-    fetchUser();
+    if (firestore) {
+        fetchUser();
+    }
   }, [id, firestore]);
 
 
