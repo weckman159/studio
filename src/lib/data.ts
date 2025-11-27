@@ -35,6 +35,15 @@ export interface Car {
   photoUrl?: string; // mainPhotoURL
   photos?: string[]; // gallery
   isCarOfTheDay?: boolean;
+  nickname?: string;
+  stockHP?: number;
+  currentHP?: number;
+  acceleration?: string;
+  clearance?: string;
+  mileage?: string;
+  views?: number;
+  comments?: number;
+  likes?: number;
 }
 
 export interface Post {
@@ -242,3 +251,4 @@ export const comments: Comment[] = [
     
 
     
+

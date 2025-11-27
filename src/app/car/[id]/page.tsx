@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from "react";
@@ -74,7 +75,7 @@ function SpecCard({ label, value, icon, progress }: SpecCardProps) {
 
 export default function CarProfilePage({ params }: { params: { id: string } }) {
   const firestore = useFirestore();
-  const [car, setCar] = useState<Car & {nickname?: string, stockHP?: number, currentHP?: number, acceleration?: string, clearance?: string, mileage?: string, views?: number, comments?: number, likes?: number} | null>(null);
+  const [car, setCar] = useState<Car | null>(null);
   const [owner, setOwner] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -171,7 +172,7 @@ export default function CarProfilePage({ params }: { params: { id: string } }) {
                 label="Мощность" 
                 value={`${car.stockHP} → ${car.currentHP}`} 
                 icon="🚗"
-                progress={(car.currentHP || 0) / (car.stockHP || 1) * 100}
+                progress={car.currentHP && car.stockHP ? (car.currentHP / car.stockHP) * 100 : 0}
             />
             <SpecCard 
                 label="0-100 км/ч" 
@@ -291,3 +292,4 @@ export default function CarProfilePage({ params }: { params: { id: string } }) {
     </div>
   );
 }
+
