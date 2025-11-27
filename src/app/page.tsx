@@ -11,6 +11,7 @@ import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card"
 import { useState } from "react";
 import { CarOfTheDay } from "@/components/CarOfTheDay";
 import { PostFilters } from "@/components/PostFilters";
+import { AutoNewsWidget } from "@/components/AutoNewsWidget";
 
 function PostFeed({ posts, loading }: { posts: Post[], loading?: boolean }) {
   if (loading) {
@@ -56,7 +57,14 @@ export default function Home() {
 
   return (
     <div className="space-y-8">
-      <CarOfTheDay />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2">
+          <CarOfTheDay />
+        </div>
+        <div className="lg:col-span-1">
+          <AutoNewsWidget />
+        </div>
+      </div>
       <PostFilters 
         activeType={activeType}
         onTypeChange={setActiveType}
