@@ -23,11 +23,13 @@ import {
 import { formatDistanceToNow } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { Post } from '@/lib/data'
+import { useToast } from '@/hooks/use-toast'
 
 export function PostCard({ post }: { post: Post }) {
   const [liked, setLiked] = useState(post.isLiked || false)
   const [bookmarked, setBookmarked] = useState(post.isBookmarked || false)
   const [likesCount, setLikesCount] = useState(post.likes)
+  const { toast } = useToast()
 
   const handleLike = () => {
     setLiked(!liked)
@@ -38,6 +40,51 @@ export function PostCard({ post }: { post: Post }) {
   const handleBookmark = () => {
     setBookmarked(!bookmarked)
     // TODO: Отправить в Firestore
+  }
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+      
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.select();
+      
+      try {
+        const success = document.execCommand('copy');
+        textArea.remove();
+        return success;
+      } catch {
+        textArea.remove();
+        return false;
+      }
+    } catch {
+      return false;
+    }
+  }
+
+  const handleShare = async () => {
+    const url = `${window.location.origin}/posts/${post.id}`;
+    const success = await copyToClipboard(url);
+    
+    if (success) {
+      toast({
+        title: 'Ссылка скопирована',
+        description: 'Можете поделиться постом',
+      });
+    } else {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось скопировать ссылку',
+        variant: 'destructive',
+      });
+    }
   }
 
   return (
@@ -80,7 +127,7 @@ export function PostCard({ post }: { post: Post }) {
           <DropdownMenuContent align="end">
             <DropdownMenuItem>Пожаловаться</DropdownMenuItem>
             <DropdownMenuItem>Скрыть пост</DropdownMenuItem>
-            <DropdownMenuItem>Скопировать ссылку</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleShare}>Скопировать ссылку</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -148,10 +195,17 @@ export function PostCard({ post }: { post: Post }) {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <Eye className="h-4 w-4" />
-            <span>{post.views.toLocaleString()}</span>
+            <span suppressHydrationWarning>
+              {post.views.toLocaleString('ru-RU')}
+            </span>
           </div>
           
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8 text-muted-foreground hover:text-primary"
+            onClick={handleShare}
+          >
             <Share2 className="h-4 w-4" />
           </Button>
         </div>
@@ -159,5 +213,3 @@ export function PostCard({ post }: { post: Post }) {
     </Card>
   )
 }
-
-    
