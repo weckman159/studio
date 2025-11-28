@@ -68,7 +68,7 @@ export function CookieConsent() {
       <Card className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:max-w-md z-50 shadow-2xl border-2">
         <div className="p-6">
           <div className="flex items-start justify-between mb-4">
-            <h3 className="font-bold text-lg">Cookies & Datenschutz</h3>
+            <h3 className="font-bold text-lg">Cookies и конфиденциальность</h3>
             <Button 
               variant="ghost" 
               size="icon" 
@@ -185,5 +185,3 @@ export function CookieConsent() {
     </>
   )
 }
-
-    
