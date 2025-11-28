@@ -2,11 +2,12 @@
 // src/app/workshops/[id]/page.tsx
 'use server';
 
-import { doc, getDoc, collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { adminDb } from '@/lib/firebase-admin';
 import type { Workshop, Review } from '@/lib/types';
 import { notFound } from 'next/navigation';
 import WorkshopDetailClient from './_components/WorkshopDetailClient';
+
+export const dynamic = 'force-dynamic';
 
 
 async function getWorkshopData(workshopId: string): Promise<{ workshop: Workshop | null, reviews: Review[] }> {

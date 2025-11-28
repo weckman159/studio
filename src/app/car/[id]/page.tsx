@@ -7,6 +7,8 @@ import type { Car, TimelineEntry } from '@/lib/types';
 import CarDetailClient from './_components/CarDetailClient';
 import { notFound } from 'next/navigation';
 
+export const dynamic = 'force-dynamic';
+
 async function getCarData(carId: string): Promise<{ car: Car | null, timeline: TimelineEntry[] }> {
     try {
         const carRef = adminDb.collection('cars').doc(carId);

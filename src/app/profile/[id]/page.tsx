@@ -1,11 +1,12 @@
 'use server';
 
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { adminDb } from '@/lib/firebase-admin';
+import { adminDb, adminAuth } from '@/lib/firebase-admin';
 import { cookies } from 'next/headers';
-import { getAuth } from 'firebase-admin/auth';
 import { ProfileClientPage } from '@/components/profile/ProfileClientPage';
 import type { User, Car } from '@/lib/types';
+import { query, collection, where, getDocs } from 'firebase/firestore';
+
+export const dynamic = 'force-dynamic';
 
 
 async function getProfileData(userId: string): Promise<{ profile: User | null; cars: Car[] }> {
@@ -20,8 +21,8 @@ async function getProfileData(userId: string): Promise<{ profile: User | null; c
         const profile = { id: userDocSnap.id, ...userDocSnap.data() } as User;
 
         const carsCollectionRef = adminDb.collection('cars');
-        const carsQuery = query(carsCollectionRef, where('userId', '==', userId));
-        const carsSnapshot = await getDocs(carsQuery);
+        const carsQuery = adminDb.collection('cars').where('userId', '==', userId);
+        const carsSnapshot = await carsQuery.get();
         const cars = carsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Car));
 
         return { profile, cars };
@@ -35,7 +36,7 @@ async function getAuthUser() {
     try {
         const sessionCookie = cookies().get('session')?.value;
         if (!sessionCookie) return null;
-        const decodedToken = await getAuth().verifySessionCookie(sessionCookie, true);
+        const decodedToken = await adminAuth.verifySessionCookie(sessionCookie, true);
         return decodedToken;
     } catch (error) {
         return null;

@@ -6,6 +6,8 @@ import { adminDb } from '@/lib/firebase-admin';
 import { notFound } from 'next/navigation';
 import type { Community } from '@/lib/types';
 
+export const dynamic = 'force-dynamic';
+
 async function getCommunity(communityId: string): Promise<Community | null> {
     try {
         const communityRef = adminDb.collection('communities').doc(communityId);

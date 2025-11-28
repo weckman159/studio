@@ -1,11 +1,12 @@
 // src/app/events/[id]/page.tsx
 'use server';
 
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { adminDb } from '@/lib/firebase-admin';
 import type { Event, User } from '@/lib/types';
 import { notFound } from 'next/navigation';
 import EventDetailClient from './_components/EventDetailClient';
+
+export const dynamic = 'force-dynamic';
 
 async function getEventData(eventId: string): Promise<{ event: Event | null, participants: User[] }> {
     try {

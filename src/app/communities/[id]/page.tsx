@@ -2,11 +2,12 @@
 // src/app/communities/[id]/page.tsx
 'use server';
 
-import { doc, getDoc, collection, query, where, orderBy, getDocs, updateDoc, arrayUnion, arrayRemove, increment } from 'firebase/firestore';
 import { adminDb } from '@/lib/firebase-admin';
 import { notFound } from 'next/navigation';
 import type { Community, Post, User } from '@/lib/types';
 import CommunityDetailClient from './_components/CommunityDetailClient';
+
+export const dynamic = 'force-dynamic';
 
 
 async function getCommunityData(communityId: string): Promise<{ community: Community | null; posts: Post[]; members: User[] }> {

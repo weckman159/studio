@@ -1,7 +1,6 @@
 
 'use server';
 
-import { getDoc, collection, query, where, getDocs, orderBy, Timestamp } from 'firebase/firestore';
 import { adminDb } from '@/lib/firebase-admin';
 import { PostActions } from './_components/PostActions';
 import { PostComments } from './_components/PostComments';
@@ -12,6 +11,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Calendar, FileText } from 'lucide-react';
 import type { Post, Comment } from '@/lib/types';
 import { notFound } from 'next/navigation';
+
+export const dynamic = 'force-dynamic';
 
 async function getPostData(postId: string): Promise<{ post: Post | null, comments: Comment[] }> {
     try {
@@ -125,4 +126,3 @@ export default async function PostDetailPage({ params }: { params: { id: string 
         </div>
       );
 }
-
