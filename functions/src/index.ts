@@ -113,12 +113,11 @@ export const onCommentDeleted = functions.firestore
   .document('comments/{commentId}')
   .onDelete(async (snap, context) => {
     const commentData = snap.data();
-    const { postId } = commentData;
-    
-    if (!postId) {
+    if (!commentData || !commentData.postId) {
         console.warn(`Comment ${context.params.commentId} deleted without a postId.`);
         return;
     }
+    const { postId } = commentData;
 
     try {
       const postRef = db.collection('posts').doc(postId);
@@ -506,6 +505,73 @@ export const fetchWorkshops = functions.pubsub
     return null;
   });
 
+// ===========================
+// Car of the Day Voting
+// ===========================
+
+/**
+ * Runs every day at midnight to select new contenders for "Car of the Day".
+ */
+export const selectCarOfTheDayContenders = functions.pubsub
+  .schedule('every 24 hours')
+  .onRun(async (context) => {
+    try {
+      console.log('Running job to select Car of the Day contenders.');
+      const numberOfContenders = 5;
+
+      // Firestore doesn't have a native "random document" function.
+      // A common workaround is to generate a random ID and query from there.
+      const randomId = db.collection('cars').doc().id;
+      const carsSnapshot = await db.collection('cars')
+        .where(admin.firestore.FieldPath.documentId(), '>=', randomId)
+        .limit(numberOfContenders)
+        .get();
+
+      let contenderCarIds: string[] = [];
+      if (carsSnapshot.size > 0) {
+        contenderCarIds = carsSnapshot.docs.map(doc => doc.id);
+      }
+      
+      // If we got less than N contenders, query again from the start of the collection
+      if (contenderCarIds.length < numberOfContenders) {
+        const remaining = numberOfContenders - contenderCarIds.length;
+        const remainingSnapshot = await db.collection('cars')
+          .limit(remaining)
+          .get();
+        const remainingIds = remainingSnapshot.docs.map(doc => doc.id).filter(id => !contenderCarIds.includes(id));
+        contenderCarIds.push(...remainingIds);
+      }
+
+      if (contenderCarIds.length === 0) {
+        console.log('No cars found to select as contenders.');
+        return null;
+      }
+      
+      const today = new Date().toISOString().split('T')[0];
+      const votingDocRef = db.collection('votings').doc(today);
+
+      const initialVotes: { [key: string]: number } = {};
+      contenderCarIds.forEach(id => {
+        initialVotes[id] = 0;
+      });
+
+      await votingDocRef.set({
+        question: `Какой автомобиль достоин звания "Автомобиль дня"?`,
+        options: contenderCarIds, // For compatibility, though we fetch cars directly
+        contenderCarIds: contenderCarIds,
+        votes: initialVotes,
+        votedUserIds: [],
+        totalVotes: 0,
+        isActive: true,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      console.log(`Created voting session for ${today} with ${contenderCarIds.length} contenders.`);
+    } catch (error) {
+      console.error('Error selecting car of the day contenders:', error);
+    }
+    return null;
+  });
 
 // ===========================
 // Утилиты
@@ -533,6 +599,11 @@ async function createNotification(params: CreateNotificationParams) {
     relatedEntityId,
     relatedEntityType
   } = params;
+
+  // Prevent self-notification
+  if (recipientId === senderId) {
+      return;
+  }
 
   try {
     let senderData = null;

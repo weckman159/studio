@@ -39,34 +39,41 @@ export default function CarOfTheDayPage() {
                     setVoting(votingData);
 
                     if (user && votingData.votedUserIds?.includes(user.uid)) {
-                        // Find which car the user voted for
-                        for (const carId in votingData.votes) {
-                            // This logic is flawed if we don't store who voted for whom.
-                            // For now, we just know they've voted. Let's find their vote if possible.
-                            // A better structure would be `votes: { carId: [userId1, userId2] }`
-                        }
-                        setVotedFor('some_car'); // Placeholder to show they've voted
+                        // This is a simple way to show the user they have voted.
+                        // A more complex implementation could store the specific vote.
+                        setVotedFor("already_voted"); 
                     }
 
                     const contendersData: Contender[] = [];
-                    for (const carId of votingData.contenderCarIds || []) {
-                        const carDoc = await getDoc(doc(firestore, 'cars', carId));
-                        if (carDoc.exists()) {
-                            const car = { id: carDoc.id, ...carDoc.data() } as Car;
-                            const userDoc = await getDoc(doc(firestore, 'users', car.userId));
-                            if (userDoc.exists()) {
-                                const owner = { id: userDoc.id, ...userDoc.data() } as User;
-                                contendersData.push({
-                                    ...car,
-                                    owner,
-                                    votes: (votingData.votes?.[carId] || 0) as number
-                                });
+                    if (votingData.contenderCarIds && votingData.contenderCarIds.length > 0) {
+                        // Fetch cars in chunks of 10 due to 'in' query limit
+                        const carIdChunks: string[][] = [];
+                        for (let i = 0; i < votingData.contenderCarIds.length; i += 10) {
+                            carIdChunks.push(votingData.contenderCarIds.slice(i, i + 10));
+                        }
+
+                        for (const chunk of carIdChunks) {
+                            if (chunk.length === 0) continue;
+                            const carsQuery = query(collection(firestore, 'cars'), where('__name__', 'in', chunk));
+                            const carsSnapshot = await getDocs(carsQuery);
+                            
+                            for (const carDoc of carsSnapshot.docs) {
+                                const car = { id: carDoc.id, ...carDoc.data() } as Car;
+                                const userDoc = await getDoc(doc(firestore, 'users', car.userId));
+                                if (userDoc.exists()) {
+                                    const owner = { id: userDoc.id, ...userDoc.data() } as User;
+                                    contendersData.push({
+                                        ...car,
+                                        owner,
+                                        votes: (votingData.votes?.[car.id] || 0) as number
+                                    });
+                                }
                             }
                         }
                     }
                     setContenders(contendersData.sort((a, b) => b.votes - a.votes));
                 } else {
-                     console.log("No voting session for today. A new one should be created by a backend function.");
+                     console.log("No voting session for today. A new one should be created by the scheduled function.");
                 }
             } catch (error) {
                 console.error("Error fetching voting data:", error);
@@ -79,24 +86,27 @@ export default function CarOfTheDayPage() {
     }, [firestore, user, todayStr]);
 
     const handleVote = async (carId: string) => {
-        if (!user || !firestore || !voting || (votedFor && votedFor !== '')) return;
+        if (!user || !firestore || !voting || votedFor) return;
 
         try {
+            setVotedFor(carId); // Optimistic update to disable voting buttons
+            
             const votingRef = doc(firestore, 'votings', voting.id);
 
-            // Using Firestore transactions could be better here
+            // Using Firestore transactions could be better here for atomicity
             await updateDoc(votingRef, {
                 [`votes.${carId}`]: increment(1),
                 votedUserIds: arrayUnion(user.uid),
                 totalVotes: increment(1)
             });
 
-            setVotedFor(carId); 
-            // Optimistically update UI
+            // Optimistically update UI for votes
             setContenders(prev => prev.map(c => c.id === carId ? { ...c, votes: c.votes + 1 } : c).sort((a,b) => b.votes - a.votes));
+            setVoting(prev => prev ? { ...prev, totalVotes: prev.totalVotes + 1 } : null);
 
         } catch (error) {
             console.error("Error casting vote:", error);
+            setVotedFor(null); // Revert optimistic update on error
         }
     };
 
@@ -148,6 +158,7 @@ export default function CarOfTheDayPage() {
                  <Card>
                     <CardContent className="p-10 text-center text-muted-foreground">
                         <p>На сегодня нет претендентов на звание "Автомобиль дня". Загляните завтра!</p>
+                         <p className="text-xs mt-2">(Новая сессия голосования создается автоматически в полночь)</p>
                     </CardContent>
                 </Card>
             )}
