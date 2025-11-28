@@ -206,9 +206,9 @@ service cloud.firestore {
     // ------------------------------------------------------------------------
     match /notifications/{notificationId} {
       allow get: if isSignedIn() && resource.data.recipientId == request.auth.uid;
-      allow list: if isSignedIn() && request.query.where.recipientId == request.auth.uid;
+      allow list: if isSignedIn() && request.query.limit <= 30; // Allow listing only with a limit to prevent abuse
       allow update: if isSignedIn() && resource.data.recipientId == request.auth.uid && request.resource.data.keys().hasOnly(['read']);
-      allow create, delete: if false;
+      allow create, delete: if false; // Should be created by backend functions only
     }
 
     // ------------------------------------------------------------------------
