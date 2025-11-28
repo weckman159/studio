@@ -42,6 +42,7 @@ export function Header() {
   const handleLogout = () => {
     if (auth) {
       signOut(auth).then(() => {
+        document.cookie = 'session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
         toast({ title: 'Вы вышли из системы.' });
       });
     }
