@@ -1,3 +1,4 @@
+
 # 🚀 Инструкция по развертыванию Firebase для AutoSphere
 
 ## Шаг 1: Установка Firebase CLI
@@ -57,11 +58,7 @@ firebase deploy --only storage:rules
 ```bash
 firebase deploy --only firestore:indexes
 ```
-
-**Альтернативный способ (через консоль):**
-- Перейдите в Firebase Console → Firestore Database → Indexes
-- При выполнении запросов Firebase автоматически предложит создать необходимые индексы
-- Кликните на ссылку в ошибке для автоматического создания индекса
+**ВАЖНО:** Этот процесс может занять 5-10 минут. Без этих индексов фильтрация и сортировка на сайте работать не будут!
 
 ## Шаг 5: Настройка Cloud Functions
 
@@ -89,14 +86,29 @@ firebase deploy --only functions
 
 **Важно:** Первое развертывание функций может занять 5-10 минут.
 
-## Шаг 6: Включение Storage в Firebase Console
+## Шаг 6: Настройка переменных окружения
 
-1. Перейдите в Firebase Console
-2. Выберите ваш проект
-3. Перейдите в раздел **Storage**
-4. Нажмите **Get Started**
-5. Выберите регион (рекомендуется выбрать тот же, что и для Firestore)
-6. Подтвердите создание bucket
+### Для локальной разработки (`.env.local`)
+
+Создайте файл `.env.local` в корне проекта:
+
+```env
+# Firebase Public Config
+NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project_id.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+
+# Firebase Admin SDK (Secret!) - NEVER commit this to Git
+# Скопируйте всё содержимое JSON-файла сервисного аккаунта в одну строку
+FIREBASE_SERVICE_ACCOUNT_KEY={"type":"service_account",...}
+```
+
+### Для продакшена (Vercel)
+
+Перейдите в настройки вашего проекта на Vercel → Settings → Environment Variables и добавьте все переменные из `.env.local`. `FIREBASE_SERVICE_ACCOUNT_KEY` должна быть добавлена как **Secret**.
 
 ## Шаг 7: Настройка CORS для Storage
 
@@ -124,106 +136,9 @@ gsutil cors set cors.json gs://your-project-id.appspot.com
 
 ### Обновите `lib/firebase.ts`:
 
-```typescript
-import { initializeApp, getApps } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+Этот файл уже должен быть настроен правильно. Проверьте, что он инициализирует Firebase с использованием `process.env.NEXT_PUBLIC_*` переменных.
 
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-};
-
-// Инициализация Firebase (только один раз)
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const storage = getStorage(app);
-export default app;
-```
-
-### Добавьте переменные окружения в `.env.local`:
-
-```env
-NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project_id.appspot.com
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
-```
-
-## Шаг 9: Установка утилит Storage в проект
-
-### Скопируйте файлы:
-
-1. **lib/storage.ts** - утилиты для работы со Storage
-2. **hooks/useFileUpload.ts** - React хук для загрузки
-3. **components/ImageUpload.tsx** - компонент загрузки
-
-### Установите зависимости:
-
-```bash
-npm install lucide-react
-```
-
-## Шаг 10: Миграция существующих данных
-
-Если у вас уже есть данные с data URI, создайте скрипт миграции:
-
-```typescript
-// scripts/migrateImages.ts
-import { db } from '@/lib/firebase';
-import { collection, getDocs, updateDoc } from 'firebase/firestore';
-import { migrateDataURItoStorage, isDataURI } from '@/lib/storage';
-
-async function migratePostImages() {
-  const postsSnapshot = await getDocs(collection(db, 'posts'));
-  
-  for (const postDoc of postsSnapshot.docs) {
-    const post = postDoc.data();
-    
-    if (post.images && Array.isArray(post.images)) {
-      const migratedImages = [];
-      
-      for (const image of post.images) {
-        if (isDataURI(image)) {
-          const result = await migrateDataURItoStorage(
-            image,
-            'posts',
-            postDoc.id,
-            `image_${Date.now()}.jpg`
-          );
-          migratedImages.push(result.url);
-        } else {
-          migratedImages.push(image);
-        }
-      }
-      
-      await updateDoc(postDoc.ref, { images: migratedImages });
-      console.log(`Migrated post ${postDoc.id}`);
-    }
-  }
-}
-
-migratePostImages().then(() => {
-  console.log('Migration completed!');
-});
-```
-
-Запустите миграцию:
-
-```bash
-npx ts-node scripts/migrateImages.ts
-```
-
-## Шаг 11: Тестирование
+## Шаг 9: Тестирование
 
 ### Проверьте Security Rules:
 
@@ -233,50 +148,9 @@ firebase emulators:start --only firestore,storage
 
 ### Тестирование загрузки:
 
-Создайте тестовый компонент:
-
-```typescript
-import { useFileUpload } from '@/hooks/useFileUpload';
-import { ImageUpload } from '@/components/ImageUpload';
-
-export default function TestUpload() {
-  const { uploadSingleFile, uploading, progress } = useFileUpload();
-
-  const handleUpload = async (files: File[]) => {
-    if (files[0]) {
-      const result = await uploadSingleFile(files[0], 'posts', 'test-post-id');
-      console.log('Uploaded:', result);
-    }
-  };
-
-  return (
-    <ImageUpload
-      onFilesSelected={handleUpload}
-      uploading={uploading}
-      progress={progress}
-    />
-  );
-}
-```
-
-## Шаг 12: Мониторинг и отладка
-
-### Firebase Console:
-- **Firestore**: Проверьте структуру данных
-- **Storage**: Просмотрите загруженные файлы
-- **Functions**: Проверьте логи выполнения
-
-### Логи Cloud Functions:
-
-```bash
-firebase functions:log
-```
-
-### Проверка использования:
-
-```bash
-firebase use
-```
+- Попробуйте создать пост с изображением.
+- Попробуйте добавить машину в гараж с фото.
+- Попробуйте отредактировать профиль, сменив аватар.
 
 ## ✅ Чеклист развертывания
 
@@ -284,49 +158,17 @@ firebase use
 - [ ] Проект инициализирован
 - [ ] Firestore Rules развернуты
 - [ ] Storage Rules развернуты
-- [ ] Индексы созданы
+- [ ] Индексы созданы и их статус "Enabled"
 - [ ] Cloud Functions развернуты
 - [ ] Storage включен
 - [ ] CORS настроен
-- [ ] Конфигурация обновлена
-- [ ] Переменные окружения установлены
-- [ ] Утилиты скопированы
-- [ ] Зависимости установлены
-- [ ] Миграция данных выполнена
+- [ ] Переменные окружения установлены в Vercel
 - [ ] Тестирование пройдено
 
 ## 🚨 Важные замечания
 
-1. **Безопасность**: Никогда не коммитьте `.env.local` в Git
+1. **Безопасность**: Никогда не коммитьте `.env.local` или ключи сервисного аккаунта в Git
 2. **Квоты**: Следите за использованием Storage (бесплатно до 5GB)
 3. **Functions**: На бесплатном плане Spark ограничено количество вызовов
-4. **Индексы**: Некоторые сложные запросы требуют составных индексов
-5. **CORS**: Обязательно настройте для работы с фронтендом
+4. **Индексы**: Некоторые сложные запросы требуют составных индексов. Если в консоли Firebase появляются ошибки с предложением создать индекс, сделайте это.
 
-## 📚 Дополнительные ресурсы
-
-- [Firebase Documentation](https://firebase.google.com/docs)
-- [Firestore Security Rules](https://firebase.google.com/docs/firestore/security/get-started)
-- [Cloud Storage Security](https://firebase.google.com/docs/storage/security)
-- [Cloud Functions Guide](https://firebase.google.com/docs/functions)
-
-## 🆘 Решение проблем
-
-### Ошибка: "Missing or insufficient permissions"
-- Проверьте Security Rules
-- Убедитесь, что пользователь авторизован
-- Проверьте структуру данных
-
-### Ошибка: "CORS policy"
-- Настройте CORS для Storage bucket
-- Проверьте origin в конфигурации
-
-### Функции не срабатывают
-- Проверьте логи: `firebase functions:log`
-- Убедитесь, что функции развернуты
-- Проверьте план Firebase (некоторые функции требуют Blaze)
-
-### Медленная загрузка изображений
-- Используйте сжатие изображений
-- Проверьте размер файлов
-- Рассмотрите использование CDN

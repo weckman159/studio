@@ -21,7 +21,7 @@ import {
   doc,
   FirestoreError,
 } from 'firebase/firestore';
-import { useUser, useFirestore } from '@/firebase';
+import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Notification } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './ui/card';
@@ -79,22 +79,27 @@ export function Notifications() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  // Memoize the query to prevent re-renders
+  const notificationsQuery = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return query(
+        collection(firestore, 'notifications'),
+        where('recipientId', '==', user.uid),
+        orderBy('createdAt', 'desc'),
+        limit(20)
+    );
+  }, [user, firestore]);
+
   useEffect(() => {
-    if (!user || !firestore) {
+    if (!notificationsQuery) {
       setLoading(false);
       return;
     }
 
     setLoading(true);
-    const q = query(
-      collection(firestore, 'notifications'),
-      where('recipientId', '==', user.uid),
-      orderBy('createdAt', 'desc'),
-      limit(20)
-    );
 
     const unsubscribe = onSnapshot(
-      q,
+      notificationsQuery,
       (snapshot) => {
         const notifs = snapshot.docs.map(
           (doc) => ({ id: doc.id, ...doc.data() } as Notification)
@@ -123,7 +128,7 @@ export function Notifications() {
     );
 
     return () => unsubscribe();
-  }, [user, firestore]);
+  }, [notificationsQuery]);
 
   const handleMarkAsRead = (notificationId: string) => {
     if (!firestore) return;

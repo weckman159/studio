@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from 'react';
 import { collection, getDocs, deleteDoc, doc, updateDoc, setDoc, getDoc } from 'firebase/firestore';
-import { useFirestore, useUser } from '@/firebase';
+import { useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { User as UserData, Workshop, Feedback } from '@/lib/types';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -233,12 +233,17 @@ function FeedbackAdmin() {
   const [loading, setLoading] = useState(true);
   const firestore = useFirestore();
 
+  const feedbackQuery = useMemoFirebase(
+    () => firestore ? collection(firestore, 'feedback') : null,
+    [firestore]
+  );
+  
   useEffect(() => {
-    if (!firestore) return;
+    if (!feedbackQuery) return;
     const fetchFeedback = async () => {
         setLoading(true);
         try {
-            const snapshot = await getDocs(collection(firestore, 'feedback'));
+            const snapshot = await getDocs(feedbackQuery);
             setFeedback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Feedback)));
         } catch (e) {
             console.error("Ошибка загрузки фидбека: ", e);
@@ -247,7 +252,7 @@ function FeedbackAdmin() {
         }
     };
     fetchFeedback();
-  }, [firestore]);
+  }, [feedbackQuery]);
 
   if (loading) return <p>Загрузка сообщений...</p>;
 

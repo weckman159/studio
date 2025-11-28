@@ -7,7 +7,7 @@ import { GarageCard } from "@/components/GarageCard";
 import { Button } from "@/components/ui/button";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, doc, deleteDoc, where } from 'firebase/firestore';
-import type { Car, User } from '@/lib/data';
+import type { Car, User } from '@/lib/types';
 import { Plus, Car as CarIcon } from "lucide-react";
 import { AddCarForm } from '@/components/AddCarForm';
 import { useToast } from "@/hooks/use-toast";
@@ -37,14 +37,18 @@ export default function GaragePage() {
   
   const handleDelete = async (car: Car) => {
     if (!user || !firestore) return;
+    if (!confirm(`Вы уверены, что хотите удалить ${car.brand} ${car.model}? Это действие необратимо.`)) {
+        return;
+    }
+    
     try {
-      if (car.photos) {
-        for (const photoUrl of car.photos) {
-          try {
-            await deleteFile(photoUrl);
-          } catch (storageError) {
-            console.warn(`Could not delete file ${photoUrl} from storage:`, storageError)
-          }
+      // Delete all photos from Storage
+      const photosToDelete = [...(car.photos || []), car.photoUrl].filter(Boolean) as string[];
+      for (const photoUrl of photosToDelete) {
+        try {
+          await deleteFile(photoUrl);
+        } catch (storageError) {
+          console.warn(`Could not delete file ${photoUrl} from storage:`, storageError)
         }
       }
       

@@ -1,3 +1,4 @@
+
 // src/app/car/[id]/page.tsx
 import type { Car, TimelineEntry } from '@/lib/types';
 import CarDetailClient from './_components/CarDetailClient';
@@ -23,17 +24,36 @@ async function getCarData(carId: string): Promise<{ car: Car | null, timeline: T
 
     const car = { id: carSnap.id, ...carSnap.data() } as Car;
 
+    // Firebase Admin Timestamps отличаются от клиентских, их нужно конвертировать
+    const convertTimestamp = (ts: any) => {
+        if (ts && ts._seconds) {
+            return new Date(ts._seconds * 1000);
+        }
+        return ts;
+    };
+
     const timelineRef = carRef.collection('timeline');
     const timelineQuery = timelineRef.orderBy('date', 'desc');
     const timelineSnap = await timelineQuery.get();
-    const timeline = timelineSnap.docs.map(doc => ({ 
-      id: doc.id, 
-      ...doc.data() 
-    } as TimelineEntry));
+    const timeline = timelineSnap.docs.map(doc => {
+      const data = doc.data();
+      return { 
+        id: doc.id,
+        ...data,
+        date: convertTimestamp(data.date), // Конвертируем Timestamp
+      } as TimelineEntry
+    });
 
-    return { car, timeline };
+    return { 
+        car: {
+            ...car,
+            createdAt: convertTimestamp(car.createdAt),
+            updatedAt: car.updatedAt ? convertTimestamp(car.updatedAt) : undefined,
+        }, 
+        timeline 
+    };
   } catch (error) {
-    console.error("Error fetching car data:", error);
+    console.error("Error fetching car data on server:", error);
     return { car: null, timeline: [] };
   }
 }

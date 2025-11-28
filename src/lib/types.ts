@@ -116,7 +116,7 @@ export interface Modification {
 export interface TimelineEntry {
   id: string
   carId: string
-  date: Timestamp
+  date: any // Can be Timestamp or Date object
   type: TimelineType
   title: string
   description: string
