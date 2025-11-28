@@ -21,12 +21,13 @@ export const onLikeCreated = functions.firestore
 
     try {
       // Увеличиваем счетчик лайков у поста
-      await db.collection('posts').doc(postId).update({
+      const postRef = db.collection('posts').doc(postId);
+      await postRef.update({
         likesCount: admin.firestore.FieldValue.increment(1)
       });
 
       // Создаем уведомление для автора поста
-      const postDoc = await db.collection('posts').doc(postId).get();
+      const postDoc = await postRef.get();
       const postData = postDoc.data();
 
       if (postData && postData.authorId !== likeData.userId) {
@@ -229,9 +230,14 @@ export const onCarCreated = functions.firestore
   .document('cars/{carId}')
   .onCreate(async (snap, context) => {
     const carData = snap.data();
+    if (!carData.userId) {
+        console.error('Car created without userId:', context.params.carId);
+        return;
+    }
 
     try {
-      await db.collection('users').doc(carData.userId).update({
+      const userRef = db.collection('users').doc(carData.userId);
+      await userRef.update({
         'stats.carsCount': admin.firestore.FieldValue.increment(1)
       });
     } catch (error) {
@@ -246,9 +252,14 @@ export const onCarDeleted = functions.firestore
   .document('cars/{carId}')
   .onDelete(async (snap, context) => {
     const carData = snap.data();
+     if (!carData.userId) {
+        console.error('Car deleted without userId:', context.params.carId);
+        return;
+    }
 
     try {
-      await db.collection('users').doc(carData.userId).update({
+       const userRef = db.collection('users').doc(carData.userId);
+      await userRef.update({
         'stats.carsCount': admin.firestore.FieldValue.increment(-1)
       });
     } catch (error) {
@@ -269,6 +280,11 @@ export const onPostCreated = functions.firestore
     const postData = snap.data();
     const postId = context.params.postId;
     const authorId = postData.authorId;
+
+    if (!authorId) {
+        console.error('Post created without authorId:', postId);
+        return;
+    }
 
     try {
       const batch = db.batch();
@@ -400,6 +416,7 @@ export const onUserUpdated = functions.firestore
       beforeData.displayName === afterData.displayName &&
       beforeData.photoURL === afterData.photoURL
     ) {
+      console.log(`User ${userId} update triggered, but no denormalized fields changed. Skipping.`);
       return;
     }
 
@@ -445,6 +462,7 @@ export const onUserUpdated = functions.firestore
       });
 
       await batch.commit();
+      console.log(`Successfully denormalized profile update for user ${userId}.`);
     } catch (error) {
       console.error('Error in onUserUpdated:', error);
     }
@@ -639,3 +657,5 @@ async function createNotification(params: CreateNotificationParams) {
     console.error('Error creating notification:', error);
   }
 }
+
+    
