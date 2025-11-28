@@ -70,7 +70,7 @@ export const onCommentCreated = functions.firestore
   .document('comments/{commentId}')
   .onCreate(async (snap, context) => {
     const commentData = snap.data();
-    const { postId, parentId } = commentData;
+    const { postId } = commentData;
 
     if (!postId) {
         console.warn('Comment created without postId:', context.params.commentId);
@@ -78,26 +78,14 @@ export const onCommentCreated = functions.firestore
     }
 
     try {
-      const batch = db.batch();
-
       // Увеличиваем счетчик комментариев у поста
       const postRef = db.collection('posts').doc(postId);
-      batch.update(postRef, {
+      await postRef.update({
         commentsCount: admin.firestore.FieldValue.increment(1)
       });
-
-      // Если это ответ, увеличиваем счетчик ответов у родителя
-      if (parentId) {
-        const parentCommentRef = db.collection('comments').doc(parentId);
-        batch.update(parentCommentRef, {
-            repliesCount: admin.firestore.FieldValue.increment(1)
-        });
-      }
       
-      await batch.commit();
-
       // Создаем уведомление для автора поста
-      const postDoc = await db.collection('posts').doc(postId).get();
+      const postDoc = await postRef.get();
       const postData = postDoc.data();
 
       if (postData && postData.authorId !== commentData.authorId) {
@@ -125,47 +113,17 @@ export const onCommentDeleted = functions.firestore
   .document('comments/{commentId}')
   .onDelete(async (snap, context) => {
     const commentData = snap.data();
-    const { commentId } = context.params;
-
-    if (!commentData) {
-        console.warn(`Comment ${commentId} data not found on delete.`);
+    if (!commentData || !commentData.postId) {
+        console.warn(`Comment ${context.params.commentId} deleted without a postId.`);
         return;
     }
-    
-    const { postId, parentId } = commentData;
+    const { postId } = commentData;
 
     try {
-        const batch = db.batch();
-
-        // Уменьшаем счетчик у поста
-        if (postId) {
-            const postRef = db.collection('posts').doc(postId);
-            batch.update(postRef, {
-                commentsCount: admin.firestore.FieldValue.increment(-1)
-            });
-        }
-
-        // Уменьшаем счетчик у родительского комментария
-        if (parentId) {
-            const parentRef = db.collection('comments').doc(parentId);
-            batch.update(parentRef, {
-                repliesCount: admin.firestore.FieldValue.increment(-1)
-            });
-        }
-        
-        await batch.commit();
-
-        // Каскадное удаление вложенных комментариев
-        const repliesQuery = db.collection('comments').where('parentId', '==', commentId);
-        const repliesSnapshot = await repliesQuery.get();
-        
-        if (!repliesSnapshot.empty) {
-            const deleteBatch = db.batch();
-            repliesSnapshot.forEach(doc => {
-                deleteBatch.delete(doc.ref);
-            });
-            await deleteBatch.commit();
-        }
+      const postRef = db.collection('posts').doc(postId);
+      await postRef.update({
+        commentsCount: admin.firestore.FieldValue.increment(-1)
+      });
 
     } catch (error) {
       console.error('Error in onCommentDeleted:', error);
