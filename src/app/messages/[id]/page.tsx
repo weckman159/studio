@@ -6,14 +6,16 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import { collection, query, where, orderBy, getDocs, addDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import { useFirestore, useUser } from '@/firebase';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
-import { Send } from 'lucide-react';
+import { Send, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useUserProfile } from '@/hooks/useUserProfile';
+import Link from 'next/link';
 
 interface Message {
     id: string;
@@ -62,12 +64,26 @@ function DialogClient({ dialogId }: { dialogId: string }) {
     const messageText = input;
     setInput('');
 
-    await addDoc(collection(firestore, 'messages'), {
-      dialogId: dialogId,
-      authorId: user.uid,
-      text: messageText,
-      createdAt: serverTimestamp()
-    });
+    try {
+        await addDoc(collection(firestore, 'messages'), {
+            dialogId: dialogId,
+            authorId: user.uid,
+            text: messageText,
+            createdAt: serverTimestamp()
+        });
+
+        // Update dialog's last message
+        const dialogRef = doc(firestore, 'dialogs', dialogId);
+        await updateDoc(dialogRef, {
+            lastMessageText: messageText,
+            lastMessageAt: serverTimestamp()
+        });
+
+    } catch (error) {
+        console.error("Error sending message:", error);
+        // Optionally revert UI or show an error
+        setInput(messageText);
+    }
   };
 
   return (
@@ -76,9 +92,9 @@ function DialogClient({ dialogId }: { dialogId: string }) {
       <div ref={listRef} className="flex-1 overflow-y-auto mb-4 space-y-4 bg-muted/50 rounded-lg p-4">
         {loading ? (
             <div className="space-y-4">
-                <Skeleton className="h-12 w-3/4" />
-                <div className="flex justify-end"><Skeleton className="h-12 w-3/4" /></div>
-                <Skeleton className="h-12 w-1/2" />
+                <div className="flex justify-start items-end gap-2"><Skeleton className="h-10 w-10 rounded-full" /><Skeleton className="h-12 w-3/4 rounded-lg" /></div>
+                <div className="flex justify-end items-end gap-2"><Skeleton className="h-12 w-1/2 rounded-lg" /><Skeleton className="h-10 w-10 rounded-full" /></div>
+                <div className="flex justify-start items-end gap-2"><Skeleton className="h-10 w-10 rounded-full" /><Skeleton className="h-16 w-2/3 rounded-lg" /></div>
             </div>
         ) : messages.map(msg => (
           <div key={msg.id} className={`flex items-end gap-2 ${msg.authorId === user?.uid ? 'justify-end' : 'justify-start'}`}>
@@ -93,7 +109,7 @@ function DialogClient({ dialogId }: { dialogId: string }) {
                 <p>{msg.text}</p>
               </CardContent>
             </Card>
-             {msg.authorId === user?.uid && (
+             {msg.authorId === user?.uid && user.photoURL && (
                 <Avatar className="h-8 w-8">
                     <AvatarImage src={user.photoURL || undefined}/>
                     <AvatarFallback>{user.displayName?.[0] || 'Я'}</AvatarFallback>
@@ -123,7 +139,7 @@ function DialogClient({ dialogId }: { dialogId: string }) {
   );
 }
 
-export default async function DialogPage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = await params;
+export default async function DialogPage({ params }: { params: { id: string } }) {
+    const { id } = params;
     return <DialogClient dialogId={id} />
 }

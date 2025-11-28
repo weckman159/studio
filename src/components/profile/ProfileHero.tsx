@@ -16,6 +16,10 @@ import {
   UserCheck
 } from 'lucide-react'
 import { Skeleton } from '../ui/skeleton'
+import { useRouter } from 'next/navigation'
+import { useUser, useFirestore } from '@/firebase'
+import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore'
+
 
 interface UserProfile {
   id: string
@@ -65,6 +69,45 @@ export function ProfileHero({
     onFollowingClick
 }: ProfileHeroProps) {
   
+  const router = useRouter();
+  const { user: currentUser } = useUser();
+  const firestore = useFirestore();
+
+  const handleWriteMessage = async () => {
+    if (!currentUser || !firestore || isOwner) return;
+
+    try {
+        const dialogsRef = collection(firestore, 'dialogs');
+        const q = query(dialogsRef, 
+            where('participantIds', 'array-contains', currentUser.uid)
+        );
+        
+        const querySnapshot = await getDocs(q);
+        let existingDialogId: string | null = null;
+
+        querySnapshot.forEach(doc => {
+            const participants = doc.data().participantIds as string[];
+            if(participants.includes(profile.id)) {
+                existingDialogId = doc.id;
+            }
+        });
+
+        if (existingDialogId) {
+            router.push(`/messages/${existingDialogId}`);
+        } else {
+            const newDialog = await addDoc(dialogsRef, {
+                participantIds: [currentUser.uid, profile.id],
+                createdAt: serverTimestamp(),
+                lastMessageAt: serverTimestamp()
+            });
+            router.push(`/messages/${newDialog.id}`);
+        }
+
+    } catch (error) {
+        console.error("Error creating or finding dialog:", error);
+    }
+  };
+
   const tierColors = {
     bronze: 'from-orange-600 to-orange-400',
     silver: 'from-gray-400 to-gray-200',
@@ -178,7 +221,7 @@ export function ProfileHero({
                          {isFollowing ? <UserCheck className="mr-2 h-5 w-5" /> : <UserPlus className="mr-2 h-5 w-5" />}
                         {isFollowing ? 'Отписаться' : 'Подписаться'}
                       </Button>
-                      <Button size="lg" variant="outline" className="border-white/50 text-white hover:bg-white/20 backdrop-blur-sm">
+                      <Button onClick={handleWriteMessage} size="lg" variant="outline" className="border-white/50 text-white hover:bg-white/20 backdrop-blur-sm">
                         <MessageCircle className="mr-2 h-5 w-5" />
                         Написать
                       </Button>
