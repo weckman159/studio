@@ -1,3 +1,4 @@
+
 // src/app/communities/[id]/page.tsx
 // Детальная страница конкретного сообщества
 // Показывает полную информацию о сообществе, список постов, участников
@@ -6,7 +7,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, orderBy, getDocs, updateDoc, arrayUnion, arrayRemove, increment } from 'firebase/firestore';
 import { useFirestore, useUser } from '@/firebase'; // Используем хуки из нашего модуля
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Users, Calendar, Lock, Globe, Settings, UserPlus, UserMinus, MessageSquare } from 'lucide-react';
+import { Users, Calendar, Lock, Globe, Settings, UserPlus, UserMinus, MessageSquare, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -246,10 +247,7 @@ function CommunityDetailClient({ communityId }: { communityId: string }) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Загрузка сообщества...</p>
-          </div>
+            <Loader2 className="h-12 w-12 animate-spin" />
         </div>
       </div>
     );
@@ -270,8 +268,8 @@ function CommunityDetailClient({ communityId }: { communityId: string }) {
 
   return (
     <div className="min-h-screen">
-      {community.coverUrl && (
-        <div className="w-full h-64 md:h-80 relative overflow-hidden">
+      <div className="w-full h-64 md:h-80 relative overflow-hidden">
+        {community.coverUrl ? (
           <Image 
             src={community.coverUrl} 
             alt={community.name}
@@ -279,8 +277,11 @@ function CommunityDetailClient({ communityId }: { communityId: string }) {
             className="object-cover"
             priority
           />
-        </div>
-      )}
+        ) : (
+          <div className="w-full h-full bg-muted"></div>
+        )}
+      </div>
+
 
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row gap-6 mb-8 -mt-20">
@@ -489,7 +490,7 @@ function CommunityDetailClient({ communityId }: { communityId: string }) {
   );
 }
 
-export default async function CommunityDetailPage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = await params;
+export default async function CommunityDetailPage({ params }: { params: { id: string } }) {
+    const { id } = params;
     return <CommunityDetailClient communityId={id} />
 }

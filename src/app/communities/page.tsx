@@ -12,7 +12,33 @@ import { Badge } from '@/components/ui/badge';
 import { Users, Search, Plus } from 'lucide-react';
 import Image from 'next/image';
 import type { Community } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
+
+function CommunitiesPageSkeleton() {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {[...Array(6)].map((_, i) => (
+        <Card key={i} className="h-full flex flex-col">
+          <Skeleton className="aspect-video w-full rounded-t-lg" />
+          <div className="flex flex-col flex-1 p-4">
+            <CardHeader className="p-0 mb-2">
+              <Skeleton className="h-6 w-3/4 mb-2" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+            </CardHeader>
+            <CardContent className="p-0 flex-1">
+              <Skeleton className="h-6 w-24" />
+            </CardContent>
+            <CardFooter className="p-0 pt-4">
+              <Skeleton className="h-5 w-28" />
+            </CardFooter>
+          </div>
+        </Card>
+      ))}
+    </div>
+  )
+}
 
 export default function CommunitiesPage() {
   const firestore = useFirestore();
@@ -65,19 +91,6 @@ export default function CommunitiesPage() {
     setFilteredCommunities(filtered);
   }, [searchQuery, selectedCategory, communities]);
 
-  if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Загрузка сообществ...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
@@ -122,7 +135,8 @@ export default function CommunitiesPage() {
         </div>
       </div>
 
-      {filteredCommunities.length === 0 ? (
+      {loading ? <CommunitiesPageSkeleton /> :
+      filteredCommunities.length === 0 ? (
         <div className="text-center py-12">
           <Users className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
           <h3 className="text-xl font-semibold mb-2">Сообщества не найдены</h3>
@@ -141,16 +155,20 @@ export default function CommunitiesPage() {
           {filteredCommunities.map(community => (
             <Link key={community.id} href={`/communities/${community.id}`}>
               <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer flex flex-col">
-                {community.imageUrl && (
-                  <div className="aspect-video w-full overflow-hidden rounded-t-lg relative">
-                    <Image 
-                      src={community.imageUrl} 
-                      alt={community.name}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                )}
+                <div className="aspect-video w-full overflow-hidden rounded-t-lg relative">
+                    {community.imageUrl ? (
+                      <Image 
+                        src={community.imageUrl} 
+                        alt={community.name}
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="bg-muted h-full flex items-center justify-center">
+                          <Users className="h-16 w-16 text-muted-foreground" />
+                      </div>
+                    )}
+                </div>
                 
                 <div className="flex flex-col flex-1 p-4">
                     <CardHeader className="p-0 mb-2">
