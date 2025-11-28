@@ -106,6 +106,15 @@ service cloud.firestore {
                     && request.resource.data.id == resource.data.id;
                     
       allow delete: if isOwner(userId);
+      
+      // Subcollections for following/followers
+      match /following/{followingId} {
+        allow read, write: if isOwner(userId);
+      }
+      match /followers/{followerId} {
+        allow read: if true;
+        allow write: if false; // Managed by Cloud Function
+      }
     }
 
     // ------------------------------------------------------------------------
@@ -135,6 +144,15 @@ service cloud.firestore {
       allow create: if isSignedIn() && isValidCar();
       allow update: if isSignedIn() && isDocumentOwner(resource.data);
       allow delete: if isSignedIn() && isDocumentOwner(resource.data);
+       // Subcollections for car details
+      match /timeline/{entryId} {
+        allow read, list: if true;
+        allow write: if isDocumentOwner(get(/databases/$(database)/documents/cars/$(carId)).data);
+      }
+      match /inventory/{itemId} {
+        allow read, list: if true;
+        allow write: if isDocumentOwner(get(/databases/$(database)/documents/cars/$(carId)).data);
+      }
     }
 
     // ------------------------------------------------------------------------
@@ -182,6 +200,18 @@ service cloud.firestore {
         allow update: if isSignedIn() && request.resource.data.keys().hasOnly(['votes', 'votedUserIds', 'totalVotes']); 
         allow delete: if false; // Deletion via backend function
     }
+    
+    // ------------------------------------------------------------------------
+    // Collection: notifications
+    // ------------------------------------------------------------------------
+    match /notifications/{notificationId} {
+      // User can only read/update their own notifications
+      allow read, update: if isSignedIn() && resource.data.recipientId == request.auth.uid;
+      // Users can list notifications only if they are querying for their own
+      allow list: if isSignedIn() && request.query.where.recipientId == request.auth.uid;
+      // Notifications are created by backend functions only
+      allow create, delete: if false;
+    }
 
     // ------------------------------------------------------------------------
     // Collection: workshops
@@ -228,6 +258,33 @@ service cloud.firestore {
     match /autoNews/{newsId} {
       allow read: if true;
       allow write: if false; // Managed by backend
+    }
+
+    // ------------------------------------------------------------------------
+    // Collection: communities
+    // ------------------------------------------------------------------------
+    match /communities/{communityId} {
+      // Anyone can read public communities, members can read private ones
+      allow get: if resource.data.isPrivate == false || (isSignedIn() && request.auth.uid in resource.data.memberIds);
+      // Anyone can list communities
+      allow list: if true;
+      // Only authenticated users can create communities
+      allow create: if isSignedIn() && isRequestingUser('adminId');
+      // Only the admin can update community info
+      allow update: if isSignedIn() && resource.data.adminId == request.auth.uid;
+      // Only admin can delete
+      allow delete: if isSignedIn() && resource.data.adminId == request.auth.uid;
+    }
+    
+    // ------------------------------------------------------------------------
+    // Collection: events
+    // ------------------------------------------------------------------------
+     match /events/{eventId} {
+      allow read, list: if true;
+      // Users can create events
+      allow create: if isSignedIn() && isRequestingUser('organizerId');
+      // Only the organizer can update/delete
+      allow update, delete: if isSignedIn() && isDocumentOwner(resource.data);
     }
   }
 }
