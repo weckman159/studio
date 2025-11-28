@@ -1,17 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { getAdminAuth } from './lib/firebase-admin';
-import { cookies } from 'next/headers';
-
-// This forces the middleware to run in the Node.js runtime on Vercel.
-// It's required because 'firebase-admin' is a Node.js-specific package
-// and is not compatible with the default Edge runtime.
-export const runtime = 'nodejs';
 
 // This function is marked as async so we can use 'await'
-export async function middleware(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const sessionCookie = (await cookies()).get('session');
-  const sessionCookieValue = sessionCookie?.value;
+  const sessionCookie = request.cookies.get('session');
 
   const protectedRoutes = [
     '/settings',
@@ -30,27 +22,18 @@ export async function middleware(request: NextRequest) {
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
   const isAuthRoute = pathname === '/auth';
   
-  let isAuthenticated = false;
-  if (sessionCookieValue) {
-    try {
-      const adminAuth = getAdminAuth();
-      if(adminAuth){
-        await adminAuth.verifySessionCookie(sessionCookieValue, true);
-        isAuthenticated = true;
-      }
-    } catch (error) {
-      // Session cookie is invalid.
-      isAuthenticated = false;
-    }
-  }
-
+  const isAuthenticated = !!sessionCookie;
 
   if (!isAuthenticated && isProtectedRoute) {
-    return NextResponse.redirect(new URL('/auth', request.url));
+    const url = request.nextUrl.clone()
+    url.pathname = '/auth'
+    return NextResponse.redirect(url);
   }
 
   if (isAuthenticated && isAuthRoute) {
-    return NextResponse.redirect(new URL('/', request.url));
+    const url = request.nextUrl.clone()
+    url.pathname = '/'
+    return NextResponse.redirect(url);
   }
 
   return NextResponse.next();

@@ -1,3 +1,4 @@
+
 // src/components/profile/ProfileClientPage.tsx
 'use client';
 
