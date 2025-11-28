@@ -40,10 +40,6 @@ export function CarOfTheDay() {
             const data = featuredCarSnap.data() as FeaturedCarData;
             carId = data.carId;
             userId = data.userId;
-        } else {
-            // Fallback for demo: pick a car, maybe the first one from a user.
-            // In production, a backend function would select and set this document daily.
-            console.warn(`No featured car for today (${todayStr}).`);
         }
         
         if (carId && userId) {
@@ -78,10 +74,10 @@ export function CarOfTheDay() {
   if (!car || !owner) {
     return (
         <Card className="h-[250px] w-full rounded-2xl flex items-center justify-center">
-            <CardContent className="text-center">
+            <CardContent className="text-center p-6">
                 <Award className="mx-auto h-12 w-12 text-muted-foreground" />
                 <p className="mt-4 font-semibold">Автомобиль дня еще не выбран</p>
-                <p className="text-sm text-muted-foreground">Примите участие в голосовании!</p>
+                <p className="text-sm text-muted-foreground">Примите участие в голосовании, чтобы выбрать победителя!</p>
                 <Button size="sm" className="mt-4" asChild>
                     <Link href="/car-of-the-day">Голосовать</Link>
                 </Button>
