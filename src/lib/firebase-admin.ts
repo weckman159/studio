@@ -19,8 +19,9 @@ function initializeFirebaseAdmin(): boolean {
     const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
     if (!serviceAccountKey) {
-      console.warn('⚠️ FIREBASE_SERVICE_ACCOUNT_KEY not set. Admin SDK unavailable.');
-      return false;
+      // This is now a critical error for server-side rendering.
+      // Throwing an error will provide a clear message during build or runtime.
+      throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set. Admin SDK cannot be initialized.');
     }
 
     const serviceAccount = JSON.parse(serviceAccountKey);
@@ -34,38 +35,32 @@ function initializeFirebaseAdmin(): boolean {
     console.log('✅ Firebase Admin SDK initialized');
     return true;
   } catch (error: any) {
+    // Log the original error for debugging, but throw a more helpful one.
     console.error('❌ Firebase Admin init error:', error.message);
-    return false;
+    throw new Error(`Firebase Admin SDK initialization failed: ${error.message}. Ensure FIREBASE_SERVICE_ACCOUNT_KEY is set correctly in your environment variables.`);
   }
 }
 
 // Геттеры с ленивой инициализацией
-export function getAdminDb(): admin.firestore.Firestore | null {
+export function getAdminDb(): admin.firestore.Firestore {
   if (!_adminDb) {
-    if (!initializeFirebaseAdmin()) {
-      // Не выбрасываем ошибку, чтобы не падать при сборке, а возвращаем null
-      return null;
-    }
+    initializeFirebaseAdmin();
     _adminDb = admin.firestore();
   }
   return _adminDb;
 }
 
-export function getAdminAuth(): admin.auth.Auth | null {
+export function getAdminAuth(): admin.auth.Auth {
   if (!_adminAuth) {
-    if (!initializeFirebaseAdmin()) {
-      return null;
-    }
+    initializeFirebaseAdmin();
     _adminAuth = admin.auth();
   }
   return _adminAuth;
 }
 
-export function getAdminStorage(): admin.storage.Storage | null {
+export function getAdminStorage(): admin.storage.Storage {
   if (!_adminStorage) {
-    if (!initializeFirebaseAdmin()) {
-      return null;
-    }
+    initializeFirebaseAdmin();
     _adminStorage = admin.storage();
   }
   return _adminStorage;
