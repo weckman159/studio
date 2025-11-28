@@ -12,7 +12,8 @@ import {
   Instagram,
   Youtube,
   Send,
-  Edit
+  Edit,
+  UserCheck
 } from 'lucide-react'
 import { Skeleton } from '../ui/skeleton'
 
@@ -39,8 +40,30 @@ interface UserProfile {
   }
 }
 
-export function ProfileHero({ profile, isOwner = false, onEditClick, loading }: { profile: UserProfile, isOwner?: boolean, onEditClick: () => void, loading?: boolean }) {
-  const [isFollowing, setIsFollowing] = useState(false)
+interface ProfileHeroProps {
+  profile: UserProfile;
+  isOwner?: boolean;
+  isFollowing?: boolean;
+  onFollow: () => void;
+  onUnfollow: () => void;
+  onEditClick: () => void;
+  loading?: boolean;
+  onFollowersClick: () => void;
+  onFollowingClick: () => void;
+}
+
+
+export function ProfileHero({ 
+    profile, 
+    isOwner = false, 
+    isFollowing = false,
+    onFollow,
+    onUnfollow,
+    onEditClick, 
+    loading,
+    onFollowersClick,
+    onFollowingClick
+}: ProfileHeroProps) {
   
   const tierColors = {
     bronze: 'from-orange-600 to-orange-400',
@@ -124,14 +147,14 @@ export function ProfileHero({ profile, isOwner = false, onEditClick, loading }: 
                 
                 {/* Статистика */}
                 <div className="flex flex-wrap gap-6 text-white mb-4">
-                  <div>
+                  <button onClick={onFollowersClick}>
                     <span className="font-bold text-xl">{profile.stats.followers > 1000 ? `${(profile.stats.followers / 1000).toFixed(1)}k` : profile.stats.followers}</span>
                     <span className="text-white/70 text-sm ml-2">Подписчиков</span>
-                  </div>
-                  <div>
+                  </button>
+                   <button onClick={onFollowingClick}>
                     <span className="font-bold text-xl">{profile.stats.reputation > 1000 ? `${(profile.stats.reputation / 1000).toFixed(0)}k` : profile.stats.reputation}</span>
-                    <span className="text-white/70 text-sm ml-2">Репутации</span>
-                  </div>
+                    <span className="text-white/70 text-sm ml-2">Подписок</span>
+                  </button>
                   <div>
                     <span className="font-bold text-xl">{profile.stats.cars}</span>
                     <span className="text-white/70 text-sm ml-2">Машин</span>
@@ -150,9 +173,9 @@ export function ProfileHero({ profile, isOwner = false, onEditClick, loading }: 
                       <Button 
                         size="lg" 
                         className={`font-semibold ${isFollowing ? 'bg-white/20 text-white' : 'bg-white text-black hover:bg-white/90'}`}
-                        onClick={() => setIsFollowing(!isFollowing)}
+                        onClick={isFollowing ? onUnfollow : onFollow}
                       >
-                        <UserPlus className="mr-2 h-5 w-5" />
+                         {isFollowing ? <UserCheck className="mr-2 h-5 w-5" /> : <UserPlus className="mr-2 h-5 w-5" />}
                         {isFollowing ? 'Отписаться' : 'Подписаться'}
                       </Button>
                       <Button size="lg" variant="outline" className="border-white/50 text-white hover:bg-white/20 backdrop-blur-sm">

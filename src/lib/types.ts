@@ -17,11 +17,11 @@ export interface User {
   profileVisibility?: 'public' | 'private';
   currentCarIds?: string[];
   stats?: {
-    posts?: number;
+    postsCount?: number;
     likes?: number;
     wins?: number;
-    followers?: number;
-    following?: number;
+    followersCount?: number;
+    followingCount?: number;
     drive?: number;
     reposts?: number;
     reputation?: number;
