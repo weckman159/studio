@@ -209,7 +209,6 @@ service cloud.firestore {
         allow get: if isSignedIn() && resource.data.recipientId == request.auth.uid;
         // For list queries, the rule checks that the query filters by the user's ID
         allow list: if isSignedIn() && request.query.where.recipientId == request.auth.uid;
-        
         // Allow updating only the 'read' field by the recipient
         allow update: if isSignedIn() 
                       && resource.data.recipientId == request.auth.uid
