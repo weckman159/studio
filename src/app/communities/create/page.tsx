@@ -437,6 +437,7 @@ export default function CreateCommunityPage() {
                 </div>
               </div>
              {uploading && <Progress value={progress} className="w-full mt-2" />}
+             </div>
           </CardContent>
         </Card>
 
@@ -490,4 +491,3 @@ export default function CreateCommunityPage() {
     </div>
   );
 }
-    
