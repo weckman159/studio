@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PostCard } from "@/components/PostCard";
