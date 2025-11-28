@@ -42,7 +42,7 @@ export default function CarOfTheDayPage() {
                         // Find which car the user voted for
                         for (const carId in votingData.votes) {
                             // This logic is flawed if we don't store who voted for whom.
-                            // For now, we just know they voted. Let's find their vote if possible.
+                            // For now, we just know they've voted. Let's find their vote if possible.
                             // A better structure would be `votes: { carId: [userId1, userId2] }`
                         }
                         setVotedFor('some_car'); // Placeholder to show they've voted
@@ -154,4 +154,3 @@ export default function CarOfTheDayPage() {
         </div>
     );
 }
-
