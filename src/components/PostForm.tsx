@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowLeft, Upload, Loader2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Upload, Loader2, AlertCircle, Trash, Users } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
@@ -32,9 +32,11 @@ const postTypes = [
 
 interface PostFormProps {
   postToEdit?: Post;
+  communityId?: string;
+  communityName?: string;
 }
 
-export function PostForm({ postToEdit }: PostFormProps) {
+export function PostForm({ postToEdit, communityId, communityName }: PostFormProps) {
   const router = useRouter();
   const { user } = useUser();
   const firestore = useFirestore();
@@ -118,26 +120,30 @@ export function PostForm({ postToEdit }: PostFormProps) {
         }
       }
 
-      const postData = {
+      const postData: Partial<Post> = {
         type,
         title: title.trim(),
         content: content.trim(),
         imageUrl,
         updatedAt: serverTimestamp(),
       };
+      
+      if (communityId) {
+        postData.communityId = communityId;
+      }
 
       if (isEditMode && postToEdit) {
         // Update existing post
         const postRef = doc(firestore, 'posts', postToEdit.id);
         await updateDoc(postRef, postData);
         toast({ title: "Успех!", description: "Пост успешно обновлен." });
-        router.push(`/posts/${postToEdit.id}`);
+        const targetUrl = communityId ? `/communities/${communityId}` : `/posts/${postToEdit.id}`;
+        router.push(targetUrl);
         router.refresh();
       } else {
         // Create new post
         const newPostData = {
             ...postData,
-            id: doc(collection(firestore, 'temp')).id,
             authorId: user.uid,
             authorName: user.displayName || 'Пользователь',
             authorAvatar: user.photoURL,
@@ -145,11 +151,12 @@ export function PostForm({ postToEdit }: PostFormProps) {
             likesCount: 0,
             likedBy: [],
             commentsCount: 0
-        }
+        };
         const docRef = await addDoc(collection(firestore, 'posts'), newPostData);
         await updateDoc(docRef, { id: docRef.id }); // Save the id in the document
         toast({ title: "Успех!", description: "Пост успешно создан." });
-        router.push(`/posts/${docRef.id}`);
+        const targetUrl = communityId ? `/communities/${communityId}` : `/posts/${docRef.id}`;
+        router.push(targetUrl);
       }
 
     } catch (err) {
@@ -162,13 +169,20 @@ export function PostForm({ postToEdit }: PostFormProps) {
   
   const totalLoading = loading || uploading;
 
+  let backLink = '/posts';
+  if (isEditMode && postToEdit) {
+      backLink = postToEdit.communityId ? `/communities/${postToEdit.communityId}` : `/posts/${postToEdit.id}`;
+  } else if (communityId) {
+      backLink = `/communities/${communityId}`;
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl">
       <div className="mb-8">
-        <Link href={isEditMode ? `/posts/${postToEdit?.id}` : "/posts"}>
+        <Link href={backLink}>
           <Button variant="ghost" size="sm" className="mb-4">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            {isEditMode ? 'Назад к посту' : 'К постам'}
+            Назад
           </Button>
         </Link>
         <h1 className="text-4xl font-bold mb-2">{isEditMode ? 'Редактировать пост' : 'Создать пост'}</h1>
@@ -176,6 +190,14 @@ export function PostForm({ postToEdit }: PostFormProps) {
           {isEditMode ? 'Внесите изменения и сохраните.' : 'Опишите ваш опыт, задайте вопрос или просто поделитесь историей.'}
         </p>
       </div>
+      {communityName && (
+        <Alert className="mb-6">
+            <Users className="h-4 w-4" />
+            <AlertDescription>
+                Вы публикуете в сообществе: <strong>{communityName}</strong>
+            </AlertDescription>
+        </Alert>
+      )}
       {(error || uploadError) && (
         <Alert variant="destructive" className="mb-6">
           <AlertCircle className="h-4 w-4" />
@@ -232,7 +254,7 @@ export function PostForm({ postToEdit }: PostFormProps) {
           <Button type="submit" size="lg" disabled={totalLoading} className="flex-1">
             {totalLoading ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />{uploading ? `Загрузка... ${progress}%` : 'Сохранение...'}</> : (isEditMode ? 'Сохранить изменения' : 'Опубликовать')}
           </Button>
-          <Link href={isEditMode ? `/posts/${postToEdit?.id}` : "/posts"}>
+          <Link href={backLink}>
             <Button type="button" variant="outline" size="lg" disabled={totalLoading}>Отмена</Button>
           </Link>
         </div>

@@ -295,6 +295,14 @@ export const onPostCreated = functions.firestore
         });
       }
 
+      // Если пост создан в сообществе, увеличиваем счетчик постов в сообществе
+      if (postData.communityId) {
+          const communityRef = db.collection('communities').doc(postData.communityId);
+          batch.update(communityRef, {
+              postsCount: admin.firestore.FieldValue.increment(1)
+          });
+      }
+
       await batch.commit();
     } catch (error) {
       console.error('Error in onPostCreated:', error);
@@ -322,6 +330,14 @@ export const onPostDeleted = functions.firestore
         batch.update(carRef, {
           postsCount: admin.firestore.FieldValue.increment(-1)
         });
+      }
+
+       // Если пост удален из сообщества, уменьшаем счетчик постов в сообществе
+      if (postData.communityId) {
+          const communityRef = db.collection('communities').doc(postData.communityId);
+          batch.update(communityRef, {
+              postsCount: admin.firestore.FieldValue.increment(-1)
+          });
       }
 
       await batch.commit();
