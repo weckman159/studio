@@ -97,67 +97,87 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
 
     setLoading(true);
     try {
-      const postId = postToEdit?.id || doc(collection(firestore, 'posts')).id;
-      let imageUrl = postToEdit?.imageUrl || '';
+        const postId = postToEdit?.id || doc(collection(firestore, 'posts')).id;
+        const postRef = doc(firestore, 'posts', postId);
 
-      // Handle image deletion logic during submit
-      if (postToEdit?.imageUrl && !imagePreview) {
-          await deleteFile(postToEdit.imageUrl);
-          imageUrl = '';
-      }
+        if (isEditMode && postToEdit) {
+            // Edit Mode
+            let imageUrl = postToEdit.imageUrl || '';
 
-      // Handle image upload
-      if (imageFile) {
-        // If there was an old image and we are uploading a new one, delete the old one.
-        if(postToEdit?.imageUrl && postToEdit.imageUrl !== imagePreview) {
-            await deleteFile(postToEdit.imageUrl);
-        }
-        const uploadResult = await uploadFiles([imageFile], 'posts', postId);
-        if (uploadResult.length > 0) {
-          imageUrl = uploadResult[0].url;
+            // Handle image deletion
+            if (postToEdit.imageUrl && !imagePreview) {
+                await deleteFile(postToEdit.imageUrl);
+                imageUrl = '';
+            }
+
+            // Handle new image upload
+            if (imageFile) {
+                if (postToEdit.imageUrl) {
+                    await deleteFile(postToEdit.imageUrl);
+                }
+                const uploadResult = await uploadFiles([imageFile], 'posts', postId);
+                if (uploadResult.length > 0) {
+                    imageUrl = uploadResult[0].url;
+                } else {
+                    throw new Error(uploadError || "Failed to upload new image");
+                }
+            }
+
+            const postData: Partial<Post> = {
+                type,
+                category: type,
+                title: title.trim(),
+                content: content.trim(),
+                imageUrl,
+                updatedAt: serverTimestamp(),
+            };
+            await updateDoc(postRef, postData);
+            toast({ title: "Успех!", description: "Пост успешно обновлен." });
+            router.push(`/posts/${postToEdit.id}`);
+            router.refresh();
+
         } else {
-          throw new Error(uploadError || "Failed to upload image");
-        }
-      }
-      
-      const postRef = doc(firestore, 'posts', postId);
-      const postData: Partial<Post> = {
-          type,
-          category: type,
-          title: title.trim(),
-          content: content.trim(),
-          imageUrl,
-          updatedAt: serverTimestamp(),
-          communityId: communityId || postToEdit?.communityId,
-      };
+            // Create Mode
+            const initialPostData: Post = {
+                id: postId,
+                authorId: user.uid,
+                authorName: user.displayName || 'Пользователь',
+                authorAvatar: user.photoURL,
+                type,
+                category: type,
+                title: title.trim(),
+                content: content.trim(),
+                imageUrl: '', // Will be updated later
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+                likesCount: 0,
+                likedBy: [],
+                commentsCount: 0,
+                views: 0,
+                bookmarks: 0,
+                communityId: communityId,
+            };
+            
+            // 1. Create document first without image
+            await setDoc(postRef, initialPostData);
 
-      if (isEditMode && postToEdit) {
-        // Update existing post
-        await updateDoc(postRef, postData);
-        toast({ title: "Успех!", description: "Пост успешно обновлен." });
-        const targetUrl = communityId ? `/communities/${communityId}` : `/posts/${postToEdit.id}`;
-        router.push(targetUrl);
-        router.refresh();
-      } else {
-        // Create new post
-        const newPostData: Post = {
-            ...postData,
-            id: postId,
-            authorId: user.uid,
-            authorName: user.displayName || 'Пользователь',
-            authorAvatar: user.photoURL,
-            createdAt: serverTimestamp(),
-            likesCount: 0,
-            likedBy: [],
-            commentsCount: 0,
-            views: 0,
-            bookmarks: 0,
-        };
-        await setDoc(postRef, newPostData);
-        toast({ title: "Успех!", description: "Пост успешно создан." });
-        const targetUrl = communityId ? `/communities/${communityId}` : `/posts/${postId}`;
-        router.push(targetUrl);
-      }
+            // 2. Upload image if it exists
+            if (imageFile) {
+                const uploadResult = await uploadFiles([imageFile], 'posts', postId);
+                if (uploadResult.length > 0) {
+                    const imageUrl = uploadResult[0].url;
+                    // 3. Update post with image URL
+                    await updateDoc(postRef, { imageUrl });
+                } else {
+                    // Clean up created post if image upload fails? Optional.
+                    // await deleteDoc(postRef);
+                    throw new Error(uploadError || "Failed to upload image");
+                }
+            }
+            
+            toast({ title: "Успех!", description: "Пост успешно создан." });
+            router.push(`/posts/${postId}`);
+        }
 
     } catch (err: any) {
         let errorMessage = 'Ошибка публикации. Попробуйте ещё раз.';
