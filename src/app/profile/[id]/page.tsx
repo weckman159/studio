@@ -2,7 +2,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ProfileHero } from '@/components/profile/ProfileHero';
 import { ProfileSidebar } from '@/components/profile/ProfileSidebar';
@@ -13,19 +12,43 @@ import { collection, query, where } from 'firebase/firestore';
 import type { Car, User } from '@/lib/types';
 import { EditProfileModal } from '@/components/EditProfileModal';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { Skeleton } from '@/components/ui/skeleton';
+
+function ProfilePageSkeleton() {
+    return (
+      <div className="min-h-screen -m-8">
+        <Skeleton className="h-[500px] w-full" />
+        <div className="container mx-auto px-4 py-8">
+            <div className="grid grid-cols-1 lg:grid-cols-[350px_1fr] gap-8">
+                 <div className="hidden lg:block space-y-6">
+                    <Skeleton className="h-40 w-full" />
+                    <Skeleton className="h-32 w-full" />
+                 </div>
+                 <div>
+                    <Skeleton className="h-12 w-full" />
+                 </div>
+            </div>
+        </div>
+      </div>
+    )
+}
+
 
 function ProfilePageClient({ userId }: { userId: string }) {
   const { user: authUser } = useUser();
   const firestore = useFirestore();
   
-  const { profile: liveProfile, isLoading: isProfileLoading, error: profileError } = useUserProfile(userId);
+  const { profile, isLoading: isProfileLoading, error: profileError } = useUserProfile(userId);
 
   const [isEditModalOpen, setEditModalOpen] = useState(false);
-  const [profile, setProfile] = useState<User | null>(liveProfile);
+  
+  // This local state is needed to reflect updates from the modal immediately
+  const [displayProfileData, setDisplayProfileData] = useState<User | null>(profile);
 
   useEffect(() => {
-    setProfile(liveProfile);
-  }, [liveProfile]);
+    setDisplayProfileData(profile);
+  }, [profile]);
+
 
   const carsQuery = useMemoFirebase(() => {
     if (!userId || !firestore) return null;
@@ -35,33 +58,29 @@ function ProfilePageClient({ userId }: { userId: string }) {
   const { data: userCars, isLoading: carsLoading } = useCollection<Car>(carsQuery);
   
   const isOwner = !!authUser && authUser.uid === userId;
-  const totalLoading = isProfileLoading || (userId && !profile && !profileError);
+  const totalLoading = isProfileLoading || (userId && !displayProfileData && !profileError);
 
   if (totalLoading) {
-     return (
-        <div className="flex justify-center items-center h-screen">
-            <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
-    );
+     return <ProfilePageSkeleton />;
   }
 
-  if (!profile) {
+  if (!displayProfileData) {
     return <div className="container text-center py-10">Профиль не найден.</div>;
   }
   
-  const displayProfile = {
-      id: profile.id,
-      displayName: profile.name || profile.displayName || 'No Name',
-      username: profile.nickname || profile.email?.split('@')[0] || 'username',
-      avatar: profile.photoURL || 'https://placehold.co/128x128',
+  const heroProfile = {
+      id: displayProfileData.id,
+      displayName: displayProfileData.name || displayProfileData.displayName || 'No Name',
+      username: displayProfileData.nickname || displayProfileData.email?.split('@')[0] || 'username',
+      avatar: displayProfileData.photoURL || 'https://placehold.co/128x128',
       coverImage: 'https://images.unsplash.com/photo-1553440569-bcc63803a83d?q=80&w=2025&auto=format&fit=crop',
-      bio: profile.bio || 'Этот пользователь пока ничего не рассказал о себе.',
-      status: profile.role === 'admin' ? 'Администратор' : 'Участник',
+      bio: displayProfileData.bio || 'Этот пользователь пока ничего не рассказал о себе.',
+      status: displayProfileData.role === 'admin' ? 'Администратор' : 'Участник',
       badges: ['Легенда клуба', 'Фотограф'],
       tier: 'gold' as const,
       stats: { 
-        followers: profile.stats?.followers || 0, 
-        reputation: profile.stats?.reputation || 0, 
+        followers: displayProfileData.stats?.followers || 0, 
+        reputation: displayProfileData.stats?.reputation || 0, 
         cars: userCars?.length || 0 
       },
       socials: {
@@ -72,17 +91,17 @@ function ProfilePageClient({ userId }: { userId: string }) {
 
   return (
     <>
-      {profile && (
+      {displayProfileData && (
         <EditProfileModal 
           isOpen={isEditModalOpen} 
           setIsOpen={setEditModalOpen}
-          user={profile}
-          onSave={(updatedUser) => setProfile(updatedUser)}
+          user={displayProfileData}
+          onSave={(updatedUser) => setDisplayProfileData(updatedUser)}
         />
       )}
       <div className="min-h-screen -m-8">
         <ProfileHero 
-            profile={displayProfile} 
+            profile={heroProfile} 
             isOwner={isOwner} 
             onEditClick={() => setEditModalOpen(true)}
             loading={totalLoading}
@@ -91,7 +110,7 @@ function ProfilePageClient({ userId }: { userId: string }) {
         <div className="container mx-auto px-4 py-8">
           <div className="grid grid-cols-1 lg:grid-cols-[350px_1fr] gap-8">
             <div className="hidden lg:block">
-              <ProfileSidebar profile={displayProfile} />
+              <ProfileSidebar profile={heroProfile} />
             </div>
             
             <div>
@@ -129,7 +148,9 @@ function ProfilePageClient({ userId }: { userId: string }) {
                 
                 <TabsContent value="garage" className="mt-8">
                     {carsLoading ? (
-                        <p>Загрузка гаража...</p>
+                        <div className="flex justify-center items-center h-40">
+                            <Loader2 className="h-8 w-8 animate-spin" />
+                        </div>
                     ) : userCars && userCars.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {userCars.map(car => (
@@ -143,7 +164,7 @@ function ProfilePageClient({ userId }: { userId: string }) {
                 
                 <TabsContent value="journal" className="mt-8">
                   <div className="text-center py-12 text-muted-foreground">
-                    Бортжурнал загружается...
+                    Бортжурнал в разработке.
                   </div>
                 </TabsContent>
                 
@@ -155,7 +176,7 @@ function ProfilePageClient({ userId }: { userId: string }) {
                 
                 <TabsContent value="shop" className="mt-8">
                   <div className="text-center py-12 text-muted-foreground">
-                    Товары не найдены
+                    Товары не найдены.
                   </div>
                 </TabsContent>
               </Tabs>
@@ -168,7 +189,7 @@ function ProfilePageClient({ userId }: { userId: string }) {
 }
 
 
-export default async function ProfilePage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = await params;
+export default async function ProfilePage({ params }: { params: { id: string } }) {
+    const { id } = params;
     return <ProfilePageClient userId={id} />;
 }

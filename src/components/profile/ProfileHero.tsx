@@ -125,11 +125,11 @@ export function ProfileHero({ profile, isOwner = false, onEditClick, loading }: 
                 {/* Статистика */}
                 <div className="flex flex-wrap gap-6 text-white mb-4">
                   <div>
-                    <span className="font-bold text-xl">{(profile.stats.followers / 1000).toFixed(1)}k</span>
+                    <span className="font-bold text-xl">{profile.stats.followers > 1000 ? `${(profile.stats.followers / 1000).toFixed(1)}k` : profile.stats.followers}</span>
                     <span className="text-white/70 text-sm ml-2">Подписчиков</span>
                   </div>
                   <div>
-                    <span className="font-bold text-xl">{(profile.stats.reputation / 1000).toFixed(0)}k</span>
+                    <span className="font-bold text-xl">{profile.stats.reputation > 1000 ? `${(profile.stats.reputation / 1000).toFixed(0)}k` : profile.stats.reputation}</span>
                     <span className="text-white/70 text-sm ml-2">Репутации</span>
                   </div>
                   <div>

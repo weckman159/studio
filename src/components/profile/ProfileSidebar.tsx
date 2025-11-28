@@ -1,4 +1,5 @@
 
+
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -47,7 +48,7 @@ export function ProfileSidebar({ profile }: { profile: UserProfile }) {
   const skills = ['Сварка', 'Настройка ECU', 'Детейлинг', 'Фотография', 'Диагностика']
 
   return (
-    <div className="sticky top-4 space-y-6">
+    <div className="sticky top-24 space-y-6">
       {/* Био */}
       <Card className="p-6">
         <h3 className="font-semibold text-lg mb-3">О себе</h3>

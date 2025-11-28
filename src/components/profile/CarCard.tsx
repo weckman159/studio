@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { Zap, Gauge, Wrench } from 'lucide-react'
-import type { Car } from '@/lib/data';
+import type { Car } from '@/lib/types';
 import Image from 'next/image';
 
 

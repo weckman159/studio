@@ -1,13 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
-import type { User } from '@/lib/data';
-import { users as mockUsers } from '@/lib/data'; // Keep for fallback if needed, but primary logic won't use it.
+import type { User } from '@/lib/types';
 
 /**
- * A centralized hook to fetch a user's profile data.
+ * A centralized hook to fetch a user's profile data from Firestore.
  * @param userId The ID of the user to fetch.
  * @returns An object containing the user's profile data, loading state, and any errors.
  */
@@ -18,10 +17,13 @@ export function useUserProfile(userId: string | null | undefined) {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    // Reset state if userId changes or is invalid
     if (!userId || !firestore) {
       setProfile(null);
       setIsLoading(false);
+      if (!userId) {
+        // This is not an error, but a state where no user is being requested.
+        setError(null);
+      }
       return;
     }
 
@@ -36,11 +38,9 @@ export function useUserProfile(userId: string | null | undefined) {
         if (userDocSnap.exists()) {
           setProfile({ id: userDocSnap.id, ...userDocSnap.data() } as User);
         } else {
-          // If not found in Firestore, explicitly set to null.
-          // We no longer fallback to mock data here to have a clear data flow.
-          // The component using the hook can decide to use mock data if profile is null.
           setProfile(null);
           console.warn(`User with ID ${userId} not found in Firestore.`);
+          setError(new Error('User not found'));
         }
       } catch (err) {
         console.error("Error fetching user profile:", err);
