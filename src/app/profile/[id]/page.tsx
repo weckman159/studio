@@ -1,3 +1,4 @@
+
 // src/app/profile/[id]/page.tsx
 import { getAdminDb, getAdminAuth } from '@/lib/firebase-admin';
 import { cookies } from 'next/headers';
@@ -18,7 +19,7 @@ async function getProfileData(userId: string): Promise<{ profile: User | null; c
         const userDocRef = adminDb.collection('users').doc(userId);
         const userDocSnap = await userDocRef.get();
 
-        if (!userDocSnap.exists) {
+        if (!userDocSnap.exists()) {
             return { profile: null, cars: [] };
         }
 
@@ -42,9 +43,9 @@ async function getAuthUser() {
         if (!adminAuth) {
             return null;
         }
-        const sessionCookie = cookies().get('session')?.value;
+        const sessionCookie = (await cookies()).get('session');
         if (!sessionCookie) return null;
-        const decodedToken = await adminAuth.verifySessionCookie(sessionCookie, true);
+        const decodedToken = await adminAuth.verifySessionCookie(sessionCookie.value, true);
         return decodedToken;
     } catch (error) {
         // This is not an error, just means user is not logged in
