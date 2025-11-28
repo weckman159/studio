@@ -209,7 +209,7 @@ service cloud.firestore {
       allow get: if isSignedIn() && resource.data.recipientId == request.auth.uid;
 
       // Allow a user to LIST notifications only if their query is scoped to their own ID.
-      allow list: if isSignedIn();
+      allow list: if isSignedIn() && request.query.where.size() == 1 && request.query.where[0][0] == 'recipientId' && request.query.where[0][2] == request.auth.uid;
         
       // Allow updating only the 'read' field by the recipient.
       allow update: if isSignedIn()
@@ -310,3 +310,4 @@ service cloud.firestore {
     
 
     
+
