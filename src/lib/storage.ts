@@ -9,10 +9,8 @@ import {
   uploadBytesResumable,
   UploadTaskSnapshot 
 } from 'firebase/storage';
-import { getStorage } from 'firebase/storage';
-import { initializeFirebase } from '@/firebase/index';
+import { storage } from './firebase-client';
 
-const { storage } = initializeFirebase();
 
 /**
  * Типы путей для Storage

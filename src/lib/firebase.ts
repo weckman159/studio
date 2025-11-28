@@ -1,5 +1,3 @@
-import { initializeFirebase } from '@/firebase/index';
-import { getStorage } from 'firebase/storage';
-
-export const { firebaseApp, auth, firestore } = initializeFirebase();
-export const storage = getStorage(firebaseApp);
+// This file is deprecated and will be removed.
+// Please use 'firebase/client-provider' for client-side Firebase services.
+// For server-side, use 'lib/firebase-admin'.
