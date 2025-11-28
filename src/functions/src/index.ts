@@ -67,29 +67,22 @@ export const onLikeDeleted = functions.firestore
  * При создании комментария увеличиваем счетчик
  */
 export const onCommentCreated = functions.firestore
-  .document('posts/{postId}/comments/{commentId}')
+  .document('comments/{commentId}')
   .onCreate(async (snap, context) => {
-    const { postId } = context.params;
     const commentData = snap.data();
+    const { postId } = commentData;
+
+    if (!postId) {
+        console.warn('Comment created without postId:', context.params.commentId);
+        return;
+    }
 
     try {
       // Увеличиваем счетчик комментариев у поста
       await db.collection('posts').doc(postId).update({
         commentsCount: admin.firestore.FieldValue.increment(1)
       });
-
-      // Если это ответ на комментарий, увеличиваем счетчик ответов
-      if (commentData.parentId) {
-        await db
-          .collection('posts')
-          .doc(postId)
-          .collection('comments')
-          .doc(commentData.parentId)
-          .update({
-            repliesCount: admin.firestore.FieldValue.increment(1)
-          });
-      }
-
+      
       // Создаем уведомление для автора поста
       const postDoc = await db.collection('posts').doc(postId).get();
       const postData = postDoc.data();
@@ -101,7 +94,7 @@ export const onCommentCreated = functions.firestore
           type: 'comment',
           title: 'Новый комментарий',
           message: 'оставил комментарий к вашему посту',
-          actionURL: `/post/${postId}`,
+          actionURL: `/posts/${postId}`,
           relatedEntityId: postId,
           relatedEntityType: 'post'
         });
@@ -111,30 +104,25 @@ export const onCommentCreated = functions.firestore
     }
   });
 
+
 /**
  * При удалении комментария уменьшаем счетчик
  */
 export const onCommentDeleted = functions.firestore
-  .document('posts/{postId}/comments/{commentId}')
+  .document('comments/{commentId}')
   .onDelete(async (snap, context) => {
-    const { postId } = context.params;
     const commentData = snap.data();
+    const { postId } = commentData;
+    
+    if (!postId) {
+        return;
+    }
 
     try {
       await db.collection('posts').doc(postId).update({
         commentsCount: admin.firestore.FieldValue.increment(-1)
       });
 
-      if (commentData.parentId) {
-        await db
-          .collection('posts')
-          .doc(postId)
-          .collection('comments')
-          .doc(commentData.parentId)
-          .update({
-            repliesCount: admin.firestore.FieldValue.increment(-1)
-          });
-      }
     } catch (error) {
       console.error('Error in onCommentDeleted:', error);
     }
