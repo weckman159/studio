@@ -205,10 +205,18 @@ service cloud.firestore {
     // Collection: notifications
     // ------------------------------------------------------------------------
     match /notifications/{notificationId} {
-        // Allow a user to read and update their own notifications.
+        // Allow a user to read their own notifications by document ID
         allow get: if isSignedIn() && resource.data.recipientId == request.auth.uid;
+        
+        // For list queries, the rule is implicitly checked by the `get` rule 
+        // when the client query includes `where('recipientId', '==', request.auth.uid)`.
+        // A specific list rule is not strictly necessary here but can be added for clarity.
         allow list: if isSignedIn() && request.query.where.recipientId == request.auth.uid;
-        allow update: if isSignedIn() && resource.data.recipientId == request.auth.uid && request.resource.data.keys().hasOnly(['read']);
+        
+        // Allow updating only the 'read' field by the recipient
+        allow update: if isSignedIn() 
+                      && resource.data.recipientId == request.auth.uid
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
         
         // Notifications are created by backend functions only
         allow create, delete: if false;
@@ -289,6 +297,7 @@ service cloud.firestore {
     }
   }
 }
+    
 
     
 
