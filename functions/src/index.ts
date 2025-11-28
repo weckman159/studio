@@ -36,7 +36,7 @@ export const onLikeCreated = functions.firestore
           type: 'like',
           title: 'Новый лайк',
           message: 'понравился ваш пост',
-          actionURL: `/post/${postId}`,
+          actionURL: `/posts/${postId}`,
           relatedEntityId: postId,
           relatedEntityType: 'post'
         });
@@ -67,31 +67,25 @@ export const onLikeDeleted = functions.firestore
  * При создании комментария увеличиваем счетчик
  */
 export const onCommentCreated = functions.firestore
-  .document('posts/{postId}/comments/{commentId}')
+  .document('comments/{commentId}')
   .onCreate(async (snap, context) => {
-    const { postId } = context.params;
     const commentData = snap.data();
+    const { postId } = commentData;
+
+    if (!postId) {
+        console.warn('Comment created without postId:', context.params.commentId);
+        return;
+    }
 
     try {
       // Увеличиваем счетчик комментариев у поста
-      await db.collection('posts').doc(postId).update({
+      const postRef = db.collection('posts').doc(postId);
+      await postRef.update({
         commentsCount: admin.firestore.FieldValue.increment(1)
       });
-
-      // Если это ответ на комментарий, увеличиваем счетчик ответов
-      if (commentData.parentId) {
-        await db
-          .collection('posts')
-          .doc(postId)
-          .collection('comments')
-          .doc(commentData.parentId)
-          .update({
-            repliesCount: admin.firestore.FieldValue.increment(1)
-          });
-      }
-
+      
       // Создаем уведомление для автора поста
-      const postDoc = await db.collection('posts').doc(postId).get();
+      const postDoc = await postRef.get();
       const postData = postDoc.data();
 
       if (postData && postData.authorId !== commentData.authorId) {
@@ -101,7 +95,7 @@ export const onCommentCreated = functions.firestore
           type: 'comment',
           title: 'Новый комментарий',
           message: 'оставил комментарий к вашему посту',
-          actionURL: `/post/${postId}`,
+          actionURL: `/posts/${postId}`,
           relatedEntityId: postId,
           relatedEntityType: 'post'
         });
@@ -111,30 +105,27 @@ export const onCommentCreated = functions.firestore
     }
   });
 
+
 /**
  * При удалении комментария уменьшаем счетчик
  */
 export const onCommentDeleted = functions.firestore
-  .document('posts/{postId}/comments/{commentId}')
+  .document('comments/{commentId}')
   .onDelete(async (snap, context) => {
-    const { postId } = context.params;
     const commentData = snap.data();
+    const { postId } = commentData;
+    
+    if (!postId) {
+        console.warn(`Comment ${context.params.commentId} deleted without a postId.`);
+        return;
+    }
 
     try {
-      await db.collection('posts').doc(postId).update({
+      const postRef = db.collection('posts').doc(postId);
+      await postRef.update({
         commentsCount: admin.firestore.FieldValue.increment(-1)
       });
 
-      if (commentData.parentId) {
-        await db
-          .collection('posts')
-          .doc(postId)
-          .collection('comments')
-          .doc(commentData.parentId)
-          .update({
-            repliesCount: admin.firestore.FieldValue.increment(-1)
-          });
-      }
     } catch (error) {
       console.error('Error in onCommentDeleted:', error);
     }
@@ -271,18 +262,20 @@ export const onCarDeleted = functions.firestore
 // ===========================
 
 /**
- * При создании поста увеличиваем счетчик у пользователя
+ * При создании поста увеличиваем счетчик у пользователя и рассылаем по лентам
  */
 export const onPostCreated = functions.firestore
   .document('posts/{postId}')
   .onCreate(async (snap, context) => {
     const postData = snap.data();
+    const postId = context.params.postId;
+    const authorId = postData.authorId;
 
     try {
       const batch = db.batch();
 
       // Увеличиваем счетчик постов у пользователя
-      const userRef = db.collection('users').doc(postData.authorId);
+      const userRef = db.collection('users').doc(authorId);
       batch.update(userRef, {
         'stats.postsCount': admin.firestore.FieldValue.increment(1)
       });
@@ -304,23 +297,49 @@ export const onPostCreated = functions.firestore
       }
 
       await batch.commit();
+
+      // Рассылка поста по лентам подписчиков (Fan-out)
+      const followersSnapshot = await db.collection('users').doc(authorId).collection('followers').get();
+      if (!followersSnapshot.empty) {
+        const feedBatch = db.batch();
+        followersSnapshot.forEach(doc => {
+          const followerId = doc.id;
+          const userFeedRef = db.collection('users').doc(followerId).collection('feed').doc(postId);
+          feedBatch.set(userFeedRef, {
+            postId: postId,
+            authorId: authorId,
+            createdAt: postData.createdAt
+          });
+        });
+        // Добавляем пост в свою же ленту
+        const authorFeedRef = db.collection('users').doc(authorId).collection('feed').doc(postId);
+        feedBatch.set(authorFeedRef, {
+          postId: postId,
+          authorId: authorId,
+          createdAt: postData.createdAt
+        });
+        await feedBatch.commit();
+      }
+
     } catch (error) {
       console.error('Error in onPostCreated:', error);
     }
   });
 
 /**
- * При удалении поста уменьшаем счетчик у пользователя
+ * При удалении поста уменьшаем счетчик у пользователя и удаляем из лент
  */
 export const onPostDeleted = functions.firestore
   .document('posts/{postId}')
   .onDelete(async (snap, context) => {
     const postData = snap.data();
+    const postId = context.params.postId;
+    const authorId = postData.authorId;
 
     try {
       const batch = db.batch();
 
-      const userRef = db.collection('users').doc(postData.authorId);
+      const userRef = db.collection('users').doc(authorId);
       batch.update(userRef, {
         'stats.postsCount': admin.firestore.FieldValue.increment(-1)
       });
@@ -341,6 +360,23 @@ export const onPostDeleted = functions.firestore
       }
 
       await batch.commit();
+      
+      // Удаляем пост из лент подписчиков
+      const followersSnapshot = await db.collection('users').doc(authorId).collection('followers').get();
+      if (!followersSnapshot.empty) {
+        const feedBatch = db.batch();
+        followersSnapshot.forEach(doc => {
+          const followerId = doc.id;
+          const userFeedRef = db.collection('users').doc(followerId).collection('feed').doc(postId);
+          feedBatch.delete(userFeedRef);
+        });
+        // Удаляем из своей ленты
+        const authorFeedRef = db.collection('users').doc(authorId).collection('feed').doc(postId);
+        feedBatch.delete(authorFeedRef);
+        await feedBatch.commit();
+      }
+
+
     } catch (error) {
       console.error('Error in onPostDeleted:', error);
     }
@@ -387,7 +423,7 @@ export const onUserUpdated = functions.firestore
 
       // Обновляем комментарии пользователя
       const commentsQuery = await db
-        .collectionGroup('comments')
+        .collection('comments')
         .where('authorId', '==', userId)
         .get();
 
