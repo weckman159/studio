@@ -37,7 +37,8 @@ export default function MarketplaceItemClient({ item }: MarketplaceItemClientPro
   const { user } = useUser();
   const firestore = useFirestore();
 
-  const [selectedImage, setSelectedImage] = useState<string>(item.imageUrl || item.gallery?.[0] || '');
+  const allImages = [item.imageUrl, ...(item.gallery || [])].filter(Boolean) as string[];
+  const [selectedImage, setSelectedImage] = useState<string>(allImages[0] || '');
 
   // Effect for client-side view count increment
   useEffect(() => {
@@ -79,7 +80,6 @@ export default function MarketplaceItemClient({ item }: MarketplaceItemClientPro
   };
 
   const isSeller = item && user && item.sellerId === user.uid;
-  const allImages = [item.imageUrl, ...(item.gallery || [])].filter(Boolean) as string[];
 
   return (
     <div>

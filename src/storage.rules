@@ -1,0 +1,119 @@
+
+rules_version = '2';
+
+/**
+ * @file storage.rules
+ * @description Security rules for Firebase Cloud Storage.
+ */
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    /**
+     * Helper function to check if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Helper to get the user document from Firestore.
+     */
+    function getUser(userId) {
+      return get(/databases/$(database)/documents/users/$(userId));
+    }
+    
+    /**
+     * Helper to get the post document from Firestore.
+     */
+    function getPost(postId) {
+        return get(/databases/$(database)/documents/posts/$(postId));
+    }
+
+    /**
+     * Helper to get the car document from Firestore.
+     */
+    function getCar(carId) {
+        return get(/databases/$(database)/documents/cars/$(carId));
+    }
+    
+    /**
+     * Helper to get the community document from Firestore.
+     */
+    function getCommunity(communityId) {
+        return get(/databases/$(database)/documents/communities/$(communityId));
+    }
+
+    /**
+     * Helper to get the marketplace item document from Firestore.
+     */
+    function getListing(listingId) {
+        return get(/databases/$(database)/documents/marketplace/$(listingId));
+    }
+
+    // ========================================================================
+    // Avatars: /avatars/{userId}/{fileName}
+    // ========================================================================
+    match /avatars/{userId}/{fileName} {
+      // Allow anyone to read avatars.
+      allow read: if true;
+      // Allow write only if the user is the owner of the profile.
+      allow write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // ========================================================================
+    // Cars: /cars/{carId}/{fileName}
+    // ========================================================================
+    match /cars/{carId}/{fileName} {
+      // Allow anyone to read car photos.
+      allow read: if true;
+      // Allow write only if the car document exists and the user is the owner.
+      allow create: if isSignedIn() && getCar(carId).data.userId == request.auth.uid;
+      // Allow update/delete for owner
+      allow update, delete: if isSignedIn()
+                            && resource.metadata.ownerId == request.auth.uid;
+    }
+
+    // ========================================================================
+    // Posts: /posts/{postId}/{fileName}
+    // ========================================================================
+    match /posts/{postId}/{fileName} {
+      // Allow anyone to read post images.
+      allow read: if true;
+      // Allow write only if the post document exists and the user is the author.
+      allow create: if isSignedIn()
+                    && getPost(postId).data.authorId == request.auth.uid;
+      // Allow update/delete only by the author.
+      allow update, delete: if isSignedIn()
+                            && resource.metadata.ownerId == request.auth.uid;
+    }
+
+    // ========================================================================
+    // Communities: /communities/{communityId}/{fileName}
+    // ========================================================================
+    match /communities/{communityId}/{fileName} {
+        allow read: if true;
+        // Allow write for community admin
+        allow write: if isSignedIn()
+                     && getCommunity(communityId).data.adminId == request.auth.uid;
+    }
+    
+    // ========================================================================
+    // Listings (Marketplace): /listings/{listingId}/{fileName}
+    // ========================================================================
+     match /listings/{listingId}/{fileName} {
+        allow read: if true;
+        // Allow write if user is authenticated and is the seller
+        // Also check if the file is being created (resource == null) OR if the user is the owner.
+        allow write: if isSignedIn() && (
+                      (request.resource == null || resource == null) || // Allow initial creation
+                      getListing(listingId).data.sellerId == request.auth.uid
+                     );
+    }
+
+
+    // Fallback rule: deny all other access.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

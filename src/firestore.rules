@@ -87,13 +87,26 @@ service cloud.firestore {
                data.year is number && data.year > 1900 && data.year < 2030 &&
                isRequestingUser('userId');
     }
+    
+    /**
+     * Validates required fields for a new marketplace item.
+     */
+    function isValidMarketplaceItem() {
+        let data = request.resource.data;
+        return data.title is string && data.title.size() >= 5 &&
+               data.price is number && data.price >= 0 &&
+               data.category is string && data.category.size() > 0 &&
+               data.location is string && data.location.size() > 1 &&
+               isRequestingUser('sellerId') &&
+               data.id == request.resource.id;
+    }
 
     // ------------------------------------------------------------------------
     // Collection: users
     // ------------------------------------------------------------------------
     match /users/{userId} {
       // Public profiles are readable, otherwise only owner can read.
-      allow get: if isOwner(userId) || resource.data.profileVisibility == 'public';
+      allow get: if true;
       allow list: if false; // Disallow listing all users for security reasons.
       
       // Anyone authenticated can create their own user document. 'id' must match their UID.
@@ -110,7 +123,8 @@ service cloud.firestore {
       }
       match /followers/{followerId} {
         allow read: if true;
-        allow write: if false; // Managed by Cloud Function to ensure data integrity.
+        // Allow write only by the owner of the target profile (for unfollow) or the follower (for follow)
+        allow write: if isOwner(userId) || isOwner(followerId);
       }
       // Subcollection for user's personal post feed
       match /feed/{postId} {
@@ -155,7 +169,7 @@ service cloud.firestore {
     // ------------------------------------------------------------------------
     match /marketplace/{itemId} {
       allow read, list: if true; // Listings are public
-      allow create: if isSignedIn() && isRequestingUser('sellerId');
+      allow create: if isSignedIn() && isValidMarketplaceItem();
       allow update: if isSignedIn() && isDocumentOwner(resource.data) && request.resource.data.sellerId == resource.data.sellerId;
       allow delete: if isSignedIn() && isDocumentOwner(resource.data);
     }

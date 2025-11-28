@@ -1,7 +1,7 @@
 // src/components/MarketplaceItemForm.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -34,8 +34,8 @@ const formSchema = z.object({
   category: z.string().min(1, 'Выберите категорию'),
   condition: z.string().min(1, 'Выберите состояние'),
   location: z.string().min(2, 'Укажите город').max(60, 'Город не длиннее 60 символов'),
-  sellerPhone: z.string().min(5, 'Укажите корректный номер').max(20, 'Номер не длиннее 20 символов'),
-  sellerEmail: z.string().email('Некорректный email').max(70, 'Email не длиннее 70 символов'),
+  sellerPhone: z.string().min(5, 'Укажите корректный номер').max(20, 'Номер не длиннее 20 символов').optional(),
+  sellerEmail: z.string().email('Некорректный email').max(70, 'Email не длиннее 70 символов').optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -54,6 +54,12 @@ export function MarketplaceItemForm({ itemToEdit }: MarketplaceItemFormProps) {
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [filesToUpload, setFilesToUpload] = useState<File[]>([]);
   const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
+  
+  const isEditMode = !!itemToEdit;
+
+  // Generate a stable ID for new items
+  const newItemId = useMemo(() => isEditMode ? itemToEdit.id : doc(collection(firestore, 'temp')).id, [isEditMode, itemToEdit, firestore]);
+
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -75,11 +81,9 @@ export function MarketplaceItemForm({ itemToEdit }: MarketplaceItemFormProps) {
   });
 
   useEffect(() => {
-    if (itemToEdit?.gallery) {
-      const allImages = [itemToEdit.imageUrl, ...itemToEdit.gallery].filter(Boolean) as string[];
+    if (itemToEdit) {
+      const allImages = [itemToEdit.imageUrl, ...(itemToEdit.gallery || [])].filter(Boolean) as string[];
       setImageUrls(allImages);
-    } else if (itemToEdit?.imageUrl) {
-        setImageUrls([itemToEdit.imageUrl]);
     }
   }, [itemToEdit]);
 
@@ -96,16 +100,15 @@ export function MarketplaceItemForm({ itemToEdit }: MarketplaceItemFormProps) {
     }
 
     try {
-      // 1. Delete images marked for deletion
+      // 1. Delete images marked for deletion from Storage
       for (const url of imagesToDelete) {
         await deleteFile(url);
       }
       
-      // 2. Upload new files
+      // 2. Upload new files to Storage
       let uploadedImageUrls: string[] = [];
       if (filesToUpload.length > 0) {
-        const itemIdForPath = itemToEdit ? itemToEdit.id : doc(collection(firestore, 'temp')).id;
-        const uploadResults = await uploadFiles(filesToUpload, 'listings', itemIdForPath);
+        const uploadResults = await uploadFiles(filesToUpload, 'listings', newItemId);
         uploadedImageUrls = uploadResults.map(res => res.url);
       }
 
@@ -121,7 +124,7 @@ export function MarketplaceItemForm({ itemToEdit }: MarketplaceItemFormProps) {
         updatedAt: serverTimestamp(),
       };
 
-      if (itemToEdit) {
+      if (isEditMode) {
         // Update existing item
         const itemRef = doc(firestore, 'marketplace', itemToEdit.id);
         await updateDoc(itemRef, itemData);
@@ -131,15 +134,16 @@ export function MarketplaceItemForm({ itemToEdit }: MarketplaceItemFormProps) {
         // Create new item
         const newItemData = {
           ...itemData,
+          id: newItemId, // use the stable ID
           sellerId: user.uid,
           sellerName: user.displayName || 'Пользователь',
           sellerAvatar: user.photoURL || '',
           createdAt: serverTimestamp(),
           views: 0,
         };
-        const docRef = await addDoc(collection(firestore, 'marketplace'), newItemData);
+        await setDoc(doc(firestore, 'marketplace', newItemId), newItemData);
         toast({ title: 'Успех!', description: 'Объявление размещено.' });
-        router.push(`/marketplace/${docRef.id}`);
+        router.push(`/marketplace/${newItemId}`);
       }
 
     } catch (e: any) {
@@ -148,7 +152,6 @@ export function MarketplaceItemForm({ itemToEdit }: MarketplaceItemFormProps) {
   };
 
   const isSubmitting = form.formState.isSubmitting || uploading;
-  const isEditMode = !!itemToEdit;
   
   const categories = ['Запчасти', 'Аксессуары', 'Шины и диски', 'Электроника', 'Тюнинг', 'Автомобили', 'Инструменты', 'Другое'];
   const conditions = ['Новое', 'Б/у', 'Отличное', 'Неисправное', 'На запчасти'];
@@ -223,10 +226,10 @@ export function MarketplaceItemForm({ itemToEdit }: MarketplaceItemFormProps) {
             </CardHeader>
             <CardContent className="space-y-4">
                <FormField control={form.control} name="sellerPhone" render={({ field }) => (
-                <FormItem><FormLabel>Телефон *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Телефон</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
               )} />
                <FormField control={form.control} name="sellerEmail" render={({ field }) => (
-                <FormItem><FormLabel>Email *</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
             </CardContent>
           </Card>
