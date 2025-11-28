@@ -1,8 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { getAdminAuth } from './lib/firebase-admin';
+import { cookies } from 'next/headers';
 
-export function middleware(request: NextRequest) {
+// This function is marked as async so we can use 'await'
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const sessionCookie = request.cookies.get('session');
+  const sessionCookie = (await cookies()).get('session');
+  const sessionCookieValue = sessionCookie?.value;
 
   const protectedRoutes = [
     '/settings',
@@ -20,12 +24,27 @@ export function middleware(request: NextRequest) {
 
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
   const isAuthRoute = pathname === '/auth';
+  
+  let isAuthenticated = false;
+  if (sessionCookieValue) {
+    try {
+      const adminAuth = getAdminAuth();
+      if(adminAuth){
+        await adminAuth.verifySessionCookie(sessionCookieValue, true);
+        isAuthenticated = true;
+      }
+    } catch (error) {
+      // Session cookie is invalid.
+      isAuthenticated = false;
+    }
+  }
 
-  if (!sessionCookie && isProtectedRoute) {
+
+  if (!isAuthenticated && isProtectedRoute) {
     return NextResponse.redirect(new URL('/auth', request.url));
   }
 
-  if (sessionCookie && isAuthRoute) {
+  if (isAuthenticated && isAuthRoute) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
