@@ -110,6 +110,11 @@ service cloud.firestore {
         allow read: if true;
         allow write: if false; // Managed by Cloud Function to ensure data integrity.
       }
+      // Subcollection for user's personal post feed
+      match /feed/{postId} {
+        allow read: if isOwner(userId);
+        allow write: if false; // Managed by Cloud Function
+      }
     }
 
     // ------------------------------------------------------------------------
