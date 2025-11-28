@@ -1,3 +1,4 @@
+
 import { Timestamp } from 'firebase/firestore'
 
 export type CarStatus = 'owned' | 'sold' | 'project' | 'dream' | 'parted'

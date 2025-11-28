@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useCar } from '@/hooks/useCar'
@@ -112,8 +113,8 @@ function GarageClient({ carId }: { carId: string }) {
   )
 }
 
-export default async function CarPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default async function CarPage({ params }: { params: { id: string } }) {
+  const { id } = params;
   return (
     <GarageClient carId={id} />
   )
