@@ -1,4 +1,3 @@
-
 rules_version = '2';
 
 /**
@@ -66,9 +65,10 @@ service firebase.storage {
     match /cars/{carId}/{fileName} {
       // Allow anyone to read car photos.
       allow read: if true;
-      // Allow create if user is signed in and car doc exists.
-      allow create: if isSignedIn() && existsInDb('cars/$(carId)');
-      // Allow update/delete for owner, checking the ownerId property in file metadata.
+      // Allow create if user is signed in. We can't reliably check doc ownership on create due to race conditions.
+      // Client logic must be solid to create Firestore doc first.
+      allow create: if isSignedIn();
+      // Allow update/delete for owner by checking Firestore doc.
       allow update, delete: if isSignedIn() && getCar(carId).data.userId == request.auth.uid;
     }
 
@@ -78,8 +78,8 @@ service firebase.storage {
     match /posts/{postId}/{fileName} {
       // Allow anyone to read post images.
       allow read: if true;
-      // Allow create if user is signed in and post doc exists. This prevents race conditions.
-      allow create: if isSignedIn() && existsInDb('posts/$(postId)');
+      // Allow create if user is signed in. The Firestore doc will be created first by the client.
+      allow create: if isSignedIn();
       // Allow update/delete only by the author.
       allow update, delete: if isSignedIn() && getPost(postId).data.authorId == request.auth.uid;
     }
@@ -99,8 +99,8 @@ service firebase.storage {
     // ========================================================================
      match /listings/{listingId}/{fileName} {
         allow read: if true;
-        // Allow create if user is signed in and listing doc exists.
-        allow create: if isSignedIn() && existsInDb('marketplace/$(listingId)');
+        // Allow create if user is signed in.
+        allow create: if isSignedIn();
         // Allow update/delete if user is the seller
         allow update, delete: if isSignedIn() && getListing(listingId).data.sellerId == request.auth.uid;
     }

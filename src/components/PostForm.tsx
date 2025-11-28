@@ -79,9 +79,9 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
     }
   };
 
-  const handleRemoveImage = () => {
-      setImageFile(null);
-      setImagePreview('');
+  const handleRemoveImage = async () => {
+    setImageFile(null);
+    setImagePreview('');
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -100,84 +100,55 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
         const postId = postToEdit?.id || doc(collection(firestore, 'posts')).id;
         const postRef = doc(firestore, 'posts', postId);
 
-        if (isEditMode && postToEdit) {
-            // Edit Mode
-            let imageUrl = postToEdit.imageUrl || '';
+        let imageUrl = postToEdit?.imageUrl || '';
 
-            // Handle image deletion
-            if (postToEdit.imageUrl && !imagePreview) {
+        // 1. Handle image upload first if there is a new file
+        if (imageFile) {
+            // If editing and there was an old image, delete it
+            if (isEditMode && postToEdit?.imageUrl) {
                 await deleteFile(postToEdit.imageUrl);
-                imageUrl = '';
             }
-
-            // Handle new image upload
-            if (imageFile) {
-                if (postToEdit.imageUrl) {
-                    await deleteFile(postToEdit.imageUrl);
-                }
-                const uploadResult = await uploadFiles([imageFile], 'posts', postId);
-                if (uploadResult.length > 0) {
-                    imageUrl = uploadResult[0].url;
-                } else {
-                    throw new Error(uploadError || "Failed to upload new image");
-                }
+            const uploadResult = await uploadFiles([imageFile], 'posts', postId);
+            if (uploadResult.length > 0) {
+                imageUrl = uploadResult[0].url;
+            } else {
+                throw new Error(uploadError || "Ошибка загрузки изображения. Попробуйте другой файл.");
             }
+        } else if (isEditMode && postToEdit?.imageUrl && !imagePreview) {
+            // If in edit mode and the preview was cleared, delete the old image
+            await deleteFile(postToEdit.imageUrl);
+            imageUrl = '';
+        }
 
-            const postData: Partial<Post> = {
-                type,
-                category: type,
-                title: title.trim(),
-                content: content.trim(),
-                imageUrl,
-                updatedAt: serverTimestamp(),
-            };
-            await updateDoc(postRef, postData);
-            toast({ title: "Успех!", description: "Пост успешно обновлен." });
-            router.push(`/posts/${postToEdit.id}`);
-            router.refresh();
-
-        } else {
-            // Create Mode
-            const initialPostData: Post = {
-                id: postId,
-                authorId: user.uid,
-                authorName: user.displayName || 'Пользователь',
-                authorAvatar: user.photoURL,
-                type,
-                category: type,
-                title: title.trim(),
-                content: content.trim(),
-                imageUrl: '', // Will be updated later
+        // 2. Prepare post data
+        const postData = {
+            id: postId,
+            authorId: user.uid,
+            authorName: user.displayName || 'Пользователь',
+            authorAvatar: user.photoURL,
+            type,
+            category: type,
+            title: title.trim(),
+            content: content.trim(),
+            imageUrl,
+            updatedAt: serverTimestamp(),
+            ...(isEditMode ? {} : { 
                 createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp(),
                 likesCount: 0,
                 likedBy: [],
                 commentsCount: 0,
                 views: 0,
                 bookmarks: 0,
                 communityId: communityId,
-            };
-            
-            // 1. Create document first without image
-            await setDoc(postRef, initialPostData);
+            })
+        };
 
-            // 2. Upload image if it exists
-            if (imageFile) {
-                const uploadResult = await uploadFiles([imageFile], 'posts', postId);
-                if (uploadResult.length > 0) {
-                    const imageUrl = uploadResult[0].url;
-                    // 3. Update post with image URL
-                    await updateDoc(postRef, { imageUrl });
-                } else {
-                    // Clean up created post if image upload fails? Optional.
-                    // await deleteDoc(postRef);
-                    throw new Error(uploadError || "Failed to upload image");
-                }
-            }
-            
-            toast({ title: "Успех!", description: "Пост успешно создан." });
-            router.push(`/posts/${postId}`);
-        }
+        // 3. Save document to Firestore
+        await setDoc(postRef, postData, { merge: true });
+
+        toast({ title: "Успех!", description: `Пост успешно ${isEditMode ? 'обновлен' : 'создан'}.` });
+        router.push(`/posts/${postId}`);
+        router.refresh();
 
     } catch (err: any) {
         let errorMessage = 'Ошибка публикации. Попробуйте ещё раз.';
@@ -186,7 +157,7 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
         } else if (err.code === 'unavailable') {
             errorMessage = 'Нет подключения к интернету или сервис недоступен.';
         } else if (err.message?.includes('upload')) {
-            errorMessage = 'Ошибка загрузки изображения. Попробуйте другой файл.';
+            errorMessage = err.message; // Use specific upload error
         }
         setError(errorMessage);
         console.error('Ошибка создания/обновления поста:', err);

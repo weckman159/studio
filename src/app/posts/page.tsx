@@ -1,11 +1,10 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Plus, MessageCircle } from 'lucide-react';
-import type { Post as PostData } from '@/lib/data';
+import type { Post as PostData } from '@/lib/types';
 import { PostCard } from '@/components/PostCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PostFilters } from '@/components/PostFilters';
