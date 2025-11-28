@@ -30,30 +30,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import type { Event } from '@/lib/types';
 
-// Интерфейс полной информации о событии
-// Gemini: это расширенная структура данных события из Firestore
-interface Event {
-  id: string;
-  title: string;
-  description: string;
-  fullDescription?: string;
-  location: string;
-  address?: string; // Полный адрес для карты
-  startDate: any;
-  endDate?: any;
-  category: string;
-  imageUrl?: string;
-  organizerId: string; // ID организатора
-  organizerName: string;
-  organizerAvatar?: string;
-  participantIds: string[]; // Массив ID участников
-  participantsCount: number;
-  maxParticipants?: number; // Максимальное количество участников
-  createdAt: any;
-  requirements?: string; // Требования к участникам
-  schedule?: string; // Расписание/программа мероприятия
-}
 
 // Интерфейс участника
 interface Participant {
@@ -112,7 +90,9 @@ function EventDetailClient({ eventId }: { eventId: string }) {
       }
 
       // Загружаем участников
-      await fetchParticipants(eventData.participantIds || []);
+      if(eventData.participantIds && eventData.participantIds.length > 0) {
+        await fetchParticipants(eventData.participantIds);
+      }
 
     } catch (error) {
       console.error('Ошибка загрузки события:', error);
@@ -487,7 +467,7 @@ function EventDetailClient({ eventId }: { eventId: string }) {
               <Alert variant={event.participantsCount >= event.maxParticipants ? 'destructive' : 'default'}>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  Осталось мест: {event.maxParticipants - event.participantsCount}
+                  Осталось мест: {Math.max(0, event.maxParticipants - event.participantsCount)}
                 </AlertDescription>
               </Alert>
             )}
@@ -589,7 +569,7 @@ function EventDetailClient({ eventId }: { eventId: string }) {
   );
 }
 
-export default async function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = await params;
+export default async function EventDetailPage({ params }: { params: { id: string } }) {
+    const { id } = params;
     return <EventDetailClient eventId={id} />
 }

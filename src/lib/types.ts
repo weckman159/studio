@@ -171,3 +171,25 @@ export interface Feedback {
   msg: string;
   createdAt: any;
 }
+
+export interface Event {
+  id: string;
+  title: string;
+  description: string;
+  fullDescription?: string;
+  location: string;
+  address?: string;
+  startDate: any;
+  endDate?: any;
+  category: string;
+  imageUrl?: string;
+  organizerId: string;
+  organizerName: string;
+  organizerAvatar?: string;
+  participantIds: string[];
+  participantsCount: number;
+  maxParticipants?: number;
+  createdAt: any;
+  requirements?: string;
+  schedule?: string;
+}

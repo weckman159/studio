@@ -1,4 +1,3 @@
-
 // src/app/events/page.tsx
 // Страница всех событий: список, поиск, фильтрация, создание нового
 'use client';
@@ -13,24 +12,14 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Search, Plus, MapPin, Users } from 'lucide-react';
+import type { Event } from '@/lib/types';
 
-// Тип события
-interface EventShort {
-  id: string;
-  title: string;
-  location: string;
-  startDate: any;
-  endDate?: any;
-  category: string;
-  participantsCount: number;
-  imageUrl?: string;
-}
 
 export default function EventsPage() {
   const firestore = useFirestore();
   // Состояния для списка событий и фильтрации
-  const [events, setEvents] = useState<EventShort[]>([]);
-  const [filteredEvents, setFilteredEvents] = useState<EventShort[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [loading, setLoading] = useState(true);
@@ -62,10 +51,10 @@ export default function EventsPage() {
         orderBy('startDate', 'desc')
       );
       const querySnapshot = await getDocs(q);
-      const data: EventShort[] = querySnapshot.docs.map(doc => ({
+      const data: Event[] = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      } as EventShort));
+      } as Event));
       setEvents(data);
       setFilteredEvents(data);
     } catch (e) {
