@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, addDoc, updateDoc, serverTimestamp, doc } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, serverTimestamp, doc, setDoc } from 'firebase/firestore';
 import { useFirestore, useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -97,6 +97,7 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
 
     setLoading(true);
     try {
+      const postId = postToEdit?.id || doc(collection(firestore, 'posts')).id;
       let imageUrl = postToEdit?.imageUrl || '';
 
       // Handle image deletion
@@ -111,30 +112,26 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
         if(postToEdit?.imageUrl && postToEdit.imageUrl !== imagePreview) {
             await deleteFile(postToEdit.imageUrl);
         }
-        const postIdForPath = postToEdit?.id || doc(collection(firestore, 'temp')).id;
-        const uploadResult = await uploadFiles([imageFile], 'posts', postIdForPath);
+        const uploadResult = await uploadFiles([imageFile], 'posts', postId);
         if (uploadResult.length > 0) {
           imageUrl = uploadResult[0].url;
         } else {
           throw new Error(uploadError || "Failed to upload image");
         }
       }
-
-      const postData: Partial<Post> = {
-        type,
-        title: title.trim(),
-        content: content.trim(),
-        imageUrl,
-        updatedAt: serverTimestamp(),
-      };
       
-      if (communityId) {
-        postData.communityId = communityId;
-      }
+      const postRef = doc(firestore, 'posts', postId);
 
       if (isEditMode && postToEdit) {
         // Update existing post
-        const postRef = doc(firestore, 'posts', postToEdit.id);
+        const postData: Partial<Post> = {
+            type,
+            title: title.trim(),
+            content: content.trim(),
+            imageUrl,
+            updatedAt: serverTimestamp(),
+            communityId: communityId || postToEdit.communityId,
+        };
         await updateDoc(postRef, postData);
         toast({ title: "Успех!", description: "Пост успешно обновлен." });
         const targetUrl = communityId ? `/communities/${communityId}` : `/posts/${postToEdit.id}`;
@@ -142,20 +139,27 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
         router.refresh();
       } else {
         // Create new post
-        const newPostData = {
-            ...postData,
+        const newPostData: Post = {
+            id: postId,
             authorId: user.uid,
             authorName: user.displayName || 'Пользователь',
             authorAvatar: user.photoURL,
+            type,
+            title: title.trim(),
+            content: content.trim(),
+            imageUrl,
             createdAt: serverTimestamp(),
             likesCount: 0,
             likedBy: [],
-            commentsCount: 0
+            commentsCount: 0,
+            communityId,
+            category: type, // Assuming type is the category
+            views: 0,
+            bookmarks: 0,
         };
-        const docRef = await addDoc(collection(firestore, 'posts'), newPostData);
-        await updateDoc(docRef, { id: docRef.id }); // Save the id in the document
+        await setDoc(postRef, newPostData);
         toast({ title: "Успех!", description: "Пост успешно создан." });
-        const targetUrl = communityId ? `/communities/${communityId}` : `/posts/${docRef.id}`;
+        const targetUrl = communityId ? `/communities/${communityId}` : `/posts/${postId}`;
         router.push(targetUrl);
       }
 

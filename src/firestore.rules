@@ -72,7 +72,8 @@ service cloud.firestore {
         let data = request.resource.data;
         return data.title is string && data.title.size() > 2 &&
                data.content is string && data.content.size() > 10 &&
-               isRequestingUser('authorId');
+               isRequestingUser('authorId') &&
+               data.id == request.resource.id;
     }
 
     /**
@@ -108,7 +109,7 @@ service cloud.firestore {
       }
       match /followers/{followerId} {
         allow read: if true;
-        allow write: if false; // Managed by Cloud Function to ensure data integrity.
+        allow write: if isOwner(followerId);
       }
       // Subcollection for user's personal post feed
       match /feed/{postId} {
@@ -139,21 +140,19 @@ service cloud.firestore {
     // Collection: cars (Root Collection)
     // ------------------------------------------------------------------------
     match /cars/{carId} {
-      allow get: if true; // Allow anyone to read car data for detail pages.
-      // Only show public cars in lists (e.g. search).
+      allow get: if true;
       allow list: if resource.data.userId == null || get(/databases/$(database)/documents/users/$(resource.data.userId)).data.profileVisibility == 'public';
       allow create: if isSignedIn() && isValidCar();
-      // Allow update if user is owner and is not changing the userId.
       allow update: if isSignedIn() && isDocumentOwner(resource.data) && request.resource.data.userId == resource.data.userId;
       allow delete: if isSignedIn() && isDocumentOwner(resource.data);
        // Subcollections for car details
       match /timeline/{entryId} {
         allow read, list: if true;
-        allow write: if isDocumentOwner(get(/databases/$(database)/documents/cars/$(carId)).data);
+        allow write: if isSignedIn() && isDocumentOwner(get(/databases/$(database)/documents/cars/$(carId)).data);
       }
       match /inventory/{itemId} {
         allow read, list: if true;
-        allow write: if isDocumentOwner(get(/databases/$(database)/documents/cars/$(carId)).data);
+        allow write: if isSignedIn() && isDocumentOwner(get(/databases/$(database)/documents/cars/$(carId)).data);
       }
     }
 
