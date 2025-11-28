@@ -110,7 +110,7 @@ service cloud.firestore {
       }
       match /followers/{followerId} {
         allow read: if true;
-        allow write: if isOwner(followerId); // Managed by Cloud Function, but this allows manual follow
+        allow write: if false; // Managed by Cloud Function to ensure data integrity.
       }
       // Subcollection for user's personal post feed
       match /feed/{postId} {

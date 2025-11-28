@@ -405,9 +405,9 @@ export const onUserUpdated = functions.firestore
 
     try {
       const batch = db.batch();
-      const userData = {
-        displayName: afterData.displayName,
-        photoURL: afterData.photoURL
+      const newUserData = {
+        authorName: afterData.displayName,
+        authorAvatar: afterData.photoURL
       };
 
       // Обновляем посты пользователя
@@ -415,29 +415,33 @@ export const onUserUpdated = functions.firestore
         .collection('posts')
         .where('authorId', '==', userId)
         .get();
-
+        
       postsSnapshot.forEach(doc => {
-        batch.update(doc.ref, { authorName: userData.displayName, authorAvatar: userData.photoURL });
+        batch.update(doc.ref, newUserData);
       });
 
       // Обновляем комментарии пользователя
-      const commentsQuery = await db
+      const commentsSnapshot = await db
         .collection('comments')
         .where('authorId', '==', userId)
         .get();
 
-      commentsQuery.forEach(doc => {
-        batch.update(doc.ref, { authorName: userData.displayName, authorAvatar: userData.photoURL });
+      commentsSnapshot.forEach(doc => {
+        batch.update(doc.ref, newUserData);
       });
       
       // Обновляем объявления пользователя
-      const listingsQuery = await db
+      const listingsSnapshot = await db
         .collection('marketplace')
         .where('sellerId', '==', userId)
         .get();
 
-      listingsQuery.forEach(doc => {
-        batch.update(doc.ref, { sellerName: userData.displayName, sellerAvatar: userData.photoURL });
+      listingsSnapshot.forEach(doc => {
+          const sellerData = {
+            sellerName: afterData.displayName,
+            sellerAvatar: afterData.photoURL
+          }
+        batch.update(doc.ref, sellerData);
       });
 
       await batch.commit();
