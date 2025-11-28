@@ -3,6 +3,7 @@ import type { Car, TimelineEntry } from '@/lib/types';
 import CarDetailClient from './_components/CarDetailClient';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
+import { getAdminDb } from '@/lib/firebase-admin';
 
 // Критически важно для динамического рендеринга
 export const dynamic = 'force-dynamic';
@@ -11,13 +12,7 @@ export const revalidate = 0;
 // Динамический импорт Firebase Admin только при выполнении
 async function getCarData(carId: string): Promise<{ car: Car | null, timeline: TimelineEntry[] }> {
   try {
-    const { getAdminDb } = await import('@/lib/firebase-admin');
     const adminDb = getAdminDb();
-
-    if (!adminDb) {
-      console.error('Firebase Admin not initialized');
-      return { car: null, timeline: [] };
-    }
 
     const carRef = adminDb.collection('cars').doc(carId);
     const carSnap = await carRef.get();
