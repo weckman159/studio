@@ -104,11 +104,14 @@ export function Notifications() {
         setLoading(false);
       },
       (error: FirestoreError) => {
-        const contextualError = new FirestorePermissionError({
-            operation: 'list',
-            path: `notifications` // Simplified path for collection group query
-        });
-        errorEmitter.emit('permission-error', contextualError);
+        if (error.code === 'permission-denied') {
+            const contextualError = new FirestorePermissionError({
+                operation: 'list',
+                path: `notifications` // Simplified path for collection group query
+            });
+            errorEmitter.emit('permission-error', contextualError);
+        }
+        console.error("Error fetching notifications:", error);
         setLoading(false);
       }
     );
@@ -206,5 +209,3 @@ export function Notifications() {
     </Popover>
   );
 }
-
-    

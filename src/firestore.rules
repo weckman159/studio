@@ -1,0 +1,297 @@
+
+rules_version = '2';
+
+/**
+ * @file firestore.rules
+ * @description Security rules for the AutoSphere Firestore database.
+ *
+ * @section Core Philosophy
+ * This ruleset uses a combination of path-based ownership for strictly private data (userSettings)
+ * and document-based ownership for public or semi-public data (posts, cars). This flat structure
+ * for major collections improves query performance and scalability.
+ *
+ * @section Data Structure
+ * - /users/{userId}: Public-facing user profile data.
+ * - /cars/{carId}: Root collection for all cars. Ownership via 'userId' field.
+ * - /posts/{postId}: Root collection for all posts. Ownership via 'authorId' field.
+ * - /userSettings/{userId}: Strictly private user settings.
+ * - /featuredCars/{date}: Public, read-only data for the 'Car of the Day'.
+ *
+ * @section Key Security Decisions
+ * - Default Deny: All paths are closed by default. Access must be explicitly granted.
+ * - User Listing Disabled: It is not possible to list all users in the application.
+ * - Ownership via Field: For root collections, ownership is checked via a field in the document.
+ */
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ------------------------------------------------------------------------
+    // Helper Functions
+    // ------------------------------------------------------------------------
+
+    /**
+     * Checks if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the currently authenticated user's UID matches the provided userId.
+     * Use for path-based ownership checks (e.g., userSettings).
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Checks for ownership on an existing document via a path.
+     * CRITICAL: Use for update/delete operations to prevent modifying non-existent data.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * Validates that a required field in a new document matches the authenticated user's UID.
+     * Use for create operations in root collections.
+     */
+    function isRequestingUser(field) {
+      return isSignedIn() && request.resource.data[field] == request.auth.uid;
+    }
+
+    /**
+     * Checks ownership of an existing document via a 'userId' or 'authorId' field.
+     * Use for update/delete operations in root collections.
+     */
+    function isDocumentOwner(doc) {
+      // Accommodates both 'userId' (for cars) and 'authorId' (for posts)
+      return isSignedIn() && (request.auth.uid == doc.userId || request.auth.uid == doc.authorId || request.auth.uid == doc.sellerId);
+    }
+    
+    /**
+     * Validates required fields for a new post.
+     */
+    function isValidPost() {
+        let data = request.resource.data;
+        return data.title is string && data.title.size() > 0 &&
+               data.content is string && data.content.size() > 0 &&
+               isRequestingUser('authorId');
+    }
+
+    /**
+     * Validates required fields for a new car.
+     */
+    function isValidCar() {
+        let data = request.resource.data;
+        return data.brand is string && data.brand.size() > 0 &&
+               data.model is string && data.model.size() > 0 &&
+               data.year is number && data.year > 1900 &&
+               isRequestingUser('userId');
+    }
+
+    // ------------------------------------------------------------------------
+    // Collection: users
+    // ------------------------------------------------------------------------
+    match /users/{userId} {
+      // Public profiles are readable, otherwise only owner can read.
+      allow get: if isOwner(userId) || (resource.data.profileVisibility == 'public');
+      allow list: if false; // Disallow listing all users
+      
+      // Anyone can create their own user document if authenticated.
+      allow create: if isRequestingUser('id');
+
+      // Only owner can update. Cannot change immutable fields like id, createdAt.
+      allow update: if isOwner(userId) 
+                    && request.resource.data.id == resource.data.id;
+                    
+      allow delete: if isOwner(userId);
+      
+      // Subcollections for following/followers
+      match /following/{followingId} {
+        allow read, write: if isOwner(userId);
+      }
+      match /followers/{followerId} {
+        allow read: if true;
+        allow write: if false; // Managed by Cloud Function
+      }
+    }
+
+    // ------------------------------------------------------------------------
+    // Collection: posts (Root Collection)
+    // ------------------------------------------------------------------------
+    match /posts/{postId} {
+      allow get, list: if true; // Posts are public
+      allow create: if isSignedIn() && isValidPost();
+      allow update: if isSignedIn() && isDocumentOwner(resource.data);
+      allow delete: if isSignedIn() && isDocumentOwner(resource.data);
+
+      // Subcollection: comments
+      match /comments/{commentId} {
+        allow read, list: if true;
+        allow create: if isSignedIn() && isRequestingUser('authorId');
+        allow update, delete: if isSignedIn() && isDocumentOwner(resource.data);
+      }
+    }
+    
+    // ------------------------------------------------------------------------
+    // Collection: cars (Root Collection)
+    // ------------------------------------------------------------------------
+    match /cars/{carId} {
+      allow get: if true; // Allow anyone to read car data
+      // Only show public cars in lists
+      allow list: if resource.data.userId == null || get(/databases/$(database)/documents/users/$(resource.data.userId)).data.profileVisibility == 'public';
+      allow create: if isSignedIn() && isValidCar();
+      allow update: if isSignedIn() && isDocumentOwner(resource.data);
+      allow delete: if isSignedIn() && isDocumentOwner(resource.data);
+       // Subcollections for car details
+      match /timeline/{entryId} {
+        allow read, list: if true;
+        allow write: if isDocumentOwner(get(/databases/$(database)/documents/cars/$(carId)).data);
+      }
+      match /inventory/{itemId} {
+        allow read, list: if true;
+        allow write: if isDocumentOwner(get(/databases/$(database)/documents/cars/$(carId)).data);
+      }
+    }
+
+    // ------------------------------------------------------------------------
+    // Collection: marketplace (Root Collection)
+    // ------------------------------------------------------------------------
+    match /marketplace/{itemId} {
+      allow read, list: if true; // Listings are public
+      allow create: if isSignedIn() && isRequestingUser('sellerId');
+      allow update: if isSignedIn() && isDocumentOwner(resource.data);
+      allow delete: if isSignedIn() && isDocumentOwner(resource.data);
+    }
+
+
+    // ------------------------------------------------------------------------
+    // Collection: comments (Root Collection for queries)
+    // ------------------------------------------------------------------------
+     match /comments/{commentId} {
+        allow read: if true;
+        allow create: if isSignedIn() && isRequestingUser('authorId');
+        allow update, delete: if isSignedIn() && isDocumentOwner(resource.data);
+    }
+
+    // ------------------------------------------------------------------------
+    // Collection: featuredCars
+    // ------------------------------------------------------------------------
+    match /featuredCars/{date} {
+      allow get, list: if true;
+      allow create, update, delete: if false; // Managed by backend
+    }
+
+    // ------------------------------------------------------------------------
+    // Collection: userSettings
+    // ------------------------------------------------------------------------
+    match /userSettings/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+    
+    // ------------------------------------------------------------------------
+    // Collection: votings
+    // ------------------------------------------------------------------------
+    match /votings/{votingId} {
+        allow read: if true;
+        allow create: if isSignedIn();
+        // Allow update only to vote (not change question etc.)
+        allow update: if isSignedIn() && request.resource.data.keys().hasOnly(['votes', 'votedUserIds', 'totalVotes']); 
+        allow delete: if false; // Deletion via backend function
+    }
+    
+    // ------------------------------------------------------------------------
+    // Collection: notifications
+    // ------------------------------------------------------------------------
+    match /notifications/{notificationId} {
+      // Allow a user to read their own notifications by document ID.
+      allow get: if isSignedIn() && resource.data.recipientId == request.auth.uid;
+
+      // Allow a user to LIST notifications only if their query is scoped to their own ID.
+      allow list: if isSignedIn() && request.query.where.size() == 1 && request.query.where[0][0] == 'recipientId' && request.query.where[0][2] == request.auth.uid;
+        
+      // Allow updating only the 'read' field by the recipient.
+      allow update: if isSignedIn()
+                    && resource.data.recipientId == request.auth.uid
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+        
+      // Notifications are created by backend functions only.
+      allow create, delete: if false;
+    }
+
+    // ------------------------------------------------------------------------
+    // Collection: workshops
+    // ------------------------------------------------------------------------
+    match /workshops/{workshopId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isRequestingUser('createdBy');
+      allow update, delete: if false; // Managed by backend
+    }
+    
+    // ------------------------------------------------------------------------
+    // Collection: workshopReviews
+    // ------------------------------------------------------------------------
+    match /workshopReviews/{reviewId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isRequestingUser('userId');
+      allow update, delete: if isSignedIn() && isDocumentOwner(resource.data);
+    }
+    
+    // ------------------------------------------------------------------------
+    // Collection: dialogs & messages (Private Chat)
+    // ------------------------------------------------------------------------
+    match /dialogs/{dialogId} {
+       allow read, write: if isSignedIn() && request.auth.uid in resource.data.participantIds;
+    }
+
+    match /messages/{messageId} {
+       allow read: if isSignedIn() && get(/databases/$(database)/documents/dialogs/$(resource.data.dialogId)).data.participantIds.hasAny([request.auth.uid]);
+       allow create: if isSignedIn() && isRequestingUser('authorId');
+       allow update, delete: if false; // Messages are immutable
+    }
+
+    // ------------------------------------------------------------------------
+    // Collection: feedback
+    // ------------------------------------------------------------------------
+    match /feedback/{feedbackId} {
+      allow create: if true; // Anyone can submit feedback
+      allow read, update, delete: if false; // Read by backend only
+    }
+    
+    // ------------------------------------------------------------------------
+    // Collection: autoNews
+    // ------------------------------------------------------------------------
+    match /autoNews/{newsId} {
+      allow read: if true;
+      allow write: if false; // Managed by backend
+    }
+
+    // ------------------------------------------------------------------------
+    // Collection: communities
+    // ------------------------------------------------------------------------
+    match /communities/{communityId} {
+      // Anyone can read public communities, members can read private ones
+      allow get: if resource.data.isPrivate == false || (isSignedIn() && request.auth.uid in resource.data.memberIds);
+      // Anyone can list communities
+      allow list: if true;
+      // Only authenticated users can create communities
+      allow create: if isSignedIn() && isRequestingUser('adminId');
+      // Only the admin can update community info
+      allow update: if isSignedIn() && resource.data.adminId == request.auth.uid;
+      // Only admin can delete
+      allow delete: if isSignedIn() && resource.data.adminId == request.auth.uid;
+    }
+    
+    // ------------------------------------------------------------------------
+    // Collection: events
+    // ------------------------------------------------------------------------
+     match /events/{eventId} {
+      allow read, list: if true;
+      // Users can create events
+      allow create: if isSignedIn() && isRequestingUser('organizerId');
+      // Only the organizer can update/delete
+      allow update, delete: if isSignedIn() && isDocumentOwner(resource.data);
+    }
+  }
+}
