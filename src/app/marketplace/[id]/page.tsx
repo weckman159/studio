@@ -7,7 +7,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, increment } from 'firebase/firestore';
 import { useFirestore, useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,32 +24,32 @@ import {
   Share2,
   AlertCircle,
   Edit3,
-  ShoppingCart
+  ShoppingCart,
+  Eye
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { MarketplaceItem } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
-// Интерфейс полной информации о товаре
-// Gemini: расширенная структура с контактами продавца
-interface MarketplaceItem {
-  id: string;
-  title: string;
-  description: string;
-  fullDescription?: string;
-  price: number;
-  currency: string;
-  category: string;
-  condition: string;
-  location: string;
-  imageUrl?: string;
-  gallery?: string[]; // Дополнительные фото
-  sellerId: string;
-  sellerName: string;
-  sellerAvatar?: string;
-  sellerPhone?: string;
-  sellerEmail?: string;
-  createdAt: any;
-  views?: number; // Количество просмотров
+function MarketplaceItemSkeleton() {
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 space-y-4">
+                <Skeleton className="aspect-video w-full" />
+                <div className="grid grid-cols-4 md:grid-cols-6 gap-2">
+                    <Skeleton className="aspect-square w-full" />
+                    <Skeleton className="aspect-square w-full" />
+                    <Skeleton className="aspect-square w-full" />
+                </div>
+                <Skeleton className="h-40 w-full" />
+            </div>
+            <div className="lg:sticky lg:top-24 space-y-4 h-fit">
+                <Skeleton className="h-32 w-full" />
+                <Skeleton className="h-64 w-full" />
+            </div>
+        </div>
+    )
 }
 
 function MarketplaceItemClient({ itemId }: { itemId: string }) {
@@ -74,7 +74,8 @@ function MarketplaceItemClient({ itemId }: { itemId: string }) {
     if (!firestore) return;
     try {
       setLoading(true);
-      const itemDoc = await getDoc(doc(firestore, 'marketplace', itemId));
+      const itemRef = doc(firestore, 'marketplace', itemId);
+      const itemDoc = await getDoc(itemRef);
 
       if (!itemDoc.exists()) {
         router.push('/marketplace');
@@ -89,10 +90,10 @@ function MarketplaceItemClient({ itemId }: { itemId: string }) {
       setItem(itemData);
       setSelectedImage(itemData.imageUrl || itemData.gallery?.[0] || '');
 
-      // TODO: Увеличить счетчик просмотров (опционально)
-      // await updateDoc(doc(db, 'marketplace', itemId), {
-      //   views: increment(1)
-      // });
+      // Увеличиваем счетчик просмотров
+      await updateDoc(itemRef, {
+        views: increment(1)
+      });
 
     } catch (error) {
       console.error('Ошибка загрузки товара:', error);
@@ -138,18 +139,8 @@ function MarketplaceItemClient({ itemId }: { itemId: string }) {
   // Проверка, является ли текущий пользователь продавцом
   const isSeller = item && user && item.sellerId === user.uid;
 
-  // UI загрузки
   if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Загрузка товара...</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <MarketplaceItemSkeleton />;
   }
 
   if (!item) {
@@ -281,7 +272,10 @@ function MarketplaceItemClient({ itemId }: { itemId: string }) {
                     {item.views && (
                     <div className="flex justify-between">
                         <span className="text-muted-foreground">Просмотров:</span>
-                        <span className="font-medium">{item.views}</span>
+                        <span className="font-medium flex items-center gap-1">
+                           <Eye className="h-4 w-4" />
+                           {item.views}
+                        </span>
                     </div>
                     )}
               </div>
@@ -297,8 +291,8 @@ function MarketplaceItemClient({ itemId }: { itemId: string }) {
                  <Link href={`/profile/${item.sellerId}`}>
                     <div className="flex items-center gap-3 hover:bg-accent p-2 rounded-lg cursor-pointer -m-2">
                         <Avatar className="h-12 w-12">
-                            <AvatarImage src={item.sellerAvatar} />
-                            <AvatarFallback>{item.sellerName[0]}</AvatarFallback>
+                            {item.sellerAvatar && <AvatarImage src={item.sellerAvatar} />}
+                            <AvatarFallback>{item.sellerName?.[0]}</AvatarFallback>
                         </Avatar>
                         <div>
                             <p className="font-semibold">{item.sellerName}</p>
@@ -307,15 +301,19 @@ function MarketplaceItemClient({ itemId }: { itemId: string }) {
                     </div>
                 </Link>
                 {item.sellerPhone && (
-                  <Button variant="outline" className="w-full">
-                    <Phone className="mr-2 h-4 w-4" />
-                    {item.sellerPhone}
+                  <Button variant="outline" className="w-full" asChild>
+                    <a href={`tel:${item.sellerPhone}`}>
+                      <Phone className="mr-2 h-4 w-4" />
+                      {item.sellerPhone}
+                    </a>
                   </Button>
                 )}
                  {item.sellerEmail && (
-                  <Button variant="outline" className="w-full">
-                    <Mail className="mr-2 h-4 w-4" />
-                    Написать на почту
+                  <Button variant="outline" className="w-full" asChild>
+                    <a href={`mailto:${item.sellerEmail}`}>
+                      <Mail className="mr-2 h-4 w-4" />
+                      Написать на почту
+                    </a>
                   </Button>
                 )}
                  <Button className="w-full">
@@ -327,7 +325,7 @@ function MarketplaceItemClient({ itemId }: { itemId: string }) {
                     Поделиться
                 </Button>
                  {isSeller && (
-                  <Link href={`/marketplace/${itemId}/edit`} className="block">
+                  <Link href={`/marketplace/edit/${itemId}`} className="block">
                      <Button variant="destructive" className="w-full">
                          <Edit3 className="mr-2 h-4 w-4" />
                          Редактировать
@@ -342,7 +340,6 @@ function MarketplaceItemClient({ itemId }: { itemId: string }) {
   );
 }
 
-export default async function MarketplaceItemPage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = await params;
-    return <MarketplaceItemClient itemId={id} />
+export default async function MarketplaceItemPage({ params }: { params: { id: string } }) {
+    return <MarketplaceItemClient itemId={params.id} />
 }

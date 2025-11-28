@@ -73,7 +73,7 @@ service cloud.firestore {
      */
     function isDocumentOwner(doc) {
       // Accommodates both 'userId' (for cars) and 'authorId' (for posts)
-      return isSignedIn() && (request.auth.uid == doc.userId || request.auth.uid == doc.authorId);
+      return isSignedIn() && (request.auth.uid == doc.userId || request.auth.uid == doc.authorId || request.auth.uid == doc.sellerId);
     }
     
     /**
@@ -132,6 +132,16 @@ service cloud.firestore {
     match /cars/{carId} {
       allow get, list: if true; // Allow anyone to read car data
       allow create: if isSignedIn() && isValidCar();
+      allow update: if isSignedIn() && isDocumentOwner(resource.data);
+      allow delete: if isSignedIn() && isDocumentOwner(resource.data);
+    }
+
+    // ------------------------------------------------------------------------
+    // Collection: marketplace (Root Collection)
+    // ------------------------------------------------------------------------
+    match /marketplace/{itemId} {
+      allow read, list: if true; // Listings are public
+      allow create: if isSignedIn() && isRequestingUser('sellerId');
       allow update: if isSignedIn() && isDocumentOwner(resource.data);
       allow delete: if isSignedIn() && isDocumentOwner(resource.data);
     }
