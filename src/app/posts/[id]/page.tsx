@@ -1,272 +1,47 @@
 
-'use client';
+'use server';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { 
-  doc, 
-  getDoc, 
-  collection, 
-  query, 
-  where, 
-  getDocs,
-  addDoc,
-  updateDoc,
-  increment,
-  arrayUnion,
-  arrayRemove,
-  serverTimestamp
-} from 'firebase/firestore';
-import { useFirestore, useUser } from '@/firebase';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { getDoc, collection, query, where, getDocs, orderBy, Timestamp } from 'firebase/firestore';
+import { adminDb } from '@/lib/firebase-admin';
+import { PostActions } from './_components/PostActions';
+import { PostComments } from './_components/PostComments';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Textarea } from '@/components/ui/textarea';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  ArrowLeft, 
-  Calendar, 
-  Heart,
-  MessageCircle,
-  Share2,
-  Edit3,
-  AlertCircle,
-  Send,
-  FileText
-} from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Calendar, FileText } from 'lucide-react';
+import type { Post, Comment } from '@/lib/types';
+import { notFound } from 'next/navigation';
 
-
-// Интерфейс полного поста
-interface Post {
-  id: string;
-  title: string;
-  content: string; // HTML из редактора
-  type: string;
-  authorId: string;
-  authorName: string;
-  authorAvatar?: string;
-  imageUrl?: string;
-  createdAt: any;
-  updatedAt?: any;
-  likesCount: number;
-  likedBy: string[]; // Массив ID пользователей, лайкнувших пост
-  commentsCount: number;
-}
-
-// Интерфейс комментария
-interface Comment {
-  id: string;
-  postId: string;
-  authorId: string;
-  authorName: string;
-  authorAvatar?: string;
-  content: string;
-  createdAt: any;
-}
-
-function PostPageSkeleton() {
-    return (
-        <div className="min-h-screen">
-             <div className="w-full h-[400px] bg-muted"></div>
-             <div className="max-w-4xl mx-auto px-4 py-8">
-                <Skeleton className="h-9 w-24 mb-6" />
-                <article>
-                    <Skeleton className="h-8 w-32 mb-4" />
-                    <Skeleton className="h-12 md:h-14 w-full mb-6" />
-                    <div className="flex flex-wrap items-center gap-6 mb-8 pb-6 border-b">
-                        <div className="flex items-center gap-3">
-                            <Skeleton className="h-12 w-12 rounded-full" />
-                            <div>
-                                <Skeleton className="h-5 w-24 mb-1" />
-                                <Skeleton className="h-3 w-16" />
-                            </div>
-                        </div>
-                        <Skeleton className="h-5 w-32" />
-                        <div className="flex items-center gap-4 ml-auto">
-                            <Skeleton className="h-9 w-20" />
-                            <Skeleton className="h-9 w-20" />
-                            <Skeleton className="h-9 w-10" />
-                        </div>
-                    </div>
-                     <div className="space-y-4">
-                        <Skeleton className="h-6 w-full" />
-                        <Skeleton className="h-6 w-5/6" />
-                        <Skeleton className="h-6 w-full" />
-                    </div>
-                </article>
-             </div>
-        </div>
-    )
-}
-
-function PostDetailClient({ postId }: { postId: string }) {
-  const router = useRouter();
-  const { user } = useUser();
-  const firestore = useFirestore();
-  
-  const [post, setPost] = useState<Post | null>(null);
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [commentText, setCommentText] = useState('');
-  const [submittingComment, setSubmittingComment] = useState(false);
-
-  // Загрузка поста и комментариев
-  useEffect(() => {
-    if (postId && firestore) {
-      fetchPost();
-      fetchComments();
-    }
-  }, [postId, firestore]);
-
-  // Функция загрузки поста
-  const fetchPost = async () => {
-    if (!firestore) return;
+async function getPostData(postId: string): Promise<{ post: Post | null, comments: Comment[] }> {
     try {
-      setLoading(true);
-      const postDoc = await getDoc(doc(firestore, 'posts', postId));
+        const postDocRef = adminDb.collection('posts').doc(postId);
+        const postDocSnap = await postDocRef.get();
 
-      if (!postDoc.exists()) {
-        router.push('/posts');
-        return;
-      }
-
-      const postData = {
-        id: postDoc.id,
-        ...postDoc.data()
-      } as Post;
-
-      setPost(postData);
-    } catch (error) {
-      console.error('Ошибка загрузки поста:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Функция загрузки комментариев
-  const fetchComments = async () => {
-    if (!firestore) return;
-    try {
-      const q = query(
-        collection(firestore, 'comments'),
-        where('postId', '==', postId),
-        orderBy('createdAt', 'desc')
-      );
-      const querySnapshot = await getDocs(q);
-      const commentsData: Comment[] = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as Comment));
-      
-      setComments(commentsData);
-    } catch (error) {
-      console.error('Ошибка загрузки комментариев:', error);
-    }
-  };
-
-  // Функция лайка/дизлайка
-  const handleLike = async () => {
-    if (!user || !post || !firestore) return;
-
-    try {
-      const postRef = doc(firestore, 'posts', postId);
-      const isLiked = post.likedBy?.includes(user.uid);
-
-      if (isLiked) {
-        // Убираем лайк
-        await updateDoc(postRef, {
-          likedBy: arrayRemove(user.uid),
-          likesCount: increment(-1)
-        });
-        setPost({
-          ...post,
-          likedBy: post.likedBy.filter(id => id !== user.uid),
-          likesCount: post.likesCount - 1
-        });
-      } else {
-        // Ставим лайк
-        await updateDoc(postRef, {
-          likedBy: arrayUnion(user.uid),
-          likesCount: increment(1)
-        });
-        setPost({
-          ...post,
-          likedBy: [...(post.likedBy || []), user.uid],
-          likesCount: post.likesCount + 1
-        });
-      }
-    } catch (error) {
-      console.error('Ошибка лайка:', error);
-    }
-  };
-
-  // Функция добавления комментария
-  const handleAddComment = async () => {
-    if (!user || !commentText.trim() || !post || !firestore) return;
-
-    try {
-      setSubmittingComment(true);
-      
-      const commentData = {
-        postId: postId,
-        authorId: user.uid,
-        authorName: user.displayName || 'Пользователь',
-        authorAvatar: user.photoURL,
-        content: commentText.trim(),
-        createdAt: serverTimestamp()
-      };
-
-      await addDoc(collection(firestore, 'comments'), commentData);
-
-      // Увеличиваем счетчик комментариев в посте
-      await updateDoc(doc(firestore, 'posts', postId), {
-        commentsCount: increment(1)
-      });
-
-      setCommentText('');
-      await fetchComments();
-      if(post) {
-        setPost({ ...post, commentsCount: post.commentsCount + 1 });
-      }
-    } catch (error) {
-      console.error('Ошибка добавления комментария:', error);
-    } finally {
-      setSubmittingComment(false);
-    }
-  };
-
-  // Функция "Поделиться"
-  const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: post?.title,
-          url: window.location.href
-        });
-      } catch (error) {
-        console.log('Ошибка при попытке поделиться:', error);
-      }
-    } else if (navigator.clipboard && window.isSecureContext) {
-        try {
-            await navigator.clipboard.writeText(window.location.href);
-            alert('Ссылка скопирована в буфер обмена');
-        } catch (error) {
-            console.error('Не удалось скопировать ссылку:', error);
-            alert('Не удалось скопировать ссылку');
+        if (!postDocSnap.exists) {
+            return { post: null, comments: [] };
         }
-    } else {
-        alert('Функция "Поделиться" не поддерживается в вашем браузере.');
-    }
-  };
 
-  // Форматирование даты
-  const formatDate = (timestamp: any) => {
+        const post = { id: postDocSnap.id, ...postDocSnap.data() } as Post;
+
+        const commentsQuery = adminDb.collection('comments')
+            .where('postId', '==', postId)
+            .orderBy('createdAt', 'asc');
+        
+        const commentsSnapshot = await commentsQuery.get();
+        const comments = commentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Comment));
+
+        return { post, comments };
+    } catch (error) {
+        console.error("Error fetching post data on server:", error);
+        return { post: null, comments: [] };
+    }
+}
+
+const formatDate = (timestamp: any) => {
     if (!timestamp) return '';
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    // Firestore Timestamps on the server are different from the client
+    const date = timestamp._seconds ? new Date(timestamp._seconds * 1000) : new Date(timestamp);
     return new Intl.DateTimeFormat('ru-RU', {
       day: 'numeric',
       month: 'long',
@@ -274,229 +49,80 @@ function PostDetailClient({ postId }: { postId: string }) {
       hour: '2-digit',
       minute: '2-digit'
     }).format(date);
-  };
+};
 
-  // Проверка, является ли текущий пользователь автором
-  const isAuthor = post && user && post.authorId === user.uid;
-  const isLiked = post && user && post.likedBy?.includes(user.uid);
 
-  // UI загрузки
-  if (loading) {
-    return <PostPageSkeleton />;
-  }
+export default async function PostDetailPage({ params }: { params: { id: string } }) {
+    const { id: postId } = params;
+    const { post, comments } = await getPostData(postId);
 
-  if (!post) {
+    if (!post) {
+        notFound();
+    }
+    
     return (
-      <div className="container mx-auto px-4 py-8">
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Пост не найден.
-            <Link href="/posts" className="ml-2 underline">
-              Вернуться к постам
-            </Link>
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen">
-      {/* Обложка поста */}
-      {post.imageUrl ? (
-        <div className="w-full h-[400px] overflow-hidden bg-muted relative">
-          <Image
-            src={post.imageUrl}
-            alt={post.title}
-            fill
-            className="object-cover"
-          />
-        </div>
-      ) : (
-         <div className="w-full h-[400px] bg-muted flex items-center justify-center">
-            <FileText className="w-24 h-24 text-muted-foreground/50"/>
-         </div>
-      )}
-
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Кнопка назад */}
-        <Link href="/posts">
-          <Button variant="ghost" size="sm" className="mb-6">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            К постам
-          </Button>
-        </Link>
-
-        {/* Основной контент */}
-        <article>
-          {/* Тип поста */}
-          <div className="mb-4">
-            <Badge>{post.type}</Badge>
-          </div>
-
-          {/* Заголовок */}
-          <div className="flex items-start justify-between gap-4 mb-6">
-            <h1 className="text-4xl md:text-5xl font-bold leading-tight">
-              {post.title}
-            </h1>
-            {isAuthor && (
-              <Link href={`/posts/edit/${postId}`}>
-                <Button variant="outline" size="icon">
-                  <Edit3 className="h-4 w-4" />
-                </Button>
-              </Link>
-            )}
-          </div>
-
-          {/* Мета-информация и автор */}
-          <div className="flex flex-wrap items-center gap-6 mb-8 pb-6 border-b">
-            {/* Автор */}
-            <Link href={`/profile/${post.authorId}`}>
-              <div className="flex items-center gap-3 hover:opacity-80 cursor-pointer">
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src={post.authorAvatar} />
-                  <AvatarFallback>{post.authorName ? post.authorName[0] : 'A'}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-semibold">{post.authorName}</p>
-                  <p className="text-xs text-muted-foreground">Автор</p>
+        <div className="min-h-screen">
+          {post.imageUrl ? (
+            <div className="w-full h-[400px] overflow-hidden bg-muted relative">
+              <Image
+                src={post.imageUrl}
+                alt={post.title}
+                fill
+                className="object-cover"
+                priority
+              />
+            </div>
+          ) : (
+             <div className="w-full h-[400px] bg-muted flex items-center justify-center">
+                <FileText className="w-24 h-24 text-muted-foreground/50"/>
+             </div>
+          )}
+    
+          <div className="max-w-4xl mx-auto px-4 py-8">
+            <article>
+              {post.type && (
+                <div className="mb-4">
+                  <Badge>{post.type}</Badge>
                 </div>
+              )}
+    
+              <div className="flex items-start justify-between gap-4 mb-6">
+                <h1 className="text-4xl md:text-5xl font-bold leading-tight">
+                  {post.title}
+                </h1>
               </div>
-            </Link>
-
-            {/* Дата */}
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Calendar className="h-4 w-4" />
-              <span>{formatDate(post.createdAt)}</span>
-            </div>
-
-            {/* Действия */}
-            <div className="flex items-center gap-4 ml-auto">
-              {/* Лайк */}
-              {user ? (
-                <Button
-                  variant={isLiked ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={handleLike}
-                >
-                  <Heart className={`mr-2 h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
-                  {post.likesCount}
-                </Button>
-              ) : (
-                <Button variant="outline" size="sm" disabled>
-                  <Heart className="mr-2 h-4 w-4" />
-                  {post.likesCount}
-                </Button>
-              )}
-
-              {/* Комментарии */}
-              <Button variant="outline" size="sm">
-                <MessageCircle className="mr-2 h-4 w-4" />
-                {post.commentsCount}
-              </Button>
-
-              {/* Поделиться */}
-              <Button variant="outline" size="sm" onClick={handleShare}>
-                <Share2 className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Текст поста */}
-          <div 
-            className="prose prose-lg dark:prose-invert max-w-none mb-8"
-            dangerouslySetInnerHTML={{ __html: post.content }}
-          />
-
-          {/* Комментарии */}
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                Комментарии ({post.commentsCount})
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Форма добавления комментария */}
-              {user ? (
-                <div className="flex gap-3">
-                  <Avatar>
-                    <AvatarImage src={user.photoURL || undefined} />
-                    <AvatarFallback>{user.displayName?.[0] || 'U'}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 space-y-2">
-                    <Textarea
-                      placeholder="Написать комментарий..."
-                      value={commentText}
-                      onChange={e => setCommentText(e.target.value)}
-                      rows={3}
-                      disabled={submittingComment}
-                    />
-                    <Button
-                      onClick={handleAddComment}
-                      disabled={!commentText.trim() || submittingComment}
-                      size="sm"
-                    >
-                      <Send className="mr-2 h-4 w-4" />
-                      Отправить
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    Для комментирования необходимо войти в систему.
-                    <Link href="/auth" className="ml-2 underline">
-                      Войти
-                    </Link>
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {/* Список комментариев */}
-              {comments.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">
-                  Комментариев пока нет. Будьте первым!
-                </p>
-              ) : (
-                <div className="space-y-6">
-                  {comments.map(comment => (
-                    <div key={comment.id} className="flex gap-3">
-                      <Link href={`/profile/${comment.authorId}`}>
-                        <Avatar>
-                          <AvatarImage src={comment.authorAvatar} />
-                          <AvatarFallback>{comment.authorName[0]}</AvatarFallback>
-                        </Avatar>
-                      </Link>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Link href={`/profile/${comment.authorId}`}>
-                            <span className="font-semibold hover:underline">
-                              {comment.authorName}
-                            </span>
-                          </Link>
-                          <span className="text-xs text-muted-foreground">
-                            {formatDate(comment.createdAt)}
-                          </span>
-                        </div>
-                        <p className="text-muted-foreground whitespace-pre-line break-words">
-                          {comment.content}
-                        </p>
-                      </div>
+    
+              <div className="flex flex-wrap items-center gap-6 mb-8 pb-6 border-b">
+                <Link href={`/profile/${post.authorId}`}>
+                  <div className="flex items-center gap-3 hover:opacity-80 cursor-pointer">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={post.authorAvatar} />
+                      <AvatarFallback>{post.authorName ? post.authorName[0] : 'A'}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-semibold">{post.authorName}</p>
+                      <p className="text-xs text-muted-foreground">Автор</p>
                     </div>
-                  ))}
+                  </div>
+                </Link>
+    
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Calendar className="h-4 w-4" />
+                  <span>{formatDate(post.createdAt)}</span>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </article>
-      </div>
-    </div>
-  );
+    
+                <PostActions post={post} />
+              </div>
+    
+              <div 
+                className="prose prose-lg dark:prose-invert max-w-none mb-8"
+                dangerouslySetInnerHTML={{ __html: post.content }}
+              />
+    
+              <PostComments post={post} initialComments={comments} />
+            </article>
+          </div>
+        </div>
+      );
 }
 
-export default async function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = await params;
-    return <PostDetailClient postId={id} />
-}
