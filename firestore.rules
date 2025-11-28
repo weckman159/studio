@@ -205,10 +205,12 @@ service cloud.firestore {
     // Collection: notifications
     // ------------------------------------------------------------------------
     match /notifications/{notificationId} {
-      allow get: if isSignedIn() && resource.data.recipientId == request.auth.uid;
-      allow list: if isSignedIn() && request.query.limit <= 30; // Allow listing only with a limit to prevent abuse
-      allow update: if isSignedIn() && resource.data.recipientId == request.auth.uid && request.resource.data.keys().hasOnly(['read']);
-      allow create, delete: if false; // Should be created by backend functions only
+      // User can read and update (mark as read) their own notifications
+      allow get, update: if isSignedIn() && resource.data.recipientId == request.auth.uid;
+      // Disallow listing all notifications for security
+      allow list: if false; 
+      // Notifications are created by backend functions only
+      allow create, delete: if false;
     }
 
     // ------------------------------------------------------------------------
@@ -286,3 +288,5 @@ service cloud.firestore {
     }
   }
 }
+
+    
