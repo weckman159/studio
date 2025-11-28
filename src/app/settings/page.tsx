@@ -13,7 +13,6 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
-  ArrowLeft, 
   Mail, 
   Lock, 
   Bell,
@@ -288,7 +287,7 @@ export default function SettingsPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <Loader2 className="animate-spin h-12 w-12 text-primary mx-auto mb-4" />
             <p className="text-muted-foreground">Загрузка настроек...</p>
           </div>
         </div>
@@ -323,7 +322,7 @@ export default function SettingsPage() {
 
       {/* Вкладки */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
           <TabsTrigger value="account">
             <Mail className="mr-2 h-4 w-4" />
             Аккаунт

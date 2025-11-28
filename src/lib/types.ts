@@ -14,6 +14,7 @@ export interface User {
   location?: string;
   createdAt?: any;
   updatedAt?: any;
+  profileVisibility?: 'public' | 'private';
   currentCarIds?: string[];
   stats?: {
     posts?: number;
