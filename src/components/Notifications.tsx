@@ -19,12 +19,15 @@ import {
   onSnapshot,
   updateDoc,
   doc,
+  FirestoreError,
 } from 'firebase/firestore';
 import { useUser, useFirestore } from '@/firebase';
 import type { Notification } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { ScrollArea } from './ui/scroll-area';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 function NotificationItem({
   notification,
@@ -100,8 +103,12 @@ export function Notifications() {
         setUnreadCount(notifs.filter((n) => !n.read).length);
         setLoading(false);
       },
-      (error) => {
-        console.error('Error fetching notifications:', error);
+      (error: FirestoreError) => {
+        const contextualError = new FirestorePermissionError({
+            operation: 'list',
+            path: `notifications` // Simplified path for collection group query
+        });
+        errorEmitter.emit('permission-error', contextualError);
         setLoading(false);
       }
     );
@@ -109,14 +116,17 @@ export function Notifications() {
     return () => unsubscribe();
   }, [user, firestore]);
 
-  const handleMarkAsRead = async (notificationId: string) => {
+  const handleMarkAsRead = (notificationId: string) => {
     if (!firestore) return;
     const notifRef = doc(firestore, 'notifications', notificationId);
-    try {
-      await updateDoc(notifRef, { read: true });
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-    }
+    updateDoc(notifRef, { read: true }).catch(error => {
+      const contextualError = new FirestorePermissionError({
+        operation: 'update',
+        path: notifRef.path,
+        requestResourceData: { read: true }
+      });
+      errorEmitter.emit('permission-error', contextualError);
+    });
   };
   
   const handleMarkAllAsRead = async () => {
@@ -126,13 +136,20 @@ export function Notifications() {
       
       const promises = unreadNotifications.map(n => {
           const notifRef = doc(firestore, 'notifications', n.id);
-          return updateDoc(notifRef, { read: true });
+          return updateDoc(notifRef, { read: true }).catch(error => {
+            const contextualError = new FirestorePermissionError({
+              operation: 'update',
+              path: notifRef.path,
+              requestResourceData: { read: true }
+            });
+            errorEmitter.emit('permission-error', contextualError);
+          });
       });
 
       try {
           await Promise.all(promises);
       } catch (error) {
-          console.error("Error marking all as read:", error);
+          // Errors are already being emitted inside the catch blocks above
       }
   }
 
