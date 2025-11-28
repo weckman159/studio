@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -9,8 +10,7 @@ import { CarCard } from '@/components/profile/CarCard';
 import { Wrench, Calendar, Camera, ShoppingBag, Loader2 } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query } from 'firebase/firestore';
-import type { Car, User } from '@/lib/data';
-import { users as mockUsers } from '@/lib/data';
+import type { Car, User } from '@/lib/types';
 import { EditProfileModal } from '@/components/EditProfileModal';
 import { useUserProfile } from '@/hooks/useUserProfile';
 
@@ -18,13 +18,11 @@ function ProfilePageClient({ userId }: { userId: string }) {
   const { user: authUser } = useUser();
   const firestore = useFirestore();
   
-  // Use the centralized hook to fetch profile data
   const { profile: liveProfile, isLoading: isProfileLoading, error: profileError } = useUserProfile(userId);
 
   const [isEditModalOpen, setEditModalOpen] = useState(false);
   const [profile, setProfile] = useState<User | null>(liveProfile);
 
-  // Sync state with hook
   useEffect(() => {
     setProfile(liveProfile);
   }, [liveProfile]);
@@ -47,26 +45,23 @@ function ProfilePageClient({ userId }: { userId: string }) {
     );
   }
 
-  // If after loading, there is no profile, use mock data as a fallback for demonstration
-  const displayProfileData = profile || mockUsers.find(u => u.id === userId);
-
-  if (!displayProfileData) {
+  if (!profile) {
     return <div className="container text-center py-10">Профиль не найден.</div>;
   }
   
   const displayProfile = {
-      id: displayProfileData.id,
-      displayName: displayProfileData.name || displayProfileData.displayName || 'No Name',
-      username: displayProfileData.nickname || displayProfileData.email?.split('@')[0] || 'username',
-      avatar: displayProfileData.photoURL || 'https://placehold.co/128x128',
+      id: profile.id,
+      displayName: profile.name || profile.displayName || 'No Name',
+      username: profile.nickname || profile.email?.split('@')[0] || 'username',
+      avatar: profile.photoURL || 'https://placehold.co/128x128',
       coverImage: 'https://images.unsplash.com/photo-1553440569-bcc63803a83d?q=80&w=2025&auto=format&fit=crop',
-      bio: displayProfileData.bio || 'Этот пользователь пока ничего не рассказал о себе.',
-      status: displayProfileData.role === 'admin' ? 'Администратор' : 'Участник',
+      bio: profile.bio || 'Этот пользователь пока ничего не рассказал о себе.',
+      status: profile.role === 'admin' ? 'Администратор' : 'Участник',
       badges: ['Легенда клуба', 'Фотограф'],
       tier: 'gold' as const,
       stats: { 
-        followers: displayProfileData.stats?.followers || 1200, 
-        reputation: displayProfileData.stats?.reputation || 45000, 
+        followers: profile.stats?.followers || 0, 
+        reputation: profile.stats?.reputation || 0, 
         cars: userCars?.length || 0 
       },
       socials: {
@@ -173,17 +168,7 @@ function ProfilePageClient({ userId }: { userId: string }) {
 }
 
 
-export default function ProfilePage() {
-  const params = useParams();
-  const userId = params?.id as string;
-
-  if (!userId) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-  
-  return <ProfilePageClient userId={userId} />;
+export default async function ProfilePage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
+    return <ProfilePageClient userId={id} />;
 }

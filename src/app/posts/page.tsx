@@ -1,9 +1,4 @@
 
-// src/app/posts/page.tsx
-// Лента пользовательских постов: публикации блогов, вопросы и фотоотчёты
-// Поиск, фильтрация по типу поста (обсуждение, отчет, отзыв)
-// Gemini: посты подтягиваются из Firestore, сортируются по дате
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -11,10 +6,12 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Plus, MessageCircle } from 'lucide-react';
 import type { Post as PostData } from '@/lib/data';
-import { posts as mockPosts } from '@/lib/data';
 import { PostCard } from '@/components/PostCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PostFilters } from '@/components/PostFilters';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, orderBy, where, limit, Query } from 'firebase/firestore';
+
 
 function PostFeed({ posts, loading }: { posts: PostData[], loading?: boolean }) {
   if (loading) {
@@ -37,6 +34,18 @@ function PostFeed({ posts, loading }: { posts: PostData[], loading?: boolean }) 
       </div>
     )
   }
+  
+  if (posts.length === 0) {
+      return (
+        <div className="text-center py-12 border-2 border-dashed rounded-lg">
+          <MessageCircle className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+          <h3 className="text-xl font-semibold mb-2">Постов нет</h3>
+          <p className="text-muted-foreground mb-6">
+            Попробуйте изменить фильтры или создайте первый пост!
+          </p>
+        </div>
+      );
+  }
 
   return (
     <div className="space-y-6">
@@ -48,27 +57,24 @@ function PostFeed({ posts, loading }: { posts: PostData[], loading?: boolean }) 
 }
 
 export default function PostsPage() {
-  const [posts, setPosts] = useState<PostData[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState('Все');
-  const [loading, setLoading] = useState(true);
+  const firestore = useFirestore();
+  
+  const postsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    let q: Query = query(collection(firestore, 'posts'), orderBy('createdAt', 'desc'));
+    if (selectedType !== 'Все') {
+      q = query(q, where('category', '==', selectedType));
+    }
+    return q;
+  }, [firestore, selectedType]);
 
-  // Загрузка постов
-  useEffect(() => {
-    setLoading(true);
-    // Simulate fetching posts
-    setTimeout(() => {
-        setPosts(mockPosts);
-        setLoading(false);
-    }, 1000);
-  }, []);
+  const { data: posts, isLoading } = useCollection<PostData>(postsQuery);
 
-  // Фильтрация постов
-  const filteredPosts = posts
-    .filter(p => selectedType === 'Все' || p.category === selectedType)
-    .filter(p => 
+  const filteredPosts = posts?.filter(p => 
       p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.excerpt.toLowerCase().includes(searchQuery.toLowerCase())
+      (p.content || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
 
 
@@ -100,19 +106,7 @@ export default function PostsPage() {
       </div>
       
       {/* Лента постов */}
-      {filteredPosts.length === 0 && !loading ? (
-        <div className="text-center py-12">
-          <MessageCircle className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-          <h3 className="text-xl font-semibold mb-2">Постов нет</h3>
-          <p className="text-muted-foreground mb-6">
-            Ваш пост может быть первым!
-          </p>
-        </div>
-      ) : (
-        <PostFeed posts={filteredPosts} loading={loading} />
-      )}
+      <PostFeed posts={filteredPosts || []} loading={isLoading} />
     </div>
   );
 }
-
-    

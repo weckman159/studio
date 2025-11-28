@@ -1,3 +1,4 @@
+
 import Link from 'next/link'
 import { Separator } from '@/components/ui/separator'
 
@@ -22,10 +23,9 @@ export function Footer() {
             <h4 className="font-semibold mb-4">Платформа</h4>
             <ul className="space-y-2 text-sm">
               <li><Link href="/about" className="text-muted-foreground hover:text-foreground transition-colors">О проекте</Link></li>
-              <li><Link href="/features" className="text-muted-foreground hover:text-foreground transition-colors">Возможности</Link></li>
-              <li><Link href="/pricing" className="text-muted-foreground hover:text-foreground transition-colors">Тарифы</Link></li>
-              <li><Link href="/blog" className="text-muted-foreground hover:text-foreground transition-colors">Блог</Link></li>
-              <li><Link href="/help" className="text-muted-foreground hover:text-foreground transition-colors">Помощь</Link></li>
+              <li><Link href="/feedback" className="text-muted-foreground hover:text-foreground transition-colors">Обратная связь</Link></li>
+              <li><Link href="/news" className="text-muted-foreground hover:text-foreground transition-colors">Новости</Link></li>
+              
             </ul>
           </div>
           
@@ -59,15 +59,10 @@ export function Footer() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <p>© {currentYear} AutoSphere. Alle Rechte vorbehalten.</p>
           <div className="flex items-center gap-4">
-            <Link href="/contact" className="hover:text-foreground transition-colors">Kontakt</Link>
-            <span>•</span>
-            <Link href="/sitemap" className="hover:text-foreground transition-colors">Sitemap</Link>
-            <span>•</span>
-            <Link href="/accessibility" className="hover:text-foreground transition-colors">Barrierefreiheit</Link>
+             <Link href="/feedback" className="hover:text-foreground transition-colors">Kontakt</Link>
           </div>
         </div>
       </div>
     </footer>
   )
 }
-    

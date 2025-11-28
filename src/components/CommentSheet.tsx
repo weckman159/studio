@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Sheet,
   SheetContent,
@@ -13,12 +13,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
 import type { Comment, User } from '@/lib/data';
-import { comments as mockComments, users as mockUsers } from '@/lib/data';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import Link from 'next/link';
-import { Send } from 'lucide-react';
+import { Send, MessageSquare } from 'lucide-react';
+import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
+import { Skeleton } from './ui/skeleton';
 
 interface CommentSheetProps {
   isOpen: boolean;
@@ -26,35 +26,31 @@ interface CommentSheetProps {
   postId: string;
 }
 
-function CommentItem({ comment, user }: { comment: Comment; user: User }) {
-  const userAvatar = PlaceHolderImages.find(p => p.id === user.avatarId);
+function CommentItem({ comment }: { comment: Comment }) {
   const [formattedDate, setFormattedDate] = useState('');
 
   useEffect(() => {
-    if (comment.createdAt) {
-      const date = new Date(comment.createdAt);
-      if (!isNaN(date.getTime())) {
-        setFormattedDate(date.toLocaleString('ru-RU', {
+    if (comment.createdAt?.toDate) {
+        setFormattedDate(comment.createdAt.toDate().toLocaleString('ru-RU', {
           year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
         }));
-      }
     }
   }, [comment.createdAt]);
 
   return (
     <div className="flex items-start space-x-4 py-4">
-      <Link href={`/profile/${user.id}`}>
+      <Link href={`/profile/${comment.authorId}`}>
         <Avatar>
-          {userAvatar && <AvatarImage src={userAvatar.imageUrl} alt={user.name} data-ai-hint={userAvatar.imageHint}/>}
-          <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+          {comment.authorAvatar && <AvatarImage src={comment.authorAvatar} alt={comment.authorName} />}
+          <AvatarFallback>{comment.authorName.charAt(0)}</AvatarFallback>
         </Avatar>
       </Link>
       <div className="flex-1">
         <div className="flex items-center justify-between">
-            <Link href={`/profile/${user.id}`} className="font-semibold hover:underline">{user.name}</Link>
+            <Link href={`/profile/${comment.authorId}`} className="font-semibold hover:underline">{comment.authorName}</Link>
             <span className="text-xs text-muted-foreground">{formattedDate}</span>
         </div>
-        <p className="text-sm text-muted-foreground mt-1">{comment.text}</p>
+        <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{comment.content}</p>
       </div>
     </div>
   );
@@ -62,31 +58,50 @@ function CommentItem({ comment, user }: { comment: Comment; user: User }) {
 
 export function CommentSheet({ isOpen, onOpenChange, postId }: CommentSheetProps) {
   const { user: authUser } = useUser();
+  const firestore = useFirestore();
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
+  const [loading, setLoading] = useState(true);
+  const listRef = useRef<HTMLDivElement>(null);
+
 
   useEffect(() => {
-    if (isOpen) {
-      // In a real app, you would fetch comments for the postId from Firestore
-      const postComments = mockComments.filter(c => c.postId === postId);
-      setComments(postComments);
+    if (isOpen && firestore) {
+      setLoading(true);
+      const q = query(collection(firestore, 'comments'), where('postId', '==', postId), orderBy('createdAt', 'asc'));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const fetchedComments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Comment));
+        setComments(fetchedComments);
+        setLoading(false);
+         setTimeout(() => {
+            listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' });
+        }, 100);
+      });
+      return () => unsubscribe();
     }
-  }, [isOpen, postId]);
+  }, [isOpen, postId, firestore]);
 
-  const handleAddComment = () => {
-    if (!newComment.trim() || !authUser) return;
-
-    // This is mock logic. In a real app, you would add the comment to Firestore.
-    const currentUser = mockUsers.find(u => u.id === authUser.uid) || mockUsers[0];
-    const comment: Comment = {
-      id: String(Date.now()),
-      postId,
-      userId: currentUser.id,
-      text: newComment,
-      createdAt: new Date().toISOString(),
+  const handleAddComment = async () => {
+    if (!newComment.trim() || !authUser || !firestore) return;
+    
+    const commentData = {
+        postId,
+        authorId: authUser.uid,
+        authorName: authUser.displayName || 'Пользователь',
+        authorAvatar: authUser.photoURL || '',
+        content: newComment.trim(),
+        createdAt: serverTimestamp(),
     };
-    setComments(prev => [comment, ...prev]);
-    setNewComment('');
+
+    try {
+        await addDoc(collection(firestore, 'comments'), commentData);
+        await updateDoc(doc(firestore, 'posts', postId), {
+            commentsCount: increment(1)
+        });
+        setNewComment('');
+    } catch(e) {
+        console.error("Error adding comment: ", e);
+    }
   };
 
   return (
@@ -95,18 +110,38 @@ export function CommentSheet({ isOpen, onOpenChange, postId }: CommentSheetProps
         <SheetHeader>
           <SheetTitle>Комментарии ({comments.length})</SheetTitle>
         </SheetHeader>
-        <ScrollArea className="flex-1 -mx-6">
+        <ScrollArea ref={listRef} className="flex-1 -mx-6">
             <div className="px-6 divide-y">
-            {comments.map(comment => {
-                const user = mockUsers.find(u => u.id === comment.userId);
-                if (!user) return null;
-                return <CommentItem key={comment.id} comment={comment} user={user} />;
-            })}
+            {loading ? (
+                <div className="space-y-4 py-4">
+                    {[...Array(3)].map((_, i) => (
+                        <div key={i} className="flex space-x-4">
+                            <Skeleton className="h-10 w-10 rounded-full" />
+                            <div className="flex-1 space-y-2">
+                                <Skeleton className="h-4 w-24" />
+                                <Skeleton className="h-3 w-full" />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            ) : comments.length > 0 ? (
+                comments.map(comment => (
+                    <CommentItem key={comment.id} comment={comment} />
+                ))
+            ) : (
+                <div className="text-center py-16">
+                    <MessageSquare className="mx-auto h-12 w-12 text-muted-foreground" />
+                    <p className="mt-4 text-muted-foreground">Комментариев пока нет.</p>
+                </div>
+            )}
             </div>
         </ScrollArea>
         <SheetFooter>
             {authUser ? (
-                <div className="flex w-full space-x-2">
+                <form 
+                    onSubmit={(e) => {e.preventDefault(); handleAddComment();}}
+                    className="flex w-full space-x-2"
+                >
                     <Textarea
                         placeholder="Написать комментарий..."
                         value={newComment}
@@ -114,10 +149,10 @@ export function CommentSheet({ isOpen, onOpenChange, postId }: CommentSheetProps
                         rows={1}
                         className="flex-1"
                     />
-                    <Button onClick={handleAddComment} disabled={!newComment.trim()}>
+                    <Button type="submit" disabled={!newComment.trim()}>
                         <Send className="h-4 w-4" />
                     </Button>
-                </div>
+                </form>
             ) : (
                 <p className="text-sm text-muted-foreground w-full text-center">
                     <Link href="/auth" className="text-primary underline">Войдите</Link>, чтобы оставить комментарий.

@@ -1,80 +1,17 @@
 
 'use client';
 
-import { useState, useEffect }
-from 'react';
-import { collection, query, orderBy, getDocs }
-from 'firebase/firestore';
-import { useFirestore }
-from '@/firebase';
+import { useState, useEffect } from 'react';
+import { collection, query, orderBy, getDocs } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
 import Link from 'next/link';
-import { Button }
-from '@/components/ui/button';
-import { Input }
-from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
-from '@/components/ui/card';
-import { Badge }
-from '@/components/ui/badge';
-import { Users, Search, Plus }
-from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Users, Search, Plus } from 'lucide-react';
 import Image from 'next/image';
-
-// Интерфейс для типизации данных сообщества
-interface Community {
-  id: string;
-  name: string; // Название сообщества
-  description: string; // Краткое описание
-  category: string; // Категория (например, "Тюнинг", "Ремонт", "Путешествия")
-  membersCount: number; // Количество участников
-  imageUrl?: string; // URL изображения сообщества (опционально)
-  createdAt: any; // Дата создания
-  isPrivate: boolean; // Приватное ли сообщество
-}
-
-// Моковые данные для демонстрации
-const mockCommunities: Community[] = [
-    {
-      id: '1',
-      name: 'BMW M Club',
-      description: 'Все о мощных автомобилях BMW M-серии. Обсуждаем тюнинг, делимся опытом и организуем встречи.',
-      category: 'Тюнинг',
-      membersCount: 12500,
-      imageUrl: 'https://images.unsplash.com/photo-1560382798-8e2b8a73a6e3?q=80&w=2070&auto=format&fit=crop',
-      createdAt: new Date(),
-      isPrivate: false,
-    },
-    {
-      id: '2',
-      name: 'JDM Legends',
-      description: 'Сообщество ценителей японского автопрома. Supra, Skyline, RX-7 и другие легенды JDM.',
-      category: 'Классика',
-      membersCount: 23450,
-      imageUrl: 'https://images.unsplash.com/photo-1617013735327-94a31a3d3cce?q=80&w=2070&auto=format&fit=crop',
-      createdAt: new Date(),
-      isPrivate: false,
-    },
-    {
-      id: '3',
-      name: 'Автопутешественники',
-      description: 'Планируем маршруты, делимся лайфхаками и отчетами о поездках на автомобилях по всему миру.',
-      category: 'Путешествия',
-      membersCount: 8750,
-      imageUrl: 'https://images.unsplash.com/photo-1532931795-65d351619448?q=80&w=1974&auto=format&fit=crop',
-      createdAt: new Date(),
-      isPrivate: false,
-    },
-    {
-      id: '4',
-      name: 'Off-Road 4x4',
-      description: 'Покоряем бездорожье! Все о внедорожниках, подготовке к экспедициям и лучшему снаряжению.',
-      category: 'Ремонт',
-      membersCount: 15200,
-      imageUrl: 'https://images.unsplash.com/photo-1528543606781-4f6e6b35cc49?q=80&w=1974&auto=format&fit=crop',
-      createdAt: new Date(),
-      isPrivate: true,
-    }
-];
+import type { Community } from '@/lib/types';
 
 
 export default function CommunitiesPage() {
@@ -88,17 +25,26 @@ export default function CommunitiesPage() {
   const categories = ['all', 'Тюнинг', 'Ремонт', 'Путешествия', 'Гонки', 'Классика', 'Электромобили'];
 
   useEffect(() => {
-    fetchCommunities();
+    if(firestore) {
+      fetchCommunities();
+    }
   }, [firestore]);
 
 
   const fetchCommunities = async () => {
-    // Используем моковые данные, пока Firestore не настроен для этого раздела
+    if (!firestore) return;
     setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500)); // Имитация загрузки
-    setCommunities(mockCommunities);
-    setFilteredCommunities(mockCommunities);
-    setLoading(false);
+    try {
+      const q = query(collection(firestore, 'communities'), orderBy('membersCount', 'desc'));
+      const querySnapshot = await getDocs(q);
+      const communitiesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Community));
+      setCommunities(communitiesData);
+      setFilteredCommunities(communitiesData);
+    } catch (e) {
+      console.error("Error fetching communities: ", e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -236,4 +182,3 @@ export default function CommunitiesPage() {
     </div>
   );
 }
-

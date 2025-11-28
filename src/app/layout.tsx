@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import type { Metadata } from "next";
@@ -14,11 +12,9 @@ import { FirebaseClientProvider } from "@/firebase/client-provider";
 import { CarOfTheDay } from "@/components/CarOfTheDay";
 import { useActivePath } from "@/hooks/use-active-path";
 import { ThemeProvider } from "next-themes";
-import { useUser, useFirestore } from '@/firebase';
-import type { User as UserData } from '@/lib/data';
-import { useEffect, useState } from "react";
-import { doc, getDoc } from "firebase/firestore";
-import { users } from '@/lib/data';
+import { useUser } from '@/firebase';
+import type { User as UserData } from '@/lib/types';
+import { useUserProfile } from "@/hooks/useUserProfile";
 import { CookieConsent } from "@/components/CookieConsent";
 
 
@@ -42,34 +38,8 @@ const footerNavLinks = [
 function AppSidebar() {
   const checkActivePath = useActivePath();
   const { user } = useUser();
-  const firestore = useFirestore();
-  const [profile, setProfile] = useState<UserData | null>(null);
+  const { profile } = useUserProfile(user?.uid);
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-        if (user && firestore) {
-            try {
-                const docRef = doc(firestore, 'users', user.uid);
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    setProfile({ id: docSnap.id, ...docSnap.data() } as UserData);
-                } else {
-                    const mockUser = users.find(u => u.id === user.uid);
-                    setProfile(mockUser || null);
-                }
-            } catch (error) {
-                console.error("Error fetching user profile:", error);
-                const mockUser = users.find(u => u.id === user.uid);
-                setProfile(mockUser || null);
-            }
-        } else {
-            setProfile(null);
-        }
-    };
-    if (firestore) {
-      fetchProfile();
-    }
-  }, [user, firestore]);
 
   return (
       <Sidebar>
@@ -167,5 +137,3 @@ export default function RootLayout({
     </html>
   );
 }
-
-    

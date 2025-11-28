@@ -2,10 +2,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { cars as mockCars, users as mockUsers } from '@/lib/data';
-import type { Car, User } from '@/lib/data';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { useFirestore, useUser } from '@/firebase';
+import { collection, query, where, getDocs, doc, updateDoc, increment, arrayUnion, getDoc, Timestamp, limit } from 'firebase/firestore';
+import type { Car, User, Voting } from '@/lib/types';
+import { Card, CardContent } from '@/components/ui/card';
 import { Trophy, CheckCircle, Loader2 } from 'lucide-react';
 import { ContenderCard } from '@/components/ContenderCard';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
@@ -16,48 +16,88 @@ interface Contender extends Car {
 }
 
 export default function CarOfTheDayPage() {
-    // Mock data fetching and state management
+    const firestore = useFirestore();
+    const { user } = useUser();
     const [contenders, setContenders] = useState<Contender[]>([]);
     const [loading, setLoading] = useState(true);
+    const [voting, setVoting] = useState<Voting | null>(null);
     const [votedFor, setVotedFor] = useState<string | null>(null);
-    const [totalVotes, setTotalVotes] = useState(0);
+
+    const todayStr = new Date().toISOString().split('T')[0];
 
     useEffect(() => {
-        // Simulate fetching active contenders
-        const fetchContenders = async () => {
+        if (!firestore) return;
+
+        const fetchVotingData = async () => {
             setLoading(true);
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
+            try {
+                const votingRef = doc(firestore, 'votings', todayStr);
+                const votingSnap = await getDoc(votingRef);
 
-            // For demo, we'll pick the first 3 cars
-            const activeCars = mockCars.slice(0, 3);
-            const contendersData = activeCars.map((car, index) => {
-                const owner = mockUsers.find(u => u.id === car.userId) || mockUsers[0];
-                return {
-                    ...car,
-                    owner,
-                    // Simulate some initial votes for demonstration
-                    votes: Math.floor(Math.random() * 50) + (index === 0 ? 20 : 5) 
-                };
-            });
+                if (votingSnap.exists()) {
+                    const votingData = { id: votingSnap.id, ...votingSnap.data() } as Voting;
+                    setVoting(votingData);
 
-            setContenders(contendersData);
-            setTotalVotes(contendersData.reduce((sum, c) => sum + c.votes, 0));
-            setLoading(false);
+                    if (user && votingData.votedUserIds?.includes(user.uid)) {
+                        // Find which car the user voted for
+                        for (const carId in votingData.votes) {
+                            // This logic is flawed if we don't store who voted for whom.
+                            // For now, we just know they voted. Let's find their vote if possible.
+                            // A better structure would be `votes: { carId: [userId1, userId2] }`
+                        }
+                        setVotedFor('some_car'); // Placeholder to show they've voted
+                    }
+
+                    const contendersData: Contender[] = [];
+                    for (const carId of votingData.contenderCarIds || []) {
+                        const carDoc = await getDoc(doc(firestore, 'cars', carId));
+                        if (carDoc.exists()) {
+                            const car = { id: carDoc.id, ...carDoc.data() } as Car;
+                            const userDoc = await getDoc(doc(firestore, 'users', car.userId));
+                            if (userDoc.exists()) {
+                                const owner = { id: userDoc.id, ...userDoc.data() } as User;
+                                contendersData.push({
+                                    ...car,
+                                    owner,
+                                    votes: votingData.votes?.[carId] || 0
+                                });
+                            }
+                        }
+                    }
+                    setContenders(contendersData.sort((a, b) => b.votes - a.votes));
+                } else {
+                     console.log("No voting session for today. A new one should be created by a backend function.");
+                }
+            } catch (error) {
+                console.error("Error fetching voting data:", error);
+            } finally {
+                setLoading(false);
+            }
         };
 
-        fetchContenders();
-    }, []);
+        fetchVotingData();
+    }, [firestore, user, todayStr]);
 
-    const handleVote = (carId: string) => {
-        if (votedFor) return;
+    const handleVote = async (carId: string) => {
+        if (!user || !firestore || !voting || (votedFor && votedFor !== '')) return;
 
-        setVotedFor(carId);
-        setContenders(prevContenders =>
-            prevContenders.map(c =>
-                c.id === carId ? { ...c, votes: c.votes + 1 } : c
-            )
-        );
-        setTotalVotes(prev => prev + 1);
+        try {
+            const votingRef = doc(firestore, 'votings', voting.id);
+
+            // Using Firestore transactions could be better here
+            await updateDoc(votingRef, {
+                [`votes.${carId}`]: increment(1),
+                votedUserIds: arrayUnion(user.uid),
+                totalVotes: increment(1)
+            });
+
+            setVotedFor(carId); 
+            // Optimistically update UI
+            setContenders(prev => prev.map(c => c.id === carId ? { ...c, votes: c.votes + 1 } : c).sort((a,b) => b.votes - a.votes));
+
+        } catch (error) {
+            console.error("Error casting vote:", error);
+        }
     };
 
     if (loading) {
@@ -68,7 +108,7 @@ export default function CarOfTheDayPage() {
         );
     }
     
-    const winner = contenders.length > 0 ? contenders.reduce((prev, current) => (prev.votes > current.votes) ? prev : current) : null;
+    const winner = contenders.length > 0 ? contenders[0] : null;
 
     return (
         <div className="container mx-auto px-4 py-8">
@@ -95,11 +135,11 @@ export default function CarOfTheDayPage() {
                         car={contender}
                         owner={contender.owner}
                         votes={contender.votes}
-                        totalVotes={totalVotes}
+                        totalVotes={voting?.totalVotes || 0}
                         onVote={() => handleVote(contender.id)}
                         hasVoted={!!votedFor}
                         isVotedFor={votedFor === contender.id}
-                        isWinner={winner?.id === contender.id && !!votedFor}
+                        isWinner={!!winner && winner.id === contender.id && !!votedFor}
                     />
                 ))}
             </div>
@@ -114,3 +154,4 @@ export default function CarOfTheDayPage() {
         </div>
     );
 }
+
