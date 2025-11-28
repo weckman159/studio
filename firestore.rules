@@ -208,7 +208,7 @@ service cloud.firestore {
         // Allow a user to read their own notifications by document ID
         allow get: if isSignedIn() && resource.data.recipientId == request.auth.uid;
         // For list queries, the rule checks that the query filters by the user's ID
-        allow list: if isSignedIn() && request.query.where.recipientId == request.auth.uid;
+      allow list: if isSignedIn();        
         // Allow updating only the 'read' field by the recipient
         allow update: if isSignedIn() 
                       && resource.data.recipientId == request.auth.uid
