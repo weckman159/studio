@@ -19,7 +19,7 @@ async function getProfileData(userId: string): Promise<{ profile: User | null; c
         const userDocRef = adminDb.collection('users').doc(userId);
         const userDocSnap = await userDocRef.get();
 
-        if (!userDocSnap.exists()) {
+        if (!userDocSnap.exists) {
             return { profile: null, cars: [] };
         }
 
@@ -37,16 +37,26 @@ async function getProfileData(userId: string): Promise<{ profile: User | null; c
     }
 }
 
-async function getAuthUser() {
+async function getAuthUser(): Promise<{ uid: string, role?: string } | null> {
     try {
         const adminAuth = getAdminAuth();
-        if (!adminAuth) {
+        const adminDb = getAdminDb();
+        if (!adminAuth || !adminDb) {
             return null;
         }
         const sessionCookie = (await cookies()).get('session');
         if (!sessionCookie) return null;
+        
         const decodedToken = await adminAuth.verifySessionCookie(sessionCookie.value, true);
-        return decodedToken;
+        
+        // Get additional user information including role
+        const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
+        const userData = userDoc.data();
+
+        return {
+          uid: decodedToken.uid,
+          role: userData?.role || 'user'
+        };
     } catch (error) {
         // This is not an error, just means user is not logged in
         return null;

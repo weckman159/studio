@@ -5,7 +5,7 @@ export interface User {
   id: string;
   name: string;
   age?: number;
-  displayName?: string; // from firebase auth
+  displayName: string; // from firebase auth
   role?: 'admin' | 'user';
   email?: string;
   photoURL?: string;

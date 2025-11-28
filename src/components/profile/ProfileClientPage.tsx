@@ -37,7 +37,7 @@ function ProfilePageSkeleton() {
 interface ProfileClientPageProps {
   initialProfile: User | null;
   initialCars: Car[];
-  authUser: { uid: string } | null;
+  authUser: { uid: string, role?: string } | null;
 }
 
 export function ProfileClientPage({ initialProfile, initialCars, authUser }: ProfileClientPageProps) {
@@ -83,9 +83,12 @@ export function ProfileClientPage({ initialProfile, initialCars, authUser }: Pro
   const handleFollow = async () => {
     if (!authUser || !firestore || !displayProfileData) return;
     const followingRef = doc(firestore, 'users', authUser.uid, 'following', displayProfileData.id);
+    const followerRef = doc(firestore, 'users', displayProfileData.id, 'followers', authUser.uid);
     try {
       await setDoc(followingRef, { createdAt: serverTimestamp() });
+      await setDoc(followerRef, { createdAt: serverTimestamp() });
       setIsFollowing(true);
+      setFollowers(prev => [...prev, authUser.uid]);
     } catch (e) {
       console.error("Error following user: ", e);
     }
@@ -94,15 +97,18 @@ export function ProfileClientPage({ initialProfile, initialCars, authUser }: Pro
   const handleUnfollow = async () => {
     if (!authUser || !firestore || !displayProfileData) return;
     const followingRef = doc(firestore, 'users', authUser.uid, 'following', displayProfileData.id);
+    const followerRef = doc(firestore, 'users', displayProfileData.id, 'followers', authUser.uid);
     try {
       await deleteDoc(followingRef);
+      await deleteDoc(followerRef);
       setIsFollowing(false);
+      setFollowers(prev => prev.filter(id => id !== authUser.uid));
     } catch (e) {
       console.error("Error unfollowing user: ", e);
     }
   };
 
-  const isOwner = !!authUser && authUser.uid === displayProfileData?.id;
+  const isOwner = !!authUser && (authUser.uid === displayProfileData?.id || authUser.role === 'admin');
 
   if (!displayProfileData) {
     return <div className="container text-center py-10">Профиль не найден.</div>;
@@ -110,7 +116,7 @@ export function ProfileClientPage({ initialProfile, initialCars, authUser }: Pro
   
   const heroProfile = {
       id: displayProfileData.id,
-      displayName: displayProfileData.name || displayProfileData.displayName || 'No Name',
+      displayName: displayProfileData.name || displayProfileData.displayName,
       username: displayProfileData.nickname || displayProfileData.email?.split('@')[0] || 'username',
       avatar: displayProfileData.photoURL || 'https://placehold.co/128x128',
       coverImage: 'https://images.unsplash.com/photo-1553440569-bcc63803a83d?q=80&w=2025&auto=format&fit=crop',
@@ -119,9 +125,9 @@ export function ProfileClientPage({ initialProfile, initialCars, authUser }: Pro
       badges: ['Легенда клуба', 'Фотограф'],
       tier: 'gold' as const,
       stats: { 
-        followers: followers.length || 0, 
-        reputation: following.length || 0, 
-        cars: userCars.length || 0 
+        followers: followers.length, 
+        following: following.length, 
+        cars: userCars.length 
       },
       socials: {
         instagram: '#',

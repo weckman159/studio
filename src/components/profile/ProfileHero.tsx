@@ -33,7 +33,7 @@ interface UserProfile {
   badges: string[]
   stats: {
     followers: number
-    reputation: number
+    following: number
     cars: number
   }
   tier: 'bronze' | 'silver' | 'gold' | 'platinum'
@@ -195,7 +195,7 @@ export function ProfileHero({
                     <span className="text-white/70 text-sm ml-2">Подписчиков</span>
                   </button>
                    <button onClick={onFollowingClick}>
-                    <span className="font-bold text-xl">{profile.stats.reputation > 1000 ? `${(profile.stats.reputation / 1000).toFixed(0)}k` : profile.stats.reputation}</span>
+                    <span className="font-bold text-xl">{profile.stats.following > 1000 ? `${(profile.stats.following / 1000).toFixed(0)}k` : profile.stats.following}</span>
                     <span className="text-white/70 text-sm ml-2">Подписок</span>
                   </button>
                   <div>
