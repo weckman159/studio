@@ -36,7 +36,7 @@ export const onLikeCreated = functions.firestore
           type: 'like',
           title: 'Новый лайк',
           message: 'понравился ваш пост',
-          actionURL: `/post/${postId}`,
+          actionURL: `/posts/${postId}`,
           relatedEntityId: postId,
           relatedEntityType: 'post'
         });
@@ -421,7 +421,7 @@ export const onUserUpdated = functions.firestore
 
       // Обновляем комментарии пользователя
       const commentsQuery = await db
-        .collectionGroup('comments')
+        .collection('comments')
         .where('authorId', '==', userId)
         .get();
 
@@ -562,3 +562,5 @@ async function createNotification(params: CreateNotificationParams) {
     console.error('Error creating notification:', error);
   }
 }
+
+    

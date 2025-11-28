@@ -163,7 +163,7 @@ service cloud.firestore {
     // ------------------------------------------------------------------------
      match /comments/{commentId} {
         allow read, list: if true;
-        allow create: if isSignedIn() && isRequestingUser('authorId');
+        allow create: if isSignedIn() && isRequestingUser('authorId') && request.resource.data.postId is string;
         allow update, delete: if isSignedIn() && isDocumentOwner(resource.data);
     }
 
@@ -200,7 +200,7 @@ service cloud.firestore {
     // ------------------------------------------------------------------------
     match /notifications/{notificationId} {
       allow get: if isSignedIn() && resource.data.recipientId == request.auth.uid;
-      allow list: if isSignedIn(); // Client must filter by recipientId
+      allow list: if isSignedIn() && request.query.where.recipientId == request.auth.uid;
       allow update: if isSignedIn()
                     && resource.data.recipientId == request.auth.uid
                     && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
@@ -285,3 +285,5 @@ service cloud.firestore {
     }
   }
 }
+
+    
