@@ -70,8 +70,9 @@ service cloud.firestore {
      */
     function isValidPost() {
         let data = request.resource.data;
-        return data.title is string && data.title.size() > 2 &&
-               data.content is string && data.content.size() > 10 &&
+        return data.title is string && data.title.size() >= 5 &&
+               data.content is string && data.content.size() >= 20 &&
+               data.type is string && data.type.size() > 0 &&
                isRequestingUser('authorId') &&
                data.id == request.resource.id;
     }

@@ -27,7 +27,7 @@ const CKEditorWrapper = dynamic(() => import('@/components/CKEditorWrapper'), {
 });
 
 const postTypes = [
-  'Блог', 'Фотоотчет', 'Вопрос', 'Мой опыт', 'Обзор', 'Обслуживание'
+  'Блог', 'Фотоотчет', 'Вопрос', 'Мой опыт', 'Обзор', 'Ремонт', 'Тюнинг', 'Путешествия'
 ];
 
 interface PostFormProps {
@@ -55,7 +55,7 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
 
   useEffect(() => {
     if (isEditMode && postToEdit) {
-      setType(postToEdit.type || '');
+      setType(postToEdit.type || postToEdit.category || '');
       setTitle(postToEdit.title);
       setContent(postToEdit.content);
       setImagePreview(postToEdit.imageUrl || '');
@@ -100,7 +100,7 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
       const postId = postToEdit?.id || doc(collection(firestore, 'posts')).id;
       let imageUrl = postToEdit?.imageUrl || '';
 
-      // Handle image deletion
+      // Handle image deletion logic during submit
       if (postToEdit?.imageUrl && !imagePreview) {
           await deleteFile(postToEdit.imageUrl);
           imageUrl = '';
@@ -108,7 +108,7 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
 
       // Handle image upload
       if (imageFile) {
-        // If there was an old image, delete it first
+        // If there was an old image and we are uploading a new one, delete the old one.
         if(postToEdit?.imageUrl && postToEdit.imageUrl !== imagePreview) {
             await deleteFile(postToEdit.imageUrl);
         }
@@ -121,17 +121,18 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
       }
       
       const postRef = doc(firestore, 'posts', postId);
+      const postData: Partial<Post> = {
+          type,
+          category: type,
+          title: title.trim(),
+          content: content.trim(),
+          imageUrl,
+          updatedAt: serverTimestamp(),
+          communityId: communityId || postToEdit?.communityId,
+      };
 
       if (isEditMode && postToEdit) {
         // Update existing post
-        const postData: Partial<Post> = {
-            type,
-            title: title.trim(),
-            content: content.trim(),
-            imageUrl,
-            updatedAt: serverTimestamp(),
-            communityId: communityId || postToEdit.communityId,
-        };
         await updateDoc(postRef, postData);
         toast({ title: "Успех!", description: "Пост успешно обновлен." });
         const targetUrl = communityId ? `/communities/${communityId}` : `/posts/${postToEdit.id}`;
@@ -140,20 +141,15 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
       } else {
         // Create new post
         const newPostData: Post = {
+            ...postData,
             id: postId,
             authorId: user.uid,
             authorName: user.displayName || 'Пользователь',
             authorAvatar: user.photoURL,
-            type,
-            title: title.trim(),
-            content: content.trim(),
-            imageUrl,
             createdAt: serverTimestamp(),
             likesCount: 0,
             likedBy: [],
             commentsCount: 0,
-            communityId,
-            category: type, // Assuming type is the category
             views: 0,
             bookmarks: 0,
         };
@@ -163,9 +159,17 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
         router.push(targetUrl);
       }
 
-    } catch (err) {
-      setError('Ошибка публикации. Попробуйте ещё раз.');
-      console.error('Ошибка создания/обновления поста:', err);
+    } catch (err: any) {
+        let errorMessage = 'Ошибка публикации. Попробуйте ещё раз.';
+        if (err.code === 'permission-denied') {
+            errorMessage = 'Недостаточно прав для выполнения этого действия. Проверьте правила безопасности Firestore.';
+        } else if (err.code === 'unavailable') {
+            errorMessage = 'Нет подключения к интернету или сервис недоступен.';
+        } else if (err.message?.includes('upload')) {
+            errorMessage = 'Ошибка загрузки изображения. Попробуйте другой файл.';
+        }
+        setError(errorMessage);
+        console.error('Ошибка создания/обновления поста:', err);
     } finally {
       setLoading(false);
     }

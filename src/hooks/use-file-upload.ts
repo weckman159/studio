@@ -57,24 +57,21 @@ export const useFileUpload = (options: UseFileUploadOptions = {}): UseFileUpload
         throw new Error(`Можно загрузить максимум ${maxFiles} файлов`);
       }
 
-      const uploadPromises: Promise<UploadResult>[] = [];
-      const totalFiles = files.length;
+      const results: UploadResult[] = [];
       
-      files.forEach((file, index) => {
-        uploadPromises.push(
-          uploadFile(file, pathType, entityId, {
-            maxSizeInMB,
-            onProgress: (fileProgress) => {
-              // This progress logic is simplified. A more robust solution would
-              // track progress for each file individually.
-              const overallProgress = (index / totalFiles) * 100 + fileProgress / totalFiles;
-              setProgress(Math.round(overallProgress));
-            },
-          })
-        );
-      });
-
-      const results = await Promise.all(uploadPromises);
+      for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          const result = await uploadFile(file, pathType, entityId, {
+              maxSizeInMB,
+              onProgress: (fileProgress) => {
+                  const completedFiles = i;
+                  const currentFileProgress = fileProgress / files.length;
+                  const totalProgress = (completedFiles / files.length) * 100 + currentFileProgress;
+                  setProgress(Math.round(totalProgress));
+              },
+          });
+          results.push(result);
+      }
       
       onSuccess?.(results);
       return results;
