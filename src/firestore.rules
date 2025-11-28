@@ -65,8 +65,13 @@ service cloud.firestore {
      * Use for update/delete operations in root collections.
      */
     function isDocumentOwner(doc) {
-      // Accommodates both 'userId' (for cars) and 'authorId' (for posts)
-      return isSignedIn() && (request.auth.uid == doc.userId || request.auth.uid == doc.authorId || request.auth.uid == doc.sellerId);
+      // Accommodates 'userId', 'authorId', 'sellerId', 'organizerId'
+      return isSignedIn() && (
+        (doc.keys().hasAny(['userId']) && request.auth.uid == doc.userId) ||
+        (doc.keys().hasAny(['authorId']) && request.auth.uid == doc.authorId) ||
+        (doc.keys().hasAny(['sellerId']) && request.auth.uid == doc.sellerId) ||
+        (doc.keys().hasAny(['organizerId']) && request.auth.uid == doc.organizerId)
+      );
     }
     
     /**
@@ -123,7 +128,7 @@ service cloud.firestore {
     match /posts/{postId} {
       allow get, list: if true; // Posts are public
       allow create: if isSignedIn() && isValidPost();
-      allow update: if isSignedIn() && isDocumentOwner(resource.data);
+      allow update: if isSignedIn() && isDocumentOwner(resource.data) && request.resource.data.authorId == resource.data.authorId;
       allow delete: if isSignedIn() && isDocumentOwner(resource.data);
 
       // Subcollection: comments
@@ -142,7 +147,7 @@ service cloud.firestore {
       // Only show public cars in lists
       allow list: if resource.data.userId == null || get(/databases/$(database)/documents/users/$(resource.data.userId)).data.profileVisibility == 'public';
       allow create: if isSignedIn() && isValidCar();
-      allow update: if isSignedIn() && isDocumentOwner(resource.data);
+      allow update: if isSignedIn() && isDocumentOwner(resource.data) && request.resource.data.userId == resource.data.userId;
       allow delete: if isSignedIn() && isDocumentOwner(resource.data);
        // Subcollections for car details
       match /timeline/{entryId} {
@@ -161,7 +166,7 @@ service cloud.firestore {
     match /marketplace/{itemId} {
       allow read, list: if true; // Listings are public
       allow create: if isSignedIn() && isRequestingUser('sellerId');
-      allow update: if isSignedIn() && isDocumentOwner(resource.data);
+      allow update: if isSignedIn() && isDocumentOwner(resource.data) && request.resource.data.sellerId == resource.data.sellerId;
       allow delete: if isSignedIn() && isDocumentOwner(resource.data);
     }
 
@@ -205,15 +210,13 @@ service cloud.firestore {
     // Collection: notifications
     // ------------------------------------------------------------------------
     match /notifications/{notificationId} {
-      // Allow a user to read their own notifications by document ID.
-      allow get: if isSignedIn() && resource.data.recipientId == request.auth.uid;
+      allow get: if isOwner(resource.data.recipientId);
 
       // Allow a user to LIST notifications only if their query is scoped to their own ID.
-      allow list: if isSignedIn() && request.query.where.size() == 1 && request.query.where[0][0] == 'recipientId' && request.query.where[0][2] == request.auth.uid;
+      allow list: if isSignedIn() && request.query.where.size() > 0 && request.query.where.recipientId == request.auth.uid;
         
       // Allow updating only the 'read' field by the recipient.
-      allow update: if isSignedIn()
-                    && resource.data.recipientId == request.auth.uid
+      allow update: if isOwner(resource.data.recipientId)
                     && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
         
       // Notifications are created by backend functions only.
@@ -224,7 +227,7 @@ service cloud.firestore {
     // Collection: workshops
     // ------------------------------------------------------------------------
     match /workshops/{workshopId} {
-      allow read: if true;
+      allow read, list: if true;
       allow create: if isSignedIn() && isRequestingUser('createdBy');
       allow update, delete: if false; // Managed by backend
     }
@@ -233,7 +236,7 @@ service cloud.firestore {
     // Collection: workshopReviews
     // ------------------------------------------------------------------------
     match /workshopReviews/{reviewId} {
-      allow read: if true;
+      allow read, list: if true;
       allow create: if isSignedIn() && isRequestingUser('userId');
       allow update, delete: if isSignedIn() && isDocumentOwner(resource.data);
     }
@@ -295,3 +298,5 @@ service cloud.firestore {
     }
   }
 }
+
+    
