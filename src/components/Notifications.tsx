@@ -107,9 +107,15 @@ export function Notifications() {
         if (error.code === 'permission-denied') {
             const contextualError = new FirestorePermissionError({
                 operation: 'list',
-                path: `notifications` // Simplified path for collection group query
+                path: `notifications`
             });
             errorEmitter.emit('permission-error', contextualError);
+        } else if (error.code === 'failed-precondition') {
+             console.warn(
+              'Firestore query failed. This is likely because a composite index is still building. ' +
+              'This warning is expected after changing security rules and should resolve itself in a few minutes. ' +
+              'Original error: ', error
+            );
         }
         console.error("Error fetching notifications:", error);
         setLoading(false);
