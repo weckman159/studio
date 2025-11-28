@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc } from 'firebase/firestore';
 import { useFirestore, useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -185,19 +185,23 @@ export default function CreateCommunityPage() {
     setError('');
 
     try {
-      const communityId = doc(collection(firestore, 'temp')).id;
       const filesToUpload: { file: File, path: 'avatars' | 'covers' }[] = [];
       if(imageFile) filesToUpload.push({ file: imageFile, path: 'avatars' });
       if(coverFile) filesToUpload.push({ file: coverFile, path: 'covers' });
 
-      const uploadResults = await uploadFiles(
-        filesToUpload.map(f => f.file),
-        'communities',
-        communityId
-      );
-      
-      const imageUrl = uploadResults.find(r => r.fileName.startsWith(imageFile?.name || ''))?.url || '';
-      const coverUrl = uploadResults.find(r => r.fileName.startsWith(coverFile?.name || ''))?.url || '';
+      let imageUrl = '';
+      let coverUrl = '';
+
+      if (filesToUpload.length > 0) {
+          const communityIdForPath = doc(collection(firestore, 'temp')).id;
+          const uploadResults = await uploadFiles(
+            filesToUpload.map(f => f.file),
+            'communities',
+            communityIdForPath
+          );
+          imageUrl = uploadResults.find(r => r.fileName.startsWith(imageFile?.name || '___'))?.url || '';
+          coverUrl = uploadResults.find(r => r.fileName.startsWith(coverFile?.name || '___'))?.url || '';
+      }
 
       const communityData = {
         name: formData.name.trim(),
@@ -215,8 +219,7 @@ export default function CreateCommunityPage() {
         updatedAt: serverTimestamp()
       };
 
-      const docRef = doc(firestore, 'communities', communityId);
-      await setDoc(docRef, communityData);
+      const docRef = await addDoc(collection(firestore, 'communities'), communityData);
 
       router.push(`/communities/${docRef.id}`);
 
@@ -433,7 +436,6 @@ export default function CreateCommunityPage() {
                   </p>
                 </div>
               </div>
-            </div>
              {uploading && <Progress value={progress} className="w-full mt-2" />}
           </CardContent>
         </Card>

@@ -51,11 +51,14 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       return;
     }
 
-    const newPreviews = files.map(file => URL.createObjectURL(file));
-    setPreviews(prev => [...prev, ...newPreviews]);
-    setLocalFiles(prev => [...prev, ...files]);
+    const newLocalFiles = multiple ? [...localFiles, ...files] : files;
+    setLocalFiles(newLocalFiles);
     
-    onFilesSelected?.([...localFiles, ...files]);
+    const newPreviews = newLocalFiles.map(file => URL.createObjectURL(file));
+    const remoteUrls = (Array.isArray(value) ? value : (value ? [value] : [])).filter(url => !url.startsWith('blob:'));
+    setPreviews([...remoteUrls, ...newPreviews]);
+    
+    onFilesSelected?.(newLocalFiles);
 
     if (inputRef.current) {
       inputRef.current.value = '';
@@ -63,22 +66,20 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   };
 
   const handleRemove = async (urlToRemove: string) => {
-    const isLocalPreview = urlToRemove.startsWith('blob:');
-    
     const newPreviews = previews.filter(url => url !== urlToRemove);
     setPreviews(newPreviews);
-    
-    if (isLocalPreview) {
-        const fileIndex = previews.indexOf(urlToRemove) - (Array.isArray(value) ? value.length : (value ? 1 : 0));
-        if (fileIndex > -1) {
-            const newLocalFiles = localFiles.filter((_, i) => i !== fileIndex);
-            setLocalFiles(newLocalFiles);
-            onFilesSelected?.(newLocalFiles);
-        }
+
+    if (urlToRemove.startsWith('blob:')) {
+      const blobIndex = previews.findIndex(p => p === urlToRemove);
+      const remoteUrlCount = (Array.isArray(value) ? value : (value ? [value] : [])).length;
+      const fileIndexToRemove = blobIndex - remoteUrlCount;
+      
+      const newLocalFiles = localFiles.filter((_, i) => i !== fileIndexToRemove);
+      setLocalFiles(newLocalFiles);
+      onFilesSelected?.(newLocalFiles);
     } else {
-        // This is a remote URL, we should not delete it from storage here
-        // as it might be associated with other entities. 
-        // The parent component is responsible for deleting from storage.
+        // This is a remote URL, we should not delete it from storage here.
+        // The parent component is responsible for deleting from storage if needed.
     }
     
     const finalUrls = newPreviews.filter(url => !url.startsWith('blob:'));
