@@ -6,11 +6,15 @@ import { useUser } from '@/firebase';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import Link from 'next/link';
+import { useUserProfile } from '@/hooks/useUserProfile';
 
 export default function MarketplaceCreatePage() {
   const { user, isUserLoading } = useUser();
+  const { profile, isLoading: isProfileLoading } = useUserProfile(user?.uid);
+  
+  const isLoading = isUserLoading || isProfileLoading;
 
-  if (isUserLoading) {
+  if (isLoading) {
     return <div className="text-center p-8">Загрузка...</div>;
   }
   

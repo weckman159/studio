@@ -78,6 +78,8 @@ export function MarketplaceItemForm({ itemToEdit }: MarketplaceItemFormProps) {
     if (itemToEdit?.gallery) {
       const allImages = [itemToEdit.imageUrl, ...itemToEdit.gallery].filter(Boolean) as string[];
       setImageUrls(allImages);
+    } else if (itemToEdit?.imageUrl) {
+        setImageUrls([itemToEdit.imageUrl]);
     }
   }, [itemToEdit]);
 

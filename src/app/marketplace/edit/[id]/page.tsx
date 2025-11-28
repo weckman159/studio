@@ -2,17 +2,15 @@
 'use client';
 
 import { MarketplaceItemForm } from '@/components/MarketplaceItemForm';
-import { useUser, useDoc, useMemoFirebase } from '@/firebase';
+import { useUser, useDoc, useMemoFirebase, useFirestore } from '@/firebase';
 import { doc, DocumentReference } from 'firebase/firestore';
-import { useParams } from 'next/navigation';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import type { MarketplaceItem } from '@/lib/data';
-import { useFirestore } from '@/firebase';
 
 
-function EditMarketplaceItemClient({ itemId }: { itemId: string }) {
+async function EditMarketplaceItemClient({ itemId }: { itemId: string }) {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 
@@ -56,7 +54,7 @@ function EditMarketplaceItemClient({ itemId }: { itemId: string }) {
   return <MarketplaceItemForm itemToEdit={item} />;
 }
 
-export default async function EditMarketplaceItemPage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = await params;
+export default async function EditMarketplaceItemPage({ params }: { params: { id: string } }) {
+    const { id } = params;
     return <EditMarketplaceItemClient itemId={id} />
 }

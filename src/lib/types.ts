@@ -141,8 +141,10 @@ export interface MarketplaceItem {
   sellerPhone?: string;
   sellerEmail?: string;
   createdAt: any;
+  updatedAt?: any;
   views?: number; // Количество просмотров
 }
+
 
 export interface Workshop {
   id: string;
