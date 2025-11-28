@@ -133,7 +133,7 @@ service cloud.firestore {
     // ------------------------------------------------------------------------
     match /cars/{carId} {
       allow get: if true;
-      allow list: if true;
+      allow list: if resource.data.userId == null || get(/databases/$(database)/documents/users/$(resource.data.userId)).data.profileVisibility == 'public';
       allow create: if isSignedIn() && isValidCar();
       allow update: if isSignedIn() && isDocumentOwner(resource.data) && request.resource.data.userId == resource.data.userId;
       allow delete: if isSignedIn() && isDocumentOwner(resource.data);
