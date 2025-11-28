@@ -9,11 +9,12 @@ import { ProfileHero } from '@/components/profile/ProfileHero';
 import { ProfileSidebar } from '@/components/profile/ProfileSidebar';
 import { CarCard } from '@/components/profile/CarCard';
 import { Wrench, Calendar, Camera, ShoppingBag, Loader2 } from 'lucide-react';
-import { useUser, useFirestore } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import type { Car, User } from '@/lib/types';
 import { EditProfileModal } from '@/components/EditProfileModal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UserListDialog } from '@/components/UserListDialog';
+import { notFound, useRouter } from 'next/navigation';
 
 function ProfilePageSkeleton() {
     return (
@@ -27,6 +28,10 @@ function ProfilePageSkeleton() {
                  </div>
                  <div>
                     <Skeleton className="h-12 w-full" />
+                    <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <Skeleton className="h-48 w-full rounded-2xl" />
+                        <Skeleton className="h-48 w-full rounded-2xl" />
+                    </div>
                  </div>
             </div>
         </div>
@@ -35,59 +40,83 @@ function ProfilePageSkeleton() {
 }
 
 interface ProfileClientPageProps {
-  initialProfile: User | null;
-  initialCars: Car[];
-  authUser: { uid: string, role?: string } | null;
+  profileId: string;
 }
 
-export function ProfileClientPage({ initialProfile, initialCars, authUser }: ProfileClientPageProps) {
+export function ProfileClientPage({ profileId }: ProfileClientPageProps) {
+  const { user: authUser, isUserLoading: isAuthLoading } = useUser();
   const firestore = useFirestore();
+  const router = useRouter();
 
-  const [displayProfileData, setDisplayProfileData] = useState<User | null>(initialProfile);
-  const [userCars, setUserCars] = useState<Car[]>(initialCars);
-  
-  const [isEditModalOpen, setEditModalOpen] = useState(false);
-  const [isFollowing, setIsFollowing] = useState(false);
+  const [profile, setProfile] = useState<User | null>(null);
+  const [cars, setCars] = useState<Car[]>([]);
   const [followers, setFollowers] = useState<string[]>([]);
   const [following, setFollowing] = useState<string[]>([]);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // State for user list dialogs
+  const [isEditModalOpen, setEditModalOpen] = useState(false);
   const [followersDialogOpen, setFollowersDialogOpen] = useState(false);
   const [followingDialogOpen, setFollowingDialogOpen] = useState(false);
 
   useEffect(() => {
-    if (authUser && firestore && displayProfileData) {
-      const checkFollowing = async () => {
-        const followingRef = doc(firestore, 'users', authUser.uid, 'following', displayProfileData.id);
-        const docSnap = await getDoc(followingRef);
-        setIsFollowing(docSnap.exists());
-      };
-      checkFollowing();
-    }
-  }, [authUser, displayProfileData, firestore]);
-  
-   useEffect(() => {
-    if (!firestore || !displayProfileData) return;
-    const fetchFollowersAndFollowing = async () => {
-        const followersQuery = query(collection(firestore, 'users', displayProfileData.id, 'followers'));
-        const followersSnapshot = await getDocs(followersQuery);
-        setFollowers(followersSnapshot.docs.map(doc => doc.id));
-        
-        const followingQuery = query(collection(firestore, 'users', displayProfileData.id, 'following'));
-        const followingSnapshot = await getDocs(followingQuery);
-        setFollowing(followingSnapshot.docs.map(doc => doc.id));
+    if (!firestore || !profileId) return;
+
+    const fetchData = async () => {
+        setIsLoading(true);
+        try {
+            // Fetch profile
+            const profileRef = doc(firestore, 'users', profileId);
+            const profileSnap = await getDoc(profileRef);
+
+            if (!profileSnap.exists()) {
+                notFound();
+                return;
+            }
+            const profileData = { id: profileSnap.id, ...profileSnap.data() } as User;
+            setProfile(profileData);
+
+            // Fetch cars
+            const carsQuery = query(collection(firestore, 'cars'), where('userId', '==', profileId));
+            const carsSnap = await getDocs(carsQuery);
+            setCars(carsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Car)));
+
+            // Fetch followers
+            const followersQuery = query(collection(firestore, 'users', profileId, 'followers'));
+            const followersSnapshot = await getDocs(followersQuery);
+            setFollowers(followersSnapshot.docs.map(doc => doc.id));
+            
+            // Fetch following
+            const followingQuery = query(collection(firestore, 'users', profileId, 'following'));
+            const followingSnapshot = await getDocs(followingQuery);
+            setFollowing(followingSnapshot.docs.map(doc => doc.id));
+
+        } catch (error) {
+            console.error("Error fetching profile data on client:", error);
+            // Handle error, maybe show a toast
+        } finally {
+            setIsLoading(false);
+        }
     };
-    fetchFollowersAndFollowing();
-  }, [firestore, displayProfileData]);
+    
+    fetchData();
+  }, [firestore, profileId]);
+
+  // Check if current user is following this profile
+  useEffect(() => {
+    if (authUser && profile) {
+        setIsFollowing(followers.includes(authUser.uid));
+    }
+  }, [authUser, profile, followers]);
+
 
   const handleFollow = async () => {
-    if (!authUser || !firestore || !displayProfileData) return;
-    const followingRef = doc(firestore, 'users', authUser.uid, 'following', displayProfileData.id);
-    const followerRef = doc(firestore, 'users', displayProfileData.id, 'followers', authUser.uid);
+    if (!authUser || !firestore || !profile) return;
+    const followingRef = doc(firestore, 'users', authUser.uid, 'following', profile.id);
+    const followerRef = doc(firestore, 'users', profile.id, 'followers', authUser.uid);
     try {
       await setDoc(followingRef, { createdAt: serverTimestamp() });
       await setDoc(followerRef, { createdAt: serverTimestamp() });
-      setIsFollowing(true);
       setFollowers(prev => [...prev, authUser.uid]);
     } catch (e) {
       console.error("Error following user: ", e);
@@ -95,57 +124,57 @@ export function ProfileClientPage({ initialProfile, initialCars, authUser }: Pro
   };
 
   const handleUnfollow = async () => {
-    if (!authUser || !firestore || !displayProfileData) return;
-    const followingRef = doc(firestore, 'users', authUser.uid, 'following', displayProfileData.id);
-    const followerRef = doc(firestore, 'users', displayProfileData.id, 'followers', authUser.uid);
+    if (!authUser || !firestore || !profile) return;
+    const followingRef = doc(firestore, 'users', authUser.uid, 'following', profile.id);
+    const followerRef = doc(firestore, 'users', profile.id, 'followers', authUser.uid);
     try {
       await deleteDoc(followingRef);
       await deleteDoc(followerRef);
-      setIsFollowing(false);
       setFollowers(prev => prev.filter(id => id !== authUser.uid));
     } catch (e) {
       console.error("Error unfollowing user: ", e);
     }
   };
 
-  const isOwner = !!authUser && (authUser.uid === displayProfileData?.id || authUser.role === 'admin');
+  if (isLoading || isAuthLoading) {
+      return <ProfilePageSkeleton />;
+  }
 
-  if (!displayProfileData) {
+  if (!profile) {
+    // notFound() must be called in a server component, so we redirect.
+    // This case should be handled by the initial fetch logic anyway.
     return <div className="container text-center py-10">Профиль не найден.</div>;
   }
   
+  const isOwner = !!authUser && (authUser.uid === profile.id || profile.role === 'admin');
+
   const heroProfile = {
-      id: displayProfileData.id,
-      displayName: displayProfileData.name || displayProfileData.displayName,
-      username: displayProfileData.nickname || displayProfileData.email?.split('@')[0] || 'username',
-      avatar: displayProfileData.photoURL || 'https://placehold.co/128x128',
-      coverImage: 'https://images.unsplash.com/photo-1553440569-bcc63803a83d?q=80&w=2025&auto=format&fit=crop',
-      bio: displayProfileData.bio || 'Этот пользователь пока ничего не рассказал о себе.',
-      status: displayProfileData.role === 'admin' ? 'Администратор' : 'Участник',
+      id: profile.id,
+      displayName: profile.name || profile.displayName || 'No Name',
+      username: profile.nickname || profile.email?.split('@')[0] || 'username',
+      avatar: profile.photoURL || 'https://placehold.co/128x128',
+      coverImage: profile.coverUrl || 'https://images.unsplash.com/photo-1553440569-bcc63803a83d?q=80&w=2025&auto=format&fit=crop',
+      bio: profile.bio || 'Этот пользователь пока ничего не рассказал о себе.',
+      status: profile.role === 'admin' ? 'Администратор' : 'Участник',
       badges: ['Легенда клуба', 'Фотограф'],
       tier: 'gold' as const,
       stats: { 
         followers: followers.length, 
         following: following.length, 
-        cars: userCars.length 
+        cars: cars.length 
       },
-      socials: {
-        instagram: '#',
-        youtube: '#',
-      },
+      socials: profile.socials || {},
   };
 
   return (
     <>
-      {displayProfileData && (
-        <EditProfileModal 
-          isOpen={isEditModalOpen} 
-          setIsOpen={setEditModalOpen}
-          user={displayProfileData}
-          onSave={(updatedUser) => setDisplayProfileData(updatedUser)}
-        />
-      )}
-       <UserListDialog 
+      <EditProfileModal 
+        isOpen={isEditModalOpen} 
+        setIsOpen={setEditModalOpen}
+        user={profile}
+        onSave={(updatedUser) => setProfile(updatedUser)}
+      />
+      <UserListDialog 
         isOpen={followersDialogOpen} 
         onOpenChange={setFollowersDialogOpen}
         title="Подписчики"
@@ -165,7 +194,7 @@ export function ProfileClientPage({ initialProfile, initialCars, authUser }: Pro
             onFollow={handleFollow}
             onUnfollow={handleUnfollow}
             onEditClick={() => setEditModalOpen(true)}
-            loading={false}
+            loading={isLoading}
             onFollowersClick={() => setFollowersDialogOpen(true)}
             onFollowingClick={() => setFollowingDialogOpen(true)}
         />
@@ -184,7 +213,7 @@ export function ProfileClientPage({ initialProfile, initialCars, authUser }: Pro
                     className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-6 py-4"
                   >
                     <Wrench className="mr-2 h-4 w-4" />
-                    Гараж ({userCars.length || 0})
+                    Гараж ({cars.length || 0})
                   </TabsTrigger>
                   <TabsTrigger 
                     value="journal"
@@ -210,9 +239,9 @@ export function ProfileClientPage({ initialProfile, initialCars, authUser }: Pro
                 </TabsList>
                 
                 <TabsContent value="garage" className="mt-8">
-                    {userCars && userCars.length > 0 ? (
+                    {cars && cars.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {userCars.map(car => (
+                            {cars.map(car => (
                                 <CarCard key={car.id} car={car} />
                             ))}
                         </div>
