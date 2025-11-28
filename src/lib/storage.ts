@@ -9,7 +9,7 @@ import {
   uploadBytesResumable,
   UploadTaskSnapshot 
 } from 'firebase/storage';
-import { storage } from './firebase-client';
+import { storage } from '@/firebase/client-instance';
 
 
 /**
