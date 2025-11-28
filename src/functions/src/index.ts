@@ -173,6 +173,94 @@ export const onCommentDeleted = functions.firestore
   });
 
 // ===========================
+// Управление подписками
+// ===========================
+
+/**
+ * При создании подписки обновляем счетчики
+ */
+export const onFollowCreated = functions.firestore
+  .document('users/{userId}/following/{followingId}')
+  .onCreate(async (snap, context) => {
+    const { userId, followingId } = context.params;
+
+    try {
+      const batch = db.batch();
+
+      // Увеличиваем счетчик подписок у пользователя
+      const userRef = db.collection('users').doc(userId);
+      batch.update(userRef, {
+        'stats.followingCount': admin.firestore.FieldValue.increment(1)
+      });
+
+      // Увеличиваем счетчик подписчиков у того, на кого подписались
+      const followingUserRef = db.collection('users').doc(followingId);
+      batch.update(followingUserRef, {
+        'stats.followersCount': admin.firestore.FieldValue.increment(1)
+      });
+
+      // Создаем зеркальную запись в коллекции followers
+      const followerRef = db
+        .collection('users')
+        .doc(followingId)
+        .collection('followers')
+        .doc(userId);
+      batch.set(followerRef, {
+        userId,
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+
+      await batch.commit();
+
+      // Создаем уведомление
+      await createNotification({
+        recipientId: followingId,
+        senderId: userId,
+        type: 'follow',
+        title: 'Новый подписчик',
+        message: 'подписался на вас',
+        actionURL: `/profile/${userId}`
+      });
+    } catch (error) {
+      console.error('Error in onFollowCreated:', error);
+    }
+  });
+
+/**
+ * При удалении подписки обновляем счетчики
+ */
+export const onFollowDeleted = functions.firestore
+  .document('users/{userId}/following/{followingId}')
+  .onDelete(async (snap, context) => {
+    const { userId, followingId } = context.params;
+
+    try {
+      const batch = db.batch();
+
+      const userRef = db.collection('users').doc(userId);
+      batch.update(userRef, {
+        'stats.followingCount': admin.firestore.FieldValue.increment(-1)
+      });
+
+      const followingUserRef = db.collection('users').doc(followingId);
+      batch.update(followingUserRef, {
+        'stats.followersCount': admin.firestore.FieldValue.increment(-1)
+      });
+
+      const followerRef = db
+        .collection('users')
+        .doc(followingId)
+        .collection('followers')
+        .doc(userId);
+      batch.delete(followerRef);
+
+      await batch.commit();
+    } catch (error) {
+      console.error('Error in onFollowDeleted:', error);
+    }
+  });
+
+// ===========================
 // Управление автомобилями
 // ===========================
 

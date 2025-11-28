@@ -113,10 +113,9 @@ export function ProfileClientPage({ profileId }: ProfileClientPageProps) {
   const handleFollow = async () => {
     if (!authUser || !firestore || !profile) return;
     const followingRef = doc(firestore, 'users', authUser.uid, 'following', profile.id);
-    const followerRef = doc(firestore, 'users', profile.id, 'followers', authUser.uid);
     try {
       await setDoc(followingRef, { createdAt: serverTimestamp() });
-      await setDoc(followerRef, { createdAt: serverTimestamp() });
+      setIsFollowing(true);
       setFollowers(prev => [...prev, authUser.uid]);
     } catch (e) {
       console.error("Error following user: ", e);
@@ -126,10 +125,9 @@ export function ProfileClientPage({ profileId }: ProfileClientPageProps) {
   const handleUnfollow = async () => {
     if (!authUser || !firestore || !profile) return;
     const followingRef = doc(firestore, 'users', authUser.uid, 'following', profile.id);
-    const followerRef = doc(firestore, 'users', profile.id, 'followers', authUser.uid);
     try {
       await deleteDoc(followingRef);
-      await deleteDoc(followerRef);
+      setIsFollowing(false);
       setFollowers(prev => prev.filter(id => id !== authUser.uid));
     } catch (e) {
       console.error("Error unfollowing user: ", e);

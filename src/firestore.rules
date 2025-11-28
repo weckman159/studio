@@ -109,7 +109,7 @@ service cloud.firestore {
       }
       match /followers/{followerId} {
         allow read: if true;
-        allow write: if isOwner(followerId);
+        allow write: if isOwner(followerId); // Managed by Cloud Function, but this allows manual follow
       }
       // Subcollection for user's personal post feed
       match /feed/{postId} {
@@ -127,13 +127,6 @@ service cloud.firestore {
       // Allow update if user is the document owner and is not changing the authorId.
       allow update: if isSignedIn() && isDocumentOwner(resource.data) && request.resource.data.authorId == resource.data.authorId;
       allow delete: if isSignedIn() && isDocumentOwner(resource.data);
-
-      // Subcollection: comments (deprecated, use root 'comments' collection)
-      match /comments/{commentId} {
-        allow read, list: if true;
-        allow create: if isSignedIn() && isRequestingUser('authorId');
-        allow update, delete: if isSignedIn() && isDocumentOwner(resource.data);
-      }
     }
     
     // ------------------------------------------------------------------------
@@ -171,7 +164,7 @@ service cloud.firestore {
     // ------------------------------------------------------------------------
      match /comments/{commentId} {
         allow read, list: if true;
-        allow create: if isSignedIn() && isRequestingUser('authorId');
+        allow create: if isSignedIn() && isRequestingUser('authorId') && request.resource.data.postId is string;
         allow update, delete: if isSignedIn() && isDocumentOwner(resource.data);
     }
 
@@ -207,16 +200,11 @@ service cloud.firestore {
     // Collection: notifications
     // ------------------------------------------------------------------------
     match /notifications/{notificationId} {
-      allow get: if isOwner(resource.data.recipientId);
-
-      // IMPORTANT: Allow a user to LIST notifications ONLY if their query is scoped to their own ID.
-      allow list: if isSignedIn() && request.query.where.recipientId == request.auth.uid;
-        
-      // Allow updating only the 'read' field by the recipient.
-      allow update: if isOwner(resource.data.recipientId)
+      allow get: if isSignedIn() && resource.data.recipientId == request.auth.uid;
+      allow list: if isSignedIn();
+      allow update: if isSignedIn()
+                    && resource.data.recipientId == request.auth.uid
                     && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
-        
-      // Notifications are created by backend functions only.
       allow create, delete: if false;
     }
 
@@ -243,14 +231,16 @@ service cloud.firestore {
     // Collection: dialogs & messages (Private Chat)
     // ------------------------------------------------------------------------
     match /dialogs/{dialogId} {
-       allow read, write: if isSignedIn() && request.auth.uid in resource.data.participantIds;
+       allow read: if isSignedIn() && request.auth.uid in resource.data.participantIds;
+       allow create: if isSignedIn() && request.auth.uid in request.resource.data.participantIds;
+       allow update: if isSignedIn() && request.auth.uid in resource.data.participantIds;
+       allow delete: if false;
     }
 
     match /messages/{messageId} {
-       // User can only read messages if they are part of the corresponding dialog.
-       allow read, list: if isSignedIn() && get(/databases/$(database)/documents/dialogs/$(resource.data.dialogId)).data.participantIds.hasAny([request.auth.uid]);
-       allow create: if isSignedIn() && isRequestingUser('authorId');
-       allow update, delete: if false; // Messages are immutable.
+       allow read, list: if isSignedIn() && exists(/databases/$(database)/documents/dialogs/$(resource.data.dialogId)) && request.auth.uid in get(/databases/$(database)/documents/dialogs/$(resource.data.dialogId)).data.participantIds;
+       allow create: if isSignedIn() && isRequestingUser('authorId') && exists(/databases/$(database)/documents/dialogs/$(request.resource.data.dialogId)) && request.auth.uid in get(/databases/$(database)/documents/dialogs/$(request.resource.data.dialogId)).data.participantIds;
+       allow update, delete: if false;
     }
 
     // ------------------------------------------------------------------------
