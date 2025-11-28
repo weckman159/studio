@@ -1,6 +1,4 @@
 // src/app/posts/[id]/page.tsx
-'use server';
-
 import { getAdminDb } from '@/lib/firebase-admin';
 import { PostActions } from './_components/PostActions';
 import { PostComments } from './_components/PostComments';
@@ -17,6 +15,10 @@ export const dynamic = 'force-dynamic';
 async function getPostData(postId: string): Promise<{ post: Post | null, comments: Comment[] }> {
     try {
         const adminDb = getAdminDb();
+        if (!adminDb) {
+            console.error("Firebase Admin not initialized");
+            return { post: null, comments: [] };
+        }
         const postDocRef = adminDb.collection('posts').doc(postId);
         const postDocSnap = await postDocRef.get();
 

@@ -1,9 +1,9 @@
-'use server';
-
+// src/app/profile/[id]/page.tsx
 import { getAdminDb, getAdminAuth } from '@/lib/firebase-admin';
 import { cookies } from 'next/headers';
 import { ProfileClientPage } from '@/components/profile/ProfileClientPage';
 import type { User, Car } from '@/lib/types';
+import { notFound } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,6 +11,10 @@ export const dynamic = 'force-dynamic';
 async function getProfileData(userId: string): Promise<{ profile: User | null; cars: Car[] }> {
     try {
         const adminDb = getAdminDb();
+        if (!adminDb) {
+            console.error("Firebase Admin not initialized");
+            return { profile: null, cars: [] };
+        }
         const userDocRef = adminDb.collection('users').doc(userId);
         const userDocSnap = await userDocRef.get();
 
@@ -35,11 +39,15 @@ async function getProfileData(userId: string): Promise<{ profile: User | null; c
 async function getAuthUser() {
     try {
         const adminAuth = getAdminAuth();
+        if (!adminAuth) {
+            return null;
+        }
         const sessionCookie = cookies().get('session')?.value;
         if (!sessionCookie) return null;
         const decodedToken = await adminAuth.verifySessionCookie(sessionCookie, true);
         return decodedToken;
     } catch (error) {
+        // This is not an error, just means user is not logged in
         return null;
     }
 }
@@ -48,6 +56,11 @@ async function getAuthUser() {
 export default async function ProfilePage({ params }: { params: { id: string } }) {
     const { id } = params;
     const { profile, cars } = await getProfileData(id);
+    
+    if (!profile) {
+        notFound();
+    }
+    
     const authUser = await getAuthUser();
     
     return <ProfileClientPage initialProfile={profile} initialCars={cars} authUser={authUser} />;

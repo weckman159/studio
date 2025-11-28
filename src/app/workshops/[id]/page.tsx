@@ -1,6 +1,4 @@
 // src/app/workshops/[id]/page.tsx
-'use server';
-
 import { getAdminDb } from '@/lib/firebase-admin';
 import type { Workshop, Review } from '@/lib/types';
 import { notFound } from 'next/navigation';
@@ -12,6 +10,10 @@ export const dynamic = 'force-dynamic';
 async function getWorkshopData(workshopId: string): Promise<{ workshop: Workshop | null, reviews: Review[] }> {
     try {
         const adminDb = getAdminDb();
+        if (!adminDb) {
+            console.error("Firebase Admin not initialized");
+            return { workshop: null, reviews: [] };
+        }
         const workshopDocRef = adminDb.collection('workshops').doc(workshopId);
         const workshopDocSnap = await workshopDocRef.get();
 

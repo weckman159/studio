@@ -1,6 +1,4 @@
 // src/app/events/[id]/page.tsx
-'use server';
-
 import { getAdminDb } from '@/lib/firebase-admin';
 import type { Event, User } from '@/lib/types';
 import { notFound } from 'next/navigation';
@@ -11,6 +9,10 @@ export const dynamic = 'force-dynamic';
 async function getEventData(eventId: string): Promise<{ event: Event | null, participants: User[] }> {
     try {
         const adminDb = getAdminDb();
+        if (!adminDb) {
+            console.error("Firebase Admin not initialized");
+            return { event: null, participants: [] };
+        }
         const eventDocRef = adminDb.collection('events').doc(eventId);
         const eventDocSnap = await eventDocRef.get();
 

@@ -1,6 +1,4 @@
 // src/app/communities/[id]/create-post/page.tsx
-'use server';
-
 import { PostForm } from '@/components/PostForm';
 import { getAdminDb } from '@/lib/firebase-admin';
 import { notFound } from 'next/navigation';
@@ -11,6 +9,10 @@ export const dynamic = 'force-dynamic';
 async function getCommunity(communityId: string): Promise<Community | null> {
     try {
         const adminDb = getAdminDb();
+        if (!adminDb) {
+            console.error("Firebase Admin not initialized");
+            return null;
+        }
         const communityRef = adminDb.collection('communities').doc(communityId);
         const communitySnap = await communityRef.get();
         if (!communitySnap.exists) {

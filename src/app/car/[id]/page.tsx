@@ -10,57 +10,60 @@ export const revalidate = 0;
 
 // Динамический импорт Firebase Admin только при выполнении
 async function getCarData(carId: string): Promise<{ car: Car | null, timeline: TimelineEntry[] }> {
-try {
-// Импортируем ТОЛЬКО в runtime, не в build-time
-const { getAdminDb } = await import('@/lib/firebase-admin');
-const adminDb = getAdminDb();
+  try {
+    const { getAdminDb } = await import('@/lib/firebase-admin');
+    const adminDb = getAdminDb();
 
+    if (!adminDb) {
+      console.error('Firebase Admin not initialized');
+      return { car: null, timeline: [] };
+    }
 
-const carRef = adminDb.collection('cars').doc(carId);
-const carSnap = await carRef.get();
+    const carRef = adminDb.collection('cars').doc(carId);
+    const carSnap = await carRef.get();
 
-if (!carSnap.exists) {
-  return { car: null, timeline: [] };
-}
+    if (!carSnap.exists) {
+      return { car: null, timeline: [] };
+    }
 
-const car = { id: carSnap.id, ...carSnap.data() } as Car;
+    const car = { id: carSnap.id, ...carSnap.data() } as Car;
 
-const timelineRef = carRef.collection('timeline');
-const timelineQuery = timelineRef.orderBy('date', 'desc');
-const timelineSnap = await timelineQuery.get();
-const timeline = timelineSnap.docs.map(doc => ({ 
-  id: doc.id, 
-  ...doc.data() 
-} as TimelineEntry));
+    const timelineRef = carRef.collection('timeline');
+    const timelineQuery = timelineRef.orderBy('date', 'desc');
+    const timelineSnap = await timelineQuery.get();
+    const timeline = timelineSnap.docs.map(doc => ({ 
+      id: doc.id, 
+      ...doc.data() 
+    } as TimelineEntry));
 
-return { car, timeline };
-} catch (error) {
-console.error("Error fetching car data:", error);
-return { car: null, timeline: [] };
-}
+    return { car, timeline };
+  } catch (error) {
+    console.error("Error fetching car data:", error);
+    return { car: null, timeline: [] };
+  }
 }
 
 // Динамические метаданные
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
-try {
-const { car } = await getCarData(params.id);
-if (!car) return { title: 'Автомобиль не найден' };
-return {
-title: `${car.brand} ${car.model} ${car.year} | AutoSphere`,
-description: car.description || `${car.brand} ${car.model} - подробная информация`,
-};
-} catch {
-return { title: 'AutoSphere' };
-}
+  try {
+    const { car } = await getCarData(params.id);
+    if (!car) return { title: 'Автомобиль не найден' };
+    return {
+      title: `${car.brand} ${car.model} ${car.year} | AutoSphere`,
+      description: car.description || `${car.brand} ${car.model} - подробная информация`,
+    };
+  } catch {
+    return { title: 'AutoSphere' };
+  }
 }
 
 export default async function CarPage({ params }: { params: { id: string } }) {
-const { id } = params;
-const { car, timeline } = await getCarData(id);
+  const { id } = params;
+  const { car, timeline } = await getCarData(id);
 
-if (!car) {
-notFound();
-}
+  if (!car) {
+    notFound();
+  }
 
-return <CarDetailClient initialCar={car} initialTimeline={timeline} />;
+  return <CarDetailClient initialCar={car} initialTimeline={timeline} />;
 }
