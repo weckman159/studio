@@ -70,7 +70,7 @@ export const onCommentCreated = functions.firestore
   .document('comments/{commentId}')
   .onCreate(async (snap, context) => {
     const commentData = snap.data();
-    const { postId } = commentData;
+    const { postId, parentId } = commentData;
 
     if (!postId) {
         console.warn('Comment created without postId:', context.params.commentId);
@@ -78,14 +78,26 @@ export const onCommentCreated = functions.firestore
     }
 
     try {
+      const batch = db.batch();
+
       // Увеличиваем счетчик комментариев у поста
       const postRef = db.collection('posts').doc(postId);
-      await postRef.update({
+      batch.update(postRef, {
         commentsCount: admin.firestore.FieldValue.increment(1)
       });
+
+      // Если это ответ, увеличиваем счетчик ответов у родителя
+      if (parentId) {
+        const parentCommentRef = db.collection('comments').doc(parentId);
+        batch.update(parentCommentRef, {
+            repliesCount: admin.firestore.FieldValue.increment(1)
+        });
+      }
       
+      await batch.commit();
+
       // Создаем уведомление для автора поста
-      const postDoc = await postRef.get();
+      const postDoc = await db.collection('posts').doc(postId).get();
       const postData = postDoc.data();
 
       if (postData && postData.authorId !== commentData.authorId) {
@@ -113,16 +125,47 @@ export const onCommentDeleted = functions.firestore
   .document('comments/{commentId}')
   .onDelete(async (snap, context) => {
     const commentData = snap.data();
-    const { postId } = commentData;
-    
-    if (!postId) {
+    const { commentId } = context.params;
+
+    if (!commentData) {
+        console.warn(`Comment ${commentId} data not found on delete.`);
         return;
     }
+    
+    const { postId, parentId } = commentData;
 
     try {
-      await db.collection('posts').doc(postId).update({
-        commentsCount: admin.firestore.FieldValue.increment(-1)
-      });
+        const batch = db.batch();
+
+        // Уменьшаем счетчик у поста
+        if (postId) {
+            const postRef = db.collection('posts').doc(postId);
+            batch.update(postRef, {
+                commentsCount: admin.firestore.FieldValue.increment(-1)
+            });
+        }
+
+        // Уменьшаем счетчик у родительского комментария
+        if (parentId) {
+            const parentRef = db.collection('comments').doc(parentId);
+            batch.update(parentRef, {
+                repliesCount: admin.firestore.FieldValue.increment(-1)
+            });
+        }
+        
+        await batch.commit();
+
+        // Каскадное удаление вложенных комментариев
+        const repliesQuery = db.collection('comments').where('parentId', '==', commentId);
+        const repliesSnapshot = await repliesQuery.get();
+        
+        if (!repliesSnapshot.empty) {
+            const deleteBatch = db.batch();
+            repliesSnapshot.forEach(doc => {
+                deleteBatch.delete(doc.ref);
+            });
+            await deleteBatch.commit();
+        }
 
     } catch (error) {
       console.error('Error in onCommentDeleted:', error);
@@ -504,6 +547,73 @@ export const fetchWorkshops = functions.pubsub
     return null;
   });
 
+// ===========================
+// Car of the Day Voting
+// ===========================
+
+/**
+ * Runs every day at midnight to select new contenders for "Car of the Day".
+ */
+export const selectCarOfTheDayContenders = functions.pubsub
+  .schedule('every 24 hours')
+  .onRun(async (context) => {
+    try {
+      console.log('Running job to select Car of the Day contenders.');
+      const numberOfContenders = 5;
+
+      // Firestore doesn't have a native "random document" function.
+      // A common workaround is to generate a random ID and query from there.
+      const randomId = db.collection('cars').doc().id;
+      const carsSnapshot = await db.collection('cars')
+        .where(admin.firestore.FieldPath.documentId(), '>=', randomId)
+        .limit(numberOfContenders)
+        .get();
+
+      let contenderCarIds: string[] = [];
+      if (carsSnapshot.size > 0) {
+        contenderCarIds = carsSnapshot.docs.map(doc => doc.id);
+      }
+      
+      // If we got less than N contenders, query again from the start of the collection
+      if (contenderCarIds.length < numberOfContenders) {
+        const remaining = numberOfContenders - contenderCarIds.length;
+        const remainingSnapshot = await db.collection('cars')
+          .limit(remaining)
+          .get();
+        const remainingIds = remainingSnapshot.docs.map(doc => doc.id).filter(id => !contenderCarIds.includes(id));
+        contenderCarIds.push(...remainingIds);
+      }
+
+      if (contenderCarIds.length === 0) {
+        console.log('No cars found to select as contenders.');
+        return null;
+      }
+      
+      const today = new Date().toISOString().split('T')[0];
+      const votingDocRef = db.collection('votings').doc(today);
+
+      const initialVotes: { [key: string]: number } = {};
+      contenderCarIds.forEach(id => {
+        initialVotes[id] = 0;
+      });
+
+      await votingDocRef.set({
+        question: `Какой автомобиль достоин звания "Автомобиль дня"?`,
+        options: contenderCarIds, // For compatibility, though we fetch cars directly
+        contenderCarIds: contenderCarIds,
+        votes: initialVotes,
+        votedUserIds: [],
+        totalVotes: 0,
+        isActive: true,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      console.log(`Created voting session for ${today} with ${contenderCarIds.length} contenders.`);
+    } catch (error) {
+      console.error('Error selecting car of the day contenders:', error);
+    }
+    return null;
+  });
 
 // ===========================
 // Утилиты
@@ -531,6 +641,11 @@ async function createNotification(params: CreateNotificationParams) {
     relatedEntityId,
     relatedEntityType
   } = params;
+
+  // Prevent self-notification
+  if (recipientId === senderId) {
+      return;
+  }
 
   try {
     let senderData = null;
