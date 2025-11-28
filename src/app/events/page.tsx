@@ -1,3 +1,4 @@
+
 // src/app/events/page.tsx
 // Страница всех событий: список, поиск, фильтрация, создание нового
 'use client';
@@ -11,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Search, Plus, MapPin } from 'lucide-react';
+import { Calendar, Search, Plus, MapPin, Users } from 'lucide-react';
 
 // Тип события
 interface EventShort {

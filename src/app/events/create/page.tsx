@@ -4,8 +4,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { useFirestore, useStorage, useUser } from '@/firebase';
+import { collection, addDoc, serverTimestamp, doc } from 'firebase/firestore';
+import { useFirestore, useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -17,6 +17,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ArrowLeft, Upload, AlertCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useFileUpload } from '@/hooks/use-file-upload';
+import { Progress } from '@/components/ui/progress';
 
 // Структура формы события
 interface EventFormData {
@@ -37,7 +38,7 @@ export default function CreateEventPage() {
   const router = useRouter();
   const { user } = useUser();
   const firestore = useFirestore();
-  const { uploadSingleFile, uploading, error: uploadError, progress } = useFileUpload({maxSizeInMB: 5});
+  const { uploadFiles, uploading, progress, error: uploadError } = useFileUpload({ maxFiles: 1, maxSizeInMB: 5});
 
   // Состояния формы
   const [formData, setFormData] = useState<EventFormData>({
@@ -140,11 +141,12 @@ export default function CreateEventPage() {
     setLoading(true);
     setError('');
     try {
+      const eventIdForPath = doc(collection(firestore, 'temp')).id;
       let imageUrl = '';
       if (imageFile) {
-        const uploadResult = await uploadSingleFile(imageFile, 'events', user.uid);
-        if(uploadResult) {
-            imageUrl = uploadResult.url;
+        const uploadResult = await uploadFiles([imageFile], 'events', eventIdForPath);
+        if(uploadResult.length > 0) {
+            imageUrl = uploadResult[0].url;
         } else {
             throw new Error(uploadError || "Не удалось загрузить изображение");
         }
@@ -350,32 +352,30 @@ export default function CreateEventPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-4">
-              {imagePreview ? (
-                <Image
-                  src={imagePreview}
-                  alt="Превью"
-                  width={128}
-                  height={128}
-                  className="w-32 h-32 rounded-lg object-cover border"
-                />
-              ) : (
-                <div className="w-32 h-32 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center">
-                  <Upload className="h-8 w-8 text-muted-foreground/50" />
+             <div className="space-y-2">
+              <div className="flex items-center gap-4">
+                {imagePreview ? (
+                  <div className="relative w-32 h-32">
+                      <Image src={imagePreview} alt="Фото" fill className="rounded-lg object-cover border" />
+                  </div>
+                ) : (
+                  <div className="w-32 h-32 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center">
+                    <Upload className="h-8 w-8 text-muted-foreground/50" />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    disabled={totalLoading}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Рекомендуемый размер: 800x400px, макс. 5 МБ
+                  </p>
                 </div>
-              )}
-              <div className="flex-1">
-                <Input
-                  id="image"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageSelect}
-                  disabled={totalLoading}
-                />
-                <p className="text-sm text-muted-foreground mt-1">
-                  Рекомендуемый размер: 800x400px, макс. 5 МБ
-                </p>
               </div>
+              {uploading && <Progress value={progress} className="w-full mt-2" />}
             </div>
           </CardContent>
         </Card>
@@ -439,4 +439,3 @@ export default function CreateEventPage() {
     </div>
   );
 }
-
