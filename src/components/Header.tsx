@@ -20,6 +20,8 @@ import { useToast } from '@/hooks/use-toast';
 import GlobalSearch from './GlobalSearch';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { ThemeToggle } from './ThemeToggle';
+import { Notifications } from './Notifications';
+import { Skeleton } from './ui/skeleton';
 
 
 export function Header() {
@@ -59,64 +61,70 @@ export function Header() {
           <GlobalSearch />
           <ThemeToggle />
           {isLoading ? (
-             <div className="h-8 w-20 bg-muted rounded-md animate-pulse" />
+             <div className="flex items-center gap-2">
+                <Skeleton className="h-8 w-8 rounded-full" />
+                <Skeleton className="h-8 w-20 rounded-md" />
+             </div>
           ) : authUser ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                  <Avatar className="h-10 w-10">
-                    {userAvatar && <AvatarImage src={userAvatar} alt="User Avatar" />}
-                    <AvatarFallback>{userName?.charAt(0).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">
-                      {userName}
-                    </p>
-                    <p className="text-xs leading-none text-muted-foreground">
-                      {authUser.email}
-                    </p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {authUser.uid && (
-                    <DropdownMenuItem asChild>
-                        <Link href={`/profile/${authUser.uid}`}>
-                            <User className="mr-2 h-4 w-4" />
-                            <span>Профиль</span>
-                        </Link>
-                    </DropdownMenuItem>
-                )}
-                 <DropdownMenuItem asChild>
-                  <Link href="/garage">
-                    <CarFront className="mr-2 h-4 w-4" />
-                    <span>Гараж</span>
-                  </Link>
-                </DropdownMenuItem>
-                 {profile?.role === 'admin' && (
-                  <DropdownMenuItem asChild>
-                    <Link href="/admin">
-                      <Shield className="mr-2 h-4 w-4" />
-                      <span>Админка</span>
+            <>
+              <Notifications />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                    <Avatar className="h-10 w-10">
+                      {userAvatar && <AvatarImage src={userAvatar} alt="User Avatar" />}
+                      <AvatarFallback>{userName?.charAt(0).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">
+                        {userName}
+                      </p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {authUser.email}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {authUser.uid && (
+                      <DropdownMenuItem asChild>
+                          <Link href={`/profile/${authUser.uid}`}>
+                              <User className="mr-2 h-4 w-4" />
+                              <span>Профиль</span>
+                          </Link>
+                      </DropdownMenuItem>
+                  )}
+                   <DropdownMenuItem asChild>
+                    <Link href="/garage">
+                      <CarFront className="mr-2 h-4 w-4" />
+                      <span>Гараж</span>
                     </Link>
                   </DropdownMenuItem>
-                )}
-                <DropdownMenuItem asChild>
-                  <Link href="/settings">
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Настройки</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Выйти</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                   {profile?.role === 'admin' && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin">
+                        <Shield className="mr-2 h-4 w-4" />
+                        <span>Админка</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings">
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Настройки</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Выйти</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
           ) : (
             <Button asChild>
               <Link href="/auth">Войти</Link>

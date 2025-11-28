@@ -194,3 +194,21 @@ export interface Event {
   requirements?: string;
   schedule?: string;
 }
+
+export interface Notification {
+  id: string;
+  recipientId: string;
+  senderId?: string;
+  senderData?: {
+    displayName: string;
+    photoURL?: string;
+  };
+  type: 'like' | 'comment' | 'follow' | 'mention' | 'car_of_day' | 'system';
+  title: string;
+  message: string;
+  actionURL?: string;
+  relatedEntityId?: string;
+  relatedEntityType?: 'post' | 'car' | 'comment';
+  read: boolean;
+  createdAt: any;
+}
