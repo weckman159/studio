@@ -1,7 +1,7 @@
 // src/app/marketplace/[id]/page.tsx
 'use server';
 
-import { adminDb } from '@/lib/firebase-admin';
+import { getAdminDb } from '@/lib/firebase-admin';
 import { notFound } from 'next/navigation';
 import type { MarketplaceItem } from '@/lib/types';
 import MarketplaceItemClient from './_components/MarketplaceItemClient';
@@ -10,6 +10,7 @@ export const dynamic = 'force-dynamic';
 
 async function getItemData(itemId: string): Promise<MarketplaceItem | null> {
     try {
+        const adminDb = getAdminDb();
         const itemRef = adminDb.collection('marketplace').doc(itemId);
         
         const itemSnap = await itemRef.get();

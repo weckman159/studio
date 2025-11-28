@@ -1,16 +1,16 @@
 'use server';
 
-import { adminDb, adminAuth } from '@/lib/firebase-admin';
+import { getAdminDb, getAdminAuth } from '@/lib/firebase-admin';
 import { cookies } from 'next/headers';
 import { ProfileClientPage } from '@/components/profile/ProfileClientPage';
 import type { User, Car } from '@/lib/types';
-import { query, collection, where, getDocs } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic';
 
 
 async function getProfileData(userId: string): Promise<{ profile: User | null; cars: Car[] }> {
     try {
+        const adminDb = getAdminDb();
         const userDocRef = adminDb.collection('users').doc(userId);
         const userDocSnap = await userDocRef.get();
 
@@ -34,6 +34,7 @@ async function getProfileData(userId: string): Promise<{ profile: User | null; c
 
 async function getAuthUser() {
     try {
+        const adminAuth = getAdminAuth();
         const sessionCookie = cookies().get('session')?.value;
         if (!sessionCookie) return null;
         const decodedToken = await adminAuth.verifySessionCookie(sessionCookie, true);

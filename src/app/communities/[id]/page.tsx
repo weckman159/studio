@@ -1,8 +1,7 @@
-
 // src/app/communities/[id]/page.tsx
 'use server';
 
-import { adminDb } from '@/lib/firebase-admin';
+import { getAdminDb } from '@/lib/firebase-admin';
 import { notFound } from 'next/navigation';
 import type { Community, Post, User } from '@/lib/types';
 import CommunityDetailClient from './_components/CommunityDetailClient';
@@ -12,6 +11,7 @@ export const dynamic = 'force-dynamic';
 
 async function getCommunityData(communityId: string): Promise<{ community: Community | null; posts: Post[]; members: User[] }> {
     try {
+        const adminDb = getAdminDb();
         const communityDocRef = adminDb.collection('communities').doc(communityId);
         const communityDocSnap = await communityDocRef.get();
 

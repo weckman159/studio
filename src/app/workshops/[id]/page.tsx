@@ -1,8 +1,7 @@
-
 // src/app/workshops/[id]/page.tsx
 'use server';
 
-import { adminDb } from '@/lib/firebase-admin';
+import { getAdminDb } from '@/lib/firebase-admin';
 import type { Workshop, Review } from '@/lib/types';
 import { notFound } from 'next/navigation';
 import WorkshopDetailClient from './_components/WorkshopDetailClient';
@@ -12,6 +11,7 @@ export const dynamic = 'force-dynamic';
 
 async function getWorkshopData(workshopId: string): Promise<{ workshop: Workshop | null, reviews: Review[] }> {
     try {
+        const adminDb = getAdminDb();
         const workshopDocRef = adminDb.collection('workshops').doc(workshopId);
         const workshopDocSnap = await workshopDocRef.get();
 

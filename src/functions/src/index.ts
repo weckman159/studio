@@ -79,12 +79,13 @@ export const onCommentCreated = functions.firestore
 
     try {
       // Увеличиваем счетчик комментариев у поста
-      await db.collection('posts').doc(postId).update({
+      const postRef = db.collection('posts').doc(postId);
+      await postRef.update({
         commentsCount: admin.firestore.FieldValue.increment(1)
       });
       
       // Создаем уведомление для автора поста
-      const postDoc = await db.collection('posts').doc(postId).get();
+      const postDoc = await postRef.get();
       const postData = postDoc.data();
 
       if (postData && postData.authorId !== commentData.authorId) {
