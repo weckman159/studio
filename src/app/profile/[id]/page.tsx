@@ -9,7 +9,7 @@ import { ProfileSidebar } from '@/components/profile/ProfileSidebar';
 import { CarCard } from '@/components/profile/CarCard';
 import { Wrench, Calendar, Camera, ShoppingBag, Loader2 } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import type { Car, User } from '@/lib/types';
 import { EditProfileModal } from '@/components/EditProfileModal';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -29,7 +29,7 @@ function ProfilePageClient({ userId }: { userId: string }) {
 
   const carsQuery = useMemoFirebase(() => {
     if (!userId || !firestore) return null;
-    return query(collection(firestore, 'users', userId, 'cars'));
+    return query(collection(firestore, 'cars'), where('userId', '==', userId));
   }, [userId, firestore]);
 
   const { data: userCars, isLoading: carsLoading } = useCollection<Car>(carsQuery);

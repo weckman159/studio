@@ -21,23 +21,12 @@ export function useCar(carId: string) {
       }
       try {
         setLoading(true);
-        // 1. Try to get from root `cars` collection (if we have public cars)
+        // Get car from root `cars` collection
         let carRef = doc(firestore, 'cars', carId);
         let carSnap = await getDoc(carRef);
 
-        // 2. If not found, try to get from the currently authenticated user's subcollection
-        if (!carSnap.exists() && user) {
-           const userCarRef = doc(firestore, 'users', user.uid, 'cars', carId);
-           const userCarSnap = await getDoc(userCarRef);
-           if (userCarSnap.exists()) {
-               carSnap = userCarSnap;
-               carRef = userCarRef;
-           }
-        }
-        
-        // 3. If still not found, we give up
         if (!carSnap.exists()) {
-            console.warn("Car not found in public collection or current user's garage.");
+            console.warn("Car not found in public collection.");
             throw new Error('Car not found');
         }
         
@@ -83,5 +72,3 @@ export function useCar(carId: string) {
 
   return { car, timeline, inventory, loading }
 }
-
-    

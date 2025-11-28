@@ -107,7 +107,7 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
     }
 
     try {
-      const carRef = doc(firestore, 'users', user.uid, 'cars', carId);
+      const carRef = doc(firestore, 'cars', carId);
 
       // 1. Delete images marked for deletion
       for (const url of imagesToDelete) {

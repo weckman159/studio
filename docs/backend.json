@@ -62,7 +62,7 @@
           "type": "string",
           "description": "Unique identifier for the post entity."
         },
-        "userId": {
+        "authorId": {
           "type": "string",
           "description": "Reference to the User who created the post. (Relationship: User 1:N Post)"
         },
@@ -100,7 +100,7 @@
       },
       "required": [
         "id",
-        "userId",
+        "authorId",
         "title",
         "content",
         "createdAt"
@@ -120,7 +120,7 @@
           "type": "string",
           "description": "Reference to the Post the comment belongs to. (Relationship: Post 1:N Comment)"
         },
-        "userId": {
+        "authorId": {
           "type": "string",
           "description": "Reference to the User who created the comment. (Relationship: User 1:N Comment)"
         },
@@ -137,7 +137,7 @@
       "required": [
         "id",
         "postId",
-        "userId",
+        "authorId",
         "text",
         "createdAt"
       ]
@@ -412,18 +412,14 @@
         }
       },
       {
-        "path": "/users/{userId}/cars/{carId}",
+        "path": "/cars/{carId}",
         "definition": {
           "entityName": "Car",
           "schema": {
             "$ref": "#/backend/entities/Car"
           },
-          "description": "Stores car information for each user.  Path-based ownership.",
+          "description": "Stores car information for all users in a root collection. Ownership is determined by the 'userId' field in the document.",
           "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            },
             {
               "name": "carId",
               "description": "The unique identifier of the car."
@@ -432,18 +428,14 @@
         }
       },
       {
-        "path": "/users/{userId}/posts/{postId}",
+        "path": "/posts/{postId}",
         "definition": {
           "entityName": "Post",
           "schema": {
             "$ref": "#/backend/entities/Post"
           },
-          "description": "Stores posts created by each user. Path-based ownership.",
+          "description": "Stores posts for all users in a root collection. Ownership is determined by the 'authorId' field in the document.",
           "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            },
             {
               "name": "postId",
               "description": "The unique identifier of the post."
@@ -452,18 +444,14 @@
         }
       },
       {
-        "path": "/users/{userId}/posts/{postId}/comments/{commentId}",
+        "path": "/posts/{postId}/comments/{commentId}",
         "definition": {
           "entityName": "Comment",
           "schema": {
             "$ref": "#/backend/entities/Comment"
           },
-          "description": "Stores comments for each post. Path-based ownership.",
+          "description": "Stores comments for each post.",
           "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            },
             {
               "name": "postId",
               "description": "The unique identifier of the post."
@@ -620,6 +608,6 @@
         }
       }
     ],
-    "reasoning": "The Firestore data structure is designed to support the features of the AutoSphere application, focusing on user profiles, car management, posts, and community interaction. Key considerations include authorization independence, data consistency, and efficient querying. The structure leverages path-based ownership for user-specific data and denormalization where needed for authorization.\n\n*   **Users Collection:** Stores user profiles with basic information (name, email, profile visibility). Profile visibility settings are duplicated to the `users` collection to avoid a `get()` call to the `/userSettings/{userId}` collection.\n*   **Cars Collection:** Stores car information, using a subcollection under each user to ensure easy management and querying of a user's cars.\n*   **Posts Collection:** Stores user-generated posts. Posts are stored in a subcollection under each user.\n*   **Comments Collection:** Stores comments related to each post, located as a subcollection under the post.\n*   **FeaturedCars Collection:** Stores the 'Car of the Day' information, keyed by date.  It includes references to the car and user.\n*   **UserSettings Collection:** Stores user-specific settings for notifications and privacy.\n*   **AutoNews Collection:** A root collection for storing news articles aggregated from various external sources. This is a read-heavy collection, ideal for SSG/ISR, with updates handled by a backend process.\n\nThis structure ensures Authorization Independence by:\n\n*   Storing ownership information directly within each document (e.g., `userId` in `cars`, `posts`, and `comments`).\n*   Duplicating profile visibility settings from `userSettings` to the `users` collection.\n\nThis approach avoids the need for complex `get()` calls in security rules and enables atomic operations.\n\nQAPs (Rules are not Filters) are supported by:\n\n*   Structural Segregation:  Data with different access control needs (e.g., public vs. private profiles) are stored in separate collections or subcollections (e.g., user profiles vs. user settings).\n*   Path-Based Ownership: Using paths like `/users/{userId}/cars/{carId}` provides inherent ownership context, simplifying security rules for listing and accessing user-owned resources."
+    "reasoning": "The Firestore data structure is refactored to place 'cars' and 'posts' in root collections. This flat structure is more scalable and performant for a social platform, as it simplifies querying for public feeds and general data browsing without needing to know the user ID. Ownership is now enforced through a 'userId' or 'authorId' field within each document, with security rules validating this field against the authenticated user's ID. This avoids deep nesting and complex, inefficient queries across user subcollections. Other collections remain as they were, following best practices for their specific use cases (e.g., user-specific settings remain tied to the user path)."
   }
 }

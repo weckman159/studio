@@ -103,9 +103,9 @@ export default function CreatePostPage() {
 
     setLoading(true);
     try {
+      const postId = doc(collection(firestore, 'temp')).id;
       let imageUrl = '';
       if (imageFile) {
-        const postId = doc(collection(firestore, 'temp')).id;
         const uploadResult = await uploadFiles([imageFile], 'posts', postId);
         if(uploadResult.length > 0) {
             imageUrl = uploadResult[0].url;
@@ -115,6 +115,7 @@ export default function CreatePostPage() {
       }
       // Добавляем пост
       const docRef = await addDoc(collection(firestore, 'posts'), {
+        id: postId,
         type,
         title: title.trim(),
         content: content.trim(),
@@ -128,7 +129,7 @@ export default function CreatePostPage() {
         likedBy: [],
         commentsCount: 0
       });
-      router.push(`/posts/${docRef.id}`);
+      router.push(`/posts/${postId}`);
     } catch (err) {
       setError('Ошибка публикации. Попробуйте ещё раз.');
       console.error('Ошибка создания поста:', err);

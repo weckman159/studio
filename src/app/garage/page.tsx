@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { GarageCard } from "@/components/GarageCard";
 import { Button } from "@/components/ui/button";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, doc, deleteDoc } from 'firebase/firestore';
+import { collection, query, doc, deleteDoc, where } from 'firebase/firestore';
 import type { Car, User } from '@/lib/data';
 import { Plus, Car as CarIcon } from "lucide-react";
 import { AddCarForm } from '@/components/AddCarForm';
@@ -23,7 +23,7 @@ export default function GaragePage() {
 
   const carsQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
-    return query(collection(firestore, 'users', user.uid, 'cars'));
+    return query(collection(firestore, 'cars'), where('userId', '==', user.uid));
   }, [user, firestore]);
 
   const { data: userCars, isLoading: carsLoading } = useCollection<Car>(carsQuery);
@@ -48,7 +48,7 @@ export default function GaragePage() {
         }
       }
       
-      await deleteDoc(doc(firestore, 'users', user.uid, 'cars', car.id));
+      await deleteDoc(doc(firestore, 'cars', car.id));
       
       toast({ title: "Успех!", description: "Автомобиль был удален." });
     } catch (error: any) {

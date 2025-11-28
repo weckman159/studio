@@ -29,9 +29,9 @@ export const onLikeCreated = functions.firestore
       const postDoc = await db.collection('posts').doc(postId).get();
       const postData = postDoc.data();
 
-      if (postData && postData.userId !== likeData.userId) {
+      if (postData && postData.authorId !== likeData.userId) {
         await createNotification({
-          recipientId: postData.userId,
+          recipientId: postData.authorId,
           senderId: likeData.userId,
           type: 'like',
           title: 'Новый лайк',
@@ -94,10 +94,10 @@ export const onCommentCreated = functions.firestore
       const postDoc = await db.collection('posts').doc(postId).get();
       const postData = postDoc.data();
 
-      if (postData && postData.userId !== commentData.userId) {
+      if (postData && postData.authorId !== commentData.authorId) {
         await createNotification({
-          recipientId: postData.userId,
-          senderId: commentData.userId,
+          recipientId: postData.authorId,
+          senderId: commentData.authorId,
           type: 'comment',
           title: 'Новый комментарий',
           message: 'оставил комментарий к вашему посту',
@@ -282,7 +282,7 @@ export const onPostCreated = functions.firestore
       const batch = db.batch();
 
       // Увеличиваем счетчик постов у пользователя
-      const userRef = db.collection('users').doc(postData.userId);
+      const userRef = db.collection('users').doc(postData.authorId);
       batch.update(userRef, {
         'stats.postsCount': admin.firestore.FieldValue.increment(1)
       });
@@ -312,7 +312,7 @@ export const onPostDeleted = functions.firestore
     try {
       const batch = db.batch();
 
-      const userRef = db.collection('users').doc(postData.userId);
+      const userRef = db.collection('users').doc(postData.authorId);
       batch.update(userRef, {
         'stats.postsCount': admin.firestore.FieldValue.increment(-1)
       });
@@ -362,21 +362,21 @@ export const onUserUpdated = functions.firestore
       // Обновляем посты пользователя
       const postsSnapshot = await db
         .collection('posts')
-        .where('userId', '==', userId)
+        .where('authorId', '==', userId)
         .get();
 
       postsSnapshot.forEach(doc => {
-        batch.update(doc.ref, { userData });
+        batch.update(doc.ref, { authorName: userData.displayName, authorAvatar: userData.photoURL });
       });
 
       // Обновляем комментарии пользователя
       const commentsQuery = await db
         .collectionGroup('comments')
-        .where('userId', '==', userId)
+        .where('authorId', '==', userId)
         .get();
 
       commentsQuery.forEach(doc => {
-        batch.update(doc.ref, { userData });
+        batch.update(doc.ref, { authorName: userData.displayName, authorAvatar: userData.photoURL });
       });
 
       await batch.commit();
