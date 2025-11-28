@@ -21,20 +21,19 @@ export function useCar(carId: string) {
       }
       try {
         setLoading(true);
-        // Get car from root `cars` collection
-        let carRef = doc(firestore, 'cars', carId);
-        let carSnap = await getDoc(carRef);
+        const carRef = doc(firestore, 'cars', carId);
+        const carSnap = await getDoc(carRef);
 
         if (!carSnap.exists()) {
-            console.warn("Car not found in public collection.");
+            console.warn("Car not found.");
             throw new Error('Car not found');
         }
         
         const carData = { id: carSnap.id, ...carSnap.data() } as Car
         setCar(carData)
         
-        // Increment views count
-        await updateDoc(carRef, { views: increment(1) })
+        // Increment views count - Note: This can be inaccurate due to client-side logic
+        updateDoc(carRef, { views: increment(1) }).catch(console.error);
         
         // Load timeline
         const timelineRef = collection(carRef, 'timeline')
@@ -57,7 +56,7 @@ export function useCar(carId: string) {
         
       } catch (error) {
         console.error('Error loading car:', error)
-        setCar(null); // Explicitly set to null on error
+        setCar(null);
       } finally {
         setLoading(false)
       }
@@ -68,7 +67,7 @@ export function useCar(carId: string) {
     } else {
         setLoading(false);
     }
-  }, [carId, firestore, user]) // Add user to dependency array
+  }, [carId, firestore, user])
 
   return { car, timeline, inventory, loading }
 }
