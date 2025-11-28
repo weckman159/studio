@@ -206,8 +206,8 @@ service cloud.firestore {
     // ------------------------------------------------------------------------
     match /notifications/{notificationId} {
         // Allow a user to read and update their own notifications.
-        // `read` covers both `get` and `list`.
-        allow read: if isSignedIn() && resource.data.recipientId == request.auth.uid;
+        allow get: if isSignedIn() && resource.data.recipientId == request.auth.uid;
+        allow list: if isSignedIn() && request.query.where.recipientId == request.auth.uid;
         allow update: if isSignedIn() && resource.data.recipientId == request.auth.uid && request.resource.data.keys().hasOnly(['read']);
         
         // Notifications are created by backend functions only
@@ -289,6 +289,8 @@ service cloud.firestore {
     }
   }
 }
+
+    
 
     
 
