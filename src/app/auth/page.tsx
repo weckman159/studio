@@ -88,6 +88,9 @@ export default function AuthPage() {
       
       await checkAndCreateUserDocument(userCredential.user);
       
+      const idToken = await userCredential.user.getIdToken();
+      document.cookie = `session=${idToken}; path=/; max-age=${60 * 60 * 24 * 5}; SameSite=Lax`;
+      
       toast({ title: "Успешно!", description: `Вы успешно ${isLogin ? 'вошли в систему' : 'зарегистрировались'}!` });
       router.push('/');
     } catch (error: any) {
@@ -108,6 +111,10 @@ export default function AuthPage() {
     try {
       const result = await signInWithPopup(auth, provider);
       await checkAndCreateUserDocument(result.user);
+
+      const idToken = await result.user.getIdToken();
+      document.cookie = `session=${idToken}; path=/; max-age=${60 * 60 * 24 * 5}; SameSite=Lax`;
+
       toast({ title: "Успешно!", description: "Вы вошли с помощью Google!" });
       router.push('/');
     } catch (error: any) {
