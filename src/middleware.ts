@@ -2,6 +2,11 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getAdminAuth } from './lib/firebase-admin';
 import { cookies } from 'next/headers';
 
+// This forces the middleware to run in the Node.js runtime on Vercel.
+// It's required because 'firebase-admin' is a Node.js-specific package
+// and is not compatible with the default Edge runtime.
+export const runtime = 'nodejs';
+
 // This function is marked as async so we can use 'await'
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
