@@ -1,3 +1,4 @@
+
 'use client';
 
 import Image from 'next/image';
@@ -18,15 +19,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import { Car as CarData, User } from '@/lib/data';
+import type { Car, User } from '@/lib/types';
 import { MoreVertical, Edit, Trash2 } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 interface GarageCardProps {
-  car: CarData;
+  car: Car;
   user: User;
-  onEdit: (car: CarData) => void;
-  onDelete: (car: CarData) => void;
+  onEdit: (car: Car) => void;
+  onDelete: (car: Car) => void;
 }
 
 export function GarageCard({ car, user, onEdit, onDelete }: GarageCardProps) {

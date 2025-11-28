@@ -11,7 +11,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { User } from '@/lib/data';
+import type { User } from '@/lib/types';
 import Link from 'next/link';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { Skeleton } from './ui/skeleton';

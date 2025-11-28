@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { ThumbsUp, Check, Award } from 'lucide-react';
-import type { Car, User } from '@/lib/data';
+import type { Car, User } from '@/lib/types';
 
 interface ContenderCardProps {
     car: Car;
@@ -56,7 +56,7 @@ export function ContenderCard({ car, owner, votes, totalVotes, onVote, hasVoted,
                 <Link href={`/profile/${owner.id}`} className="flex items-center gap-2 mt-2 hover:underline">
                     <Avatar className="h-6 w-6">
                         {owner.photoURL && <AvatarImage src={owner.photoURL} />}
-                        <AvatarFallback>{owner.name[0]}</AvatarFallback>
+                        <AvatarFallback>{owner.name?.[0]}</AvatarFallback>
                     </Avatar>
                     <span className="text-sm text-muted-foreground">{owner.name}</span>
                 </Link>

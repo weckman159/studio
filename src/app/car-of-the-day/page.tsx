@@ -59,7 +59,7 @@ export default function CarOfTheDayPage() {
                                 contendersData.push({
                                     ...car,
                                     owner,
-                                    votes: votingData.votes?.[carId] || 0
+                                    votes: (votingData.votes?.[carId] || 0) as number
                                 });
                             }
                         }

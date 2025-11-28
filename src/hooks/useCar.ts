@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { doc, getDoc, collection, getDocs, query, orderBy, increment, updateDoc, where } from 'firebase/firestore'
 import { useFirestore, useUser } from '@/firebase'
-import type { Car, TimelineEntry, InventoryItem } from '@/lib/types/car'
+import type { Car, TimelineEntry, InventoryItem } from '@/lib/types'
 
 export function useCar(carId: string) {
   const { user } = useUser();

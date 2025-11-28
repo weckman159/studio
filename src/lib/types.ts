@@ -9,6 +9,7 @@ export interface User {
   role?: 'admin' | 'user';
   email?: string;
   photoURL?: string;
+  coverUrl?: string; // profile cover
   bio?: string;
   nickname?: string;
   location?: string;
@@ -22,42 +23,126 @@ export interface User {
     wins?: number;
     followersCount?: number;
     followingCount?: number;
-    drive?: number;
-    reposts?: number;
+    carsCount?: number;
     reputation?: number;
   };
+  socials?: {
+      instagram?: string;
+      youtube?: string;
+      tiktok?: string;
+  }
 }
 
+// =====================================================================
+//  CAR TYPES (from garage 2.0)
+// =====================================================================
+
+export type CarStatus = 'owned' | 'sold' | 'project' | 'dream' | 'parted'
+export type FitmentStatus = 'flush' | 'tucked' | 'poke'
+export type TimelineType = 'purchase' | 'maintenance' | 'tuning' | 'accident' | 'sale'
+export type ModCategory = 'engine' | 'suspension' | 'exterior' | 'interior' | 'audio'
+
 export interface Car {
-  id: string;
-  userId: string;
-  brand: string;
-  model: string;
-  year: number;
-  engine: string;
-  description?: string;
-  photoUrl?: string; // mainPhotoURL
-  photos?: string[]; // gallery
-  isCarOfTheDay?: boolean;
+  id: string
+  userId: string
+  status?: CarStatus
   
-  // Garage 2.0 fields
-  generation?: string;
-  nickname?: string;
-  coverImage?: string;
-  coverVideo?: string;
-  badges?: string[]; // ['car-of-the-day', 'top-10-region', 'stage-2']
+  // Основные данные
+  brand: string
+  model: string
+  generation?: string
+  year: number
+  engine: string;
+  nickname?: string
+  vin?: string
+  
+  // Hero-блок
+  coverImage?: string
+  coverVideo?: string
+  photos: string[]
+  photoUrl?: string; // main photo
+  badges?: string[] // ['car-of-the-day', 'top-10-region', 'stage-2']
+  
+  // Спеки
   specs?: {
-    stockHP: number;
-    currentHP: number;
-    acceleration: number;
-    clearance: number;
-    mileage: number;
-    lastMileageUpdate: Timestamp;
-  };
-  views?: number;
-  comments?: number;
-  likes?: number;
+    stockHP: number
+    currentHP: number
+    acceleration: number
+    clearance: number
+    mileage: number
+    lastMileageUpdate: Timestamp
+  }
+  
+  // Фитмент
+  fitment?: {
+    front: WheelSetup
+    rear: WheelSetup
+    status: FitmentStatus
+  }
+
+  description?: string;
+  
+  // Модификации
+  modifications?: Record<ModCategory, Modification[]>
+  
+  // Статистика
+  views?: number
+  likes?: number
+  comments?: number
+  
+  // Метаданные
+  createdAt: any
+  updatedAt?: any
 }
+
+export interface WheelSetup {
+  et: number
+  width: number
+  tire: string
+  spacers?: number
+}
+
+export interface Modification {
+  id: string
+  part: string
+  brand: string
+  model: string
+  price?: number
+  installedAt?: Timestamp
+  postId?: string
+  affiliateLink?: string
+}
+
+export interface TimelineEntry {
+  id: string
+  carId: string
+  date: Timestamp
+  type: TimelineType
+  title: string
+  description: string
+  mileage: number
+  cost?: number
+  photos: string[]
+  documents: string[]
+  isPublic: boolean
+}
+
+export interface InventoryItem {
+  id: string
+  carId: string
+  name: string
+  category: string
+  quantity: number
+  photo?: string
+  purchasePrice?: number
+  forSale: boolean
+  salePrice?: number
+}
+
+
+// =====================================================================
+//  OTHER TYPES
+// =====================================================================
 
 
 export interface Post {
@@ -86,6 +171,7 @@ export interface Post {
   isBookmarked?: boolean;
   likedBy?: string[];
   updatedAt?: string;
+  communityId?: string;
 }
 
 export interface Comment {
@@ -102,10 +188,14 @@ export interface Community {
   id: string;
   name: string;
   description: string;
+  fullDescription?: string;
+  rules?: string;
   category: string;
   membersCount: number;
   imageUrl?: string;
+  coverUrl?: string;
   createdAt: any;
+  updatedAt?: any;
   isPrivate: boolean;
   adminId: string;
   memberIds: string[];
@@ -164,6 +254,17 @@ export interface Workshop {
   lat?: number;
   lng?: number;
   createdBy?: string;
+}
+
+export interface Review {
+  id: string;
+  workshopId?: string;
+  userId: string;
+  userName: string;
+  userAvatar?: string;
+  rating: number;
+  text: string;
+  createdAt: any;
 }
 
 export interface Feedback {

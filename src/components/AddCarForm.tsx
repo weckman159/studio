@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import type { Car } from '@/lib/data';
+import type { Car } from '@/lib/types';
 import { MultipleImageUpload } from './ImageUpload';
 import { useCarPhotosUpload } from '@/hooks/use-file-upload';
 import { deleteFile } from '@/lib/storage';
@@ -134,7 +134,7 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
         });
       } else {
         // 3b. Create new car
-        const carData = {
+        const carData: Car = {
           ...data,
           id: carId,
           userId: user.uid,
