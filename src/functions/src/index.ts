@@ -657,5 +657,3 @@ async function createNotification(params: CreateNotificationParams) {
     console.error('Error creating notification:', error);
   }
 }
-
-    
