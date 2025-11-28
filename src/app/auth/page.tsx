@@ -18,6 +18,7 @@ import {
   signInWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
+  User
 } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from "@/hooks/use-toast";
@@ -43,70 +44,54 @@ export default function AuthPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const checkAndCreateUserDocument = async (user: User) => {
+    if (!firestore) return;
+    const userDocRef = doc(firestore, 'users', user.uid);
+    const userDocSnap = await getDoc(userDocRef);
+
+    if (!userDocSnap.exists()) {
+      await setDoc(userDocRef, {
+        id: user.uid,
+        name: user.displayName || email.split('@')[0],
+        email: user.email,
+        displayName: user.displayName || email.split('@')[0] || 'Пользователь',
+        photoURL: user.photoURL || `https://avatar.vercel.sh/${user.uid}.png`,
+        role: 'user',
+        bio: '',
+        location: '',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        stats: {
+          postsCount: 0,
+          followersCount: 0,
+          followingCount: 0,
+          carsCount: 0,
+        }
+      });
+    }
+  }
+
   const handleAuth = async (isLogin: boolean) => {
     setLoading(true);
-    if (!auth) {
-      toast({ variant: "destructive", title: "Authentication Error", description: "Firebase Auth not initialized" });
+    if (!auth || !firestore) {
+      toast({ variant: "destructive", title: "Ошибка аутентификации", description: "Сервис временно недоступен" });
       setLoading(false);
       return;
     }
     try {
+      let userCredential;
       if (isLogin) {
-        const loginCredential = await signInWithEmailAndPassword(auth, email, password);
-        // Check if user document exists, create if not
-        const loginUser = loginCredential.user;
-        const userDocRef = doc(firestore, 'users', loginUser.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        if (!userDocSnap.exists()) {
-          // Create user document for existing Firebase Auth user
-          await setDoc(userDocRef, {
-            id: loginUser.uid,
-            name: loginUser.displayName || email.split('@')[0],
-            email: loginUser.email,
-            displayName: loginUser.displayName || email.split('@')[0],
-            photoURL: loginUser.photoURL || '',
-            role: 'user',
-            bio: '',
-            location: '',
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-            stats: {
-              posts: 0,
-              likes: 0,
-              wins: 0,
-              followers: 0,
-              following: 0
-            }
-          });
-        }
+        userCredential = await signInWithEmailAndPassword(auth, email, password);
       } else {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                // Create user document in Firestore
-                const user = userCredential.user;
-                await setDoc(doc(firestore, 'users', user.uid), {
-                  id: user.uid,
-                  name: user.displayName || email.split('@')[0],
-                  email: user.email,
-                  displayName: user.displayName || email.split('@')[0],
-                  photoURL: user.photoURL || '',
-                  role: 'user',
-                  bio: '',
-                  location: '',
-                  createdAt: serverTimestamp(),
-                  updatedAt: serverTimestamp(),
-                  stats: {
-                    posts: 0,
-                    likes: 0,
-                    wins: 0,
-                    followers: 0,
-                    following: 0
-                  }
-                });
+        userCredential = await createUserWithEmailAndPassword(auth, email, password);
       }
-      toast({ title: "Success", description: `Successfully ${isLogin ? 'logged in' : 'registered'}!` });
+      
+      await checkAndCreateUserDocument(userCredential.user);
+      
+      toast({ title: "Успешно!", description: `Вы успешно ${isLogin ? 'вошли в систему' : 'зарегистрировались'}!` });
       router.push('/');
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Authentication Error", description: error.message });
+      toast({ variant: "destructive", title: "Ошибка аутентификации", description: error.message });
     } finally {
       setLoading(false);
     }
@@ -114,18 +99,19 @@ export default function AuthPage() {
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
-    if (!auth) {
-      toast({ variant: "destructive", title: "Authentication Error", description: "Firebase Auth not initialized" });
+    if (!auth || !firestore) {
+      toast({ variant: "destructive", title: "Ошибка аутентификации", description: "Сервис временно недоступен" });
       setLoading(false);
       return;
     }
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
-      toast({ title: "Success", description: "Successfully logged in with Google!" });
+      const result = await signInWithPopup(auth, provider);
+      await checkAndCreateUserDocument(result.user);
+      toast({ title: "Успешно!", description: "Вы вошли с помощью Google!" });
       router.push('/');
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Google Sign-In Error", description: error.message });
+      toast({ variant: "destructive", title: "Ошибка входа через Google", description: error.message });
     } finally {
       setLoading(false);
     }
