@@ -6,7 +6,8 @@ import { useEffect, useState } from 'react';
 import { collection, getDocs, deleteDoc, doc, updateDoc, setDoc, getDoc } from 'firebase/firestore';
 import { useFirestore, useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { User as UserData, Workshop, Feedback } from '@/lib/data';
+import { User as UserData, Workshop, Feedback } from '@/lib/types';
+import { useUserProfile } from '@/hooks/useUserProfile';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -141,24 +142,20 @@ function UserListAdmin() {
                     <TableBody>
                         {users.map(u => (
                             <TableRow key={u.id}>
-                                <TableCell>{u.name || u.displayName}</TableCell>
+                                <TableCell>{u.displayName}</TableCell>
                                 <TableCell>{u.email}</TableCell>
                                 <TableCell>
-                                    <Select 
-                                        defaultValue={u.role || 'user'}
-                                        onValueChange={(value: 'admin' | 'user') => handleRoleChange(u.id, value)}
-                                    >
-                                        <SelectTrigger className="w-[120px]">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="user">User</SelectItem>
-                                            <SelectItem value="admin">Admin</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                    {u.role === 'admin' ? (
+                                        <Badge>Админ</Badge>
+                                    ) : (
+                                        <Badge variant="secondary">Пользователь</Badge>
+                                    )}
                                 </TableCell>
                                 <TableCell className="text-right">
-                                    <Button variant="ghost" size="sm" onClick={() => handleBan(u.id)}>Забанить</Button>
+                                    {u.role !== 'admin' && (
+                                        <Button variant="ghost" size="sm" onClick={() => handleRoleChange(u.id, 'admin')}>Сделать админом</Button>
+                                    )}
+                                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleBan(u.id)}>Забанить</Button>
                                 </TableCell>
                             </TableRow>
                         ))}
@@ -278,23 +275,18 @@ function FeedbackAdmin() {
 
 export default function AdminPage() {
     const { user, isUserLoading } = useUser();
-    const [profile, setProfile] = useState<UserData | null>(null);
-    const firestore = useFirestore();
+    const { profile, isLoading: isProfileLoading } = useUserProfile(user?.uid);
     const router = useRouter();
 
-    useEffect(() => {
-        if (user && firestore) {
-            const fetchProfile = async () => {
-                const userDoc = await getDoc(doc(firestore, 'users', user.uid));
-                if (userDoc.exists()) {
-                    setProfile({id: userDoc.id, ...userDoc.data()} as UserData);
-                }
-            };
-            fetchProfile();
-        }
-    }, [user, firestore]);
+    const isLoading = isUserLoading || isProfileLoading;
 
-    if (isUserLoading || (user && !profile)) {
+    useEffect(() => {
+        if (!isLoading && (!user || profile?.role !== 'admin')) {
+            router.push('/');
+        }
+    }, [isLoading, user, profile, router]);
+
+    if (isLoading || !user || profile?.role !== 'admin') {
         return (
             <div className="flex justify-center items-center h-screen">
                 <Loader2 className="h-8 w-8 animate-spin" />
@@ -302,13 +294,6 @@ export default function AdminPage() {
         );
     }
     
-    if (!user || profile?.role !== 'admin') {
-        if (typeof window !== 'undefined') {
-            router.push('/');
-        }
-        return null;
-    }
-
     return (
         <div className="space-y-8">
             <h1 className="text-3xl font-bold">Админ-панель</h1>
@@ -320,19 +305,4 @@ export default function AdminPage() {
 
         </div>
     );
-}
-
-// Интерфейсы для данных
-interface Workshop {
-  id: string;
-  name: string;
-  city: string;
-  source?: string;
-}
-
-interface Feedback {
-  id: string;
-  email?: string;
-  msg: string;
-  createdAt: any;
 }
