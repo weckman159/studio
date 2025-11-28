@@ -378,6 +378,16 @@ export const onUserUpdated = functions.firestore
       commentsQuery.forEach(doc => {
         batch.update(doc.ref, { authorName: userData.displayName, authorAvatar: userData.photoURL });
       });
+      
+      // Обновляем объявления пользователя
+      const listingsQuery = await db
+        .collection('marketplace')
+        .where('sellerId', '==', userId)
+        .get();
+
+      listingsQuery.forEach(doc => {
+        batch.update(doc.ref, { sellerName: userData.displayName, sellerAvatar: userData.photoURL });
+      });
 
       await batch.commit();
     } catch (error) {
