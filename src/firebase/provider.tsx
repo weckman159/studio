@@ -56,6 +56,25 @@ export interface UserHookResult { // Renamed from UserAuthHookResult for consist
 // React Context
 export const FirebaseContext = createContext<FirebaseContextState | undefined>(undefined);
 
+const MOCK_USER = {
+  uid: 'dev-user-01',
+  email: 'dev@autosphere.com',
+  displayName: 'Разработчик',
+  photoURL: 'https://avatar.vercel.sh/dev.png',
+  emailVerified: true,
+  // Добавляем остальные обязательные поля типа User, чтобы соответствовать
+  isAnonymous: false,
+  metadata: {},
+  providerData: [],
+  providerId: 'password',
+  tenantId: null,
+  delete: async () => {},
+  getIdToken: async () => 'mock-token',
+  getIdTokenResult: async () => ({ token: 'mock-token', claims: {}, authTime: '', expirationTime: '', issuedAtTime: '', signInProvider: null, signInSecondFactor: null }),
+  reload: async () => {},
+  toJSON: () => ({}),
+} as User;
+
 /**
  * FirebaseProvider manages and provides Firebase services and user authentication state.
  */
@@ -67,32 +86,30 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   storage,
 }) => {
   const [userAuthState, setUserAuthState] = useState<UserAuthState>({
-    user: null,
-    isUserLoading: true, // Start loading until first auth event
+    user: MOCK_USER,
+    isUserLoading: false, // Assume user is always logged in for development
     userError: null,
   });
 
-  // Effect to subscribe to Firebase auth state changes
-  useEffect(() => {
-    if (!auth) { // If no Auth service instance, cannot determine user state
-      setUserAuthState({ user: null, isUserLoading: false, userError: new Error("Auth service not provided.") });
-      return;
-    }
-
-    setUserAuthState({ user: null, isUserLoading: true, userError: null }); // Reset on auth instance change
-
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      (firebaseUser) => { // Auth state determined
-        setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
-      },
-      (error) => { // Auth listener error
-        console.error("FirebaseProvider: onAuthStateChanged error:", error);
-        setUserAuthState({ user: null, isUserLoading: false, userError: error });
-      }
-    );
-    return () => unsubscribe(); // Cleanup
-  }, [auth]); // Depends on the auth instance
+  // The onAuthStateChanged listener is temporarily disabled for development.
+  // useEffect(() => {
+  //   if (!auth) { 
+  //     setUserAuthState({ user: null, isUserLoading: false, userError: new Error("Auth service not provided.") });
+  //     return;
+  //   }
+  //   setUserAuthState({ user: null, isUserLoading: true, userError: null }); 
+  //   const unsubscribe = onAuthStateChanged(
+  //     auth,
+  //     (firebaseUser) => { 
+  //       setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
+  //     },
+  //     (error) => {
+  //       console.error("FirebaseProvider: onAuthStateChanged error:", error);
+  //       setUserAuthState({ user: null, isUserLoading: false, userError: error });
+  //     }
+  //   );
+  //   return () => unsubscribe();
+  // }, [auth]);
 
   // Memoize the context value
   const contextValue = useMemo((): FirebaseContextState => {
