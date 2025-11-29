@@ -51,11 +51,12 @@ export default function AuthPage() {
     const userDocSnap = await getDoc(userDocRef);
 
     if (!userDocSnap.exists()) {
+      const displayName = user.displayName || email.split('@')[0] || 'Пользователь';
       await setDoc(userDocRef, {
-        id: user.uid,
-        name: user.displayName || email.split('@')[0],
+        id: user.uid, // This field is required by security rules
+        name: displayName,
+        displayName: displayName,
         email: user.email,
-        displayName: user.displayName || email.split('@')[0] || 'Пользователь',
         photoURL: user.photoURL || `https://avatar.vercel.sh/${user.uid}.png`,
         role: 'user',
         bio: '',
@@ -196,5 +197,3 @@ export default function AuthPage() {
     </div>
   );
 }
-
-    
