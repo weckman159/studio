@@ -15,7 +15,7 @@ import {
 import { Settings, User, LogOut, CarFront, Menu, Shield } from 'lucide-react';
 import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
-import { SidebarTrigger, useSidebar } from './ui/sidebar';
+import { useSidebar } from './ui/sidebar';
 import { useToast } from '@/hooks/use-toast';
 import GlobalSearch from './GlobalSearch';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -57,14 +57,20 @@ export function Header() {
               <span className="sr-only">Toggle Sidebar</span>
             </Button>
         </div>
-        <div className="flex-1" />
+        <div className="hidden md:flex items-center space-x-2">
+            <Button variant="ghost" size="icon" onClick={toggleSidebar}>
+                <Menu className="h-6 w-6" />
+                <span className="sr-only">Toggle Sidebar</span>
+            </Button>
+        </div>
+        <div className="flex-1 px-4">
+            <GlobalSearch />
+        </div>
         <div className="flex items-center justify-end space-x-2">
-          <GlobalSearch />
           <ThemeToggle />
           {isLoading ? (
              <div className="flex items-center gap-2">
                 <Skeleton className="h-8 w-8 rounded-full" />
-                <Skeleton className="h-8 w-20 rounded-md" />
              </div>
           ) : authUser ? (
             <>

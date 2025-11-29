@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { Metadata } from "next";
@@ -44,8 +45,8 @@ function AppSidebar() {
   return (
       <Sidebar>
           <SidebarHeader>
-              <div className="flex items-center space-x-2">
-               <CarFront className="h-6 w-6 text-primary" />
+              <div className="flex items-center space-x-2 p-2">
+               <CarFront className="h-6 w-6 text-primary shrink-0" />
                <span className="font-bold text-lg group-data-[collapsible=icon]:hidden">AutoSphere</span>
               </div>
           </SidebarHeader>
@@ -53,7 +54,7 @@ function AppSidebar() {
               <SidebarMenu>
                   {navLinks.map(link => (
                       <SidebarMenuItem key={link.href}>
-                          <SidebarMenuButton asChild isActive={checkActivePath(link.href)}>
+                          <SidebarMenuButton asChild isActive={checkActivePath(link.href)} title={link.label} tooltip={link.label}>
                               <Link href={link.href}>
                                   <link.icon />
                                   <span className="group-data-[collapsible=icon]:hidden">{link.label}</span>
@@ -63,7 +64,7 @@ function AppSidebar() {
                   ))}
                   {profile?.role === 'admin' && (
                     <SidebarMenuItem>
-                        <SidebarMenuButton asChild isActive={checkActivePath('/admin')}>
+                        <SidebarMenuButton asChild isActive={checkActivePath('/admin')} title="Админка" tooltip="Админка">
                             <Link href="/admin">
                                 <Shield />
                                 <span className="group-data-[collapsible=icon]:hidden">Админка</span>
@@ -78,7 +79,7 @@ function AppSidebar() {
                 <SidebarMenu>
                      {footerNavLinks.map(link => (
                       <SidebarMenuItem key={link.href}>
-                          <SidebarMenuButton asChild isActive={checkActivePath(link.href)}>
+                          <SidebarMenuButton asChild isActive={checkActivePath(link.href)} title={link.label} tooltip={link.label}>
                               <Link href={link.href}>
                                   <link.icon />
                                   <span className="group-data-[collapsible=icon]:hidden">{link.label}</span>
@@ -120,7 +121,7 @@ export default function RootLayout({
             <SidebarProvider>
               <div className="relative flex min-h-screen">
                 <AppSidebar />
-                <div className="flex flex-col flex-1">
+                <div className="flex flex-col flex-1 min-w-0">
                   <Header />
                   <main className="flex-1 container mx-auto px-4 py-8">
                      {children}

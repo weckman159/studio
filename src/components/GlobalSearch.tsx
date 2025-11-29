@@ -1,3 +1,4 @@
+
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -23,10 +24,10 @@ export default function GlobalSearch() {
   }
 
   return (
-    <form onSubmit={submit} className="relative w-full max-w-md">
+    <form onSubmit={submit} className="relative w-full max-w-lg">
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
       <Input
-        className="pl-10"
+        className="pl-10 h-10 w-full"
         value={query}
         onChange={e => setQuery(e.target.value)}
         placeholder="Поиск по сайту..."

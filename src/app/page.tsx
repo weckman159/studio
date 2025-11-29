@@ -47,7 +47,7 @@ function PostFeed({ posts, loading }: { posts: Post[], loading?: boolean }) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="grid grid-cols-1 gap-6">
       {posts.map(post => (
         <PostCard key={post.id} post={post} />
       ))}
@@ -143,30 +143,28 @@ export default function Home() {
   );
 
   return (
-    <div className="space-y-8">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
-          <CarOfTheDay />
+    <div className="grid grid-cols-1 xl:grid-cols-[1fr_350px] gap-8">
+      <div className="space-y-8">
+        <PostFilters 
+          activeType={activeType}
+          onTypeChange={setActiveType}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          feedType={feedType}
+          onFeedTypeChange={setFeedType}
+          showFeedToggle={!!user}
+        />
+        <div>
+          <h1 className="text-3xl font-bold mb-6">
+            {feedType === 'following' && user ? 'Лента подписок' : 'Глобальная лента'}
+          </h1>
+          <PostFeed posts={filteredPosts || []} loading={currentLoading} />
         </div>
-        <div className="lg:col-span-1">
+      </div>
+       <div className="hidden xl:block space-y-8">
+          <CarOfTheDay />
           <AutoNewsWidget />
         </div>
-      </div>
-      <PostFilters 
-        activeType={activeType}
-        onTypeChange={setActiveType}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        feedType={feedType}
-        onFeedTypeChange={setFeedType}
-        showFeedToggle={!!user}
-      />
-      <div>
-        <h1 className="text-3xl font-bold mb-6">
-          {feedType === 'following' && user ? 'Лента подписок' : 'Глобальная лента'}
-        </h1>
-        <PostFeed posts={filteredPosts || []} loading={currentLoading} />
-      </div>
     </div>
   );
 }
