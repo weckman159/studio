@@ -3,27 +3,44 @@
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { getFirestore, Firestore, enableIndexedDbPersistence, terminate } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
+
+let firebaseApp: FirebaseApp;
+let auth: Auth;
+let firestore: Firestore;
+let storage: FirebaseStorage;
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase() {
-  if (!getApps().length) {
-    const firebaseApp = initializeApp(firebaseConfig);
-    return getSdks(firebaseApp);
+  if (getApps().length === 0) {
+    firebaseApp = initializeApp(firebaseConfig);
+    auth = getAuth(firebaseApp);
+    firestore = getFirestore(firebaseApp);
+    storage = getStorage(firebaseApp);
+
+    // Enable offline persistence
+    try {
+      enableIndexedDbPersistence(firestore);
+    } catch (error: any) {
+      if (error.code == 'failed-precondition') {
+        // Multiple tabs open, persistence can only be enabled in one tab at a time.
+        console.warn('Firestore offline persistence failed: Multiple tabs open.');
+      } else if (error.code == 'unimplemented') {
+        // The current browser does not support all of the
+        // features required to enable persistence
+        console.warn('Firestore offline persistence not supported in this browser.');
+      }
+    }
+    
+  } else {
+    firebaseApp = getApp();
+    auth = getAuth(firebaseApp);
+    firestore = getFirestore(firebaseApp);
+    storage = getStorage(firebaseApp);
   }
 
-  // If already initialized, return the SDKs with the already initialized App
-  return getSdks(getApp());
-}
-
-export function getSdks(firebaseApp: FirebaseApp) {
-  return {
-    firebaseApp,
-    auth: getAuth(firebaseApp),
-    firestore: getFirestore(firebaseApp),
-    storage: getStorage(firebaseApp),
-  };
+  return { firebaseApp, auth, firestore, storage };
 }
 
 export * from './provider';
