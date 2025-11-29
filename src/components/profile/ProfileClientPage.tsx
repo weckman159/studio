@@ -3,145 +3,92 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { doc, getDoc, setDoc, deleteDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ProfileHero } from '@/components/profile/ProfileHero';
 import { ProfileSidebar } from '@/components/profile/ProfileSidebar';
 import { CarCard } from '@/components/profile/CarCard';
-import { Wrench, Calendar, Camera, ShoppingBag, Loader2 } from 'lucide-react';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import type { Car, User } from '@/lib/types';
+import { Wrench, Calendar, Camera, ShoppingBag } from 'lucide-react';
+import { useUser, useFirestore } from '@/firebase';
+import type { Car, User, Post } from '@/lib/types';
 import { EditProfileModal } from '@/components/EditProfileModal';
-import { Skeleton } from '@/components/ui/skeleton';
 import { UserListDialog } from '@/components/UserListDialog';
-import { notFound, useRouter } from 'next/navigation';
+import { PostCard } from '@/components/PostCard';
+import { ProfilePageSkeleton } from './ProfilePageSkeleton';
 
-function ProfilePageSkeleton() {
-    return (
-      <div className="min-h-screen -m-8">
-        <Skeleton className="h-[500px] w-full" />
-        <div className="container mx-auto px-4 py-8">
-            <div className="grid grid-cols-1 lg:grid-cols-[350px_1fr] gap-8">
-                 <div className="hidden lg:block space-y-6">
-                    <Skeleton className="h-40 w-full" />
-                    <Skeleton className="h-32 w-full" />
-                 </div>
-                 <div>
-                    <Skeleton className="h-12 w-full" />
-                    <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <Skeleton className="h-48 w-full rounded-2xl" />
-                        <Skeleton className="h-48 w-full rounded-2xl" />
-                    </div>
-                 </div>
-            </div>
-        </div>
-      </div>
-    )
-}
 
 interface ProfileClientPageProps {
   profileId: string;
+  initialProfile: User;
+  initialCars: Car[];
+  initialPosts: Post[];
+  initialFollowers: string[];
+  initialFollowing: string[];
 }
 
-export function ProfileClientPage({ profileId }: ProfileClientPageProps) {
-  const { user: authUser, isUserLoading: isAuthLoading } = useUser();
+export function ProfileClientPage({ 
+    profileId, 
+    initialProfile, 
+    initialCars, 
+    initialPosts, 
+    initialFollowers, 
+    initialFollowing 
+}: ProfileClientPageProps) {
+  const { user: authUser } = useUser();
   const firestore = useFirestore();
-  const router = useRouter();
 
-  const [profile, setProfile] = useState<User | null>(null);
-  const [cars, setCars] = useState<Car[]>([]);
-  const [followers, setFollowers] = useState<string[]>([]);
-  const [following, setFollowing] = useState<string[]>([]);
+  const [profile, setProfile] = useState<User>(initialProfile);
+  const [cars] = useState<Car[]>(initialCars);
+  const [posts] = useState<Post[]>(initialPosts);
+  const [followers, setFollowers] = useState<string[]>(initialFollowers);
+  const [following, setFollowing] = useState<string[]>(initialFollowing);
+  
   const [isFollowing, setIsFollowing] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loadingAction, setLoadingAction] = useState(false);
 
   const [isEditModalOpen, setEditModalOpen] = useState(false);
   const [followersDialogOpen, setFollowersDialogOpen] = useState(false);
   const [followingDialogOpen, setFollowingDialogOpen] = useState(false);
 
   useEffect(() => {
-    if (!firestore || !profileId) return;
-
-    const fetchData = async () => {
-        setIsLoading(true);
-        try {
-            // Fetch profile
-            const profileRef = doc(firestore, 'users', profileId);
-            const profileSnap = await getDoc(profileRef);
-
-            if (!profileSnap.exists()) {
-                notFound();
-                return;
-            }
-            const profileData = { id: profileSnap.id, ...profileSnap.data() } as User;
-            setProfile(profileData);
-
-            // Fetch cars
-            const carsQuery = query(collection(firestore, 'cars'), where('userId', '==', profileId));
-            const carsSnap = await getDocs(carsQuery);
-            setCars(carsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Car)));
-
-            // Fetch followers
-            const followersQuery = query(collection(firestore, 'users', profileId, 'followers'));
-            const followersSnapshot = await getDocs(followersQuery);
-            setFollowers(followersSnapshot.docs.map(doc => doc.id));
-            
-            // Fetch following
-            const followingQuery = query(collection(firestore, 'users', profileId, 'following'));
-            const followingSnapshot = await getDocs(followingQuery);
-            setFollowing(followingSnapshot.docs.map(doc => doc.id));
-
-        } catch (error) {
-            console.error("Error fetching profile data on client:", error);
-            // Handle error, maybe show a toast
-        } finally {
-            setIsLoading(false);
-        }
-    };
-    
-    fetchData();
-  }, [firestore, profileId]);
-
-  // Check if current user is following this profile
-  useEffect(() => {
-    if (authUser && profile) {
+    if (authUser) {
         setIsFollowing(followers.includes(authUser.uid));
     }
-  }, [authUser, profile, followers]);
+  }, [authUser, followers]);
 
 
   const handleFollow = async () => {
     if (!authUser || !firestore || !profile) return;
+    setLoadingAction(true);
     const followingRef = doc(firestore, 'users', authUser.uid, 'following', profile.id);
     try {
       await setDoc(followingRef, { createdAt: serverTimestamp() });
-      setIsFollowing(true);
       setFollowers(prev => [...prev, authUser.uid]);
+      setIsFollowing(true);
     } catch (e) {
       console.error("Error following user: ", e);
+    } finally {
+      setLoadingAction(false);
     }
   };
 
   const handleUnfollow = async () => {
     if (!authUser || !firestore || !profile) return;
+    setLoadingAction(true);
     const followingRef = doc(firestore, 'users', authUser.uid, 'following', profile.id);
     try {
       await deleteDoc(followingRef);
-      setIsFollowing(false);
       setFollowers(prev => prev.filter(id => id !== authUser.uid));
+      setIsFollowing(false);
     } catch (e) {
       console.error("Error unfollowing user: ", e);
+    } finally {
+        setLoadingAction(false);
     }
   };
 
-  if (isLoading || isAuthLoading) {
-      return <ProfilePageSkeleton />;
-  }
-
   if (!profile) {
-    // notFound() must be called in a server component, so we redirect.
-    // This case should be handled by the initial fetch logic anyway.
-    return <div className="container text-center py-10">Профиль не найден.</div>;
+    return <ProfilePageSkeleton />;
   }
   
   const isOwner = !!authUser && (authUser.uid === profile.id || profile.role === 'admin');
@@ -192,7 +139,7 @@ export function ProfileClientPage({ profileId }: ProfileClientPageProps) {
             onFollow={handleFollow}
             onUnfollow={handleUnfollow}
             onEditClick={() => setEditModalOpen(true)}
-            loading={isLoading}
+            loading={loadingAction}
             onFollowersClick={() => setFollowersDialogOpen(true)}
             onFollowingClick={() => setFollowingDialogOpen(true)}
         />
@@ -204,21 +151,21 @@ export function ProfileClientPage({ profileId }: ProfileClientPageProps) {
             </div>
             
             <div>
-              <Tabs defaultValue="garage" className="w-full">
+              <Tabs defaultValue="journal" className="w-full">
                 <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent">
+                   <TabsTrigger 
+                    value="journal"
+                    className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-6 py-4"
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    Бортжурнал ({posts.length})
+                  </TabsTrigger>
                   <TabsTrigger 
                     value="garage" 
                     className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-6 py-4"
                   >
                     <Wrench className="mr-2 h-4 w-4" />
-                    Гараж ({cars.length || 0})
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="journal"
-                    className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-6 py-4"
-                  >
-                    <Calendar className="mr-2 h-4 w-4" />
-                    Бортжурнал
+                    Гараж ({cars.length})
                   </TabsTrigger>
                   <TabsTrigger 
                     value="photos"
@@ -236,8 +183,16 @@ export function ProfileClientPage({ profileId }: ProfileClientPageProps) {
                   </TabsTrigger>
                 </TabsList>
                 
+                <TabsContent value="journal" className="mt-8 space-y-6">
+                  {posts.length > 0 ? (
+                    posts.map(post => <PostCard key={post.id} post={post} />)
+                  ) : (
+                    <div className="text-center py-12 text-muted-foreground">У пользователя еще нет постов.</div>
+                  )}
+                </TabsContent>
+
                 <TabsContent value="garage" className="mt-8">
-                    {cars && cars.length > 0 ? (
+                    {cars.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {cars.map(car => (
                                 <CarCard key={car.id} car={car} />
@@ -246,12 +201,6 @@ export function ProfileClientPage({ profileId }: ProfileClientPageProps) {
                     ) : (
                         <div className="text-center py-12 text-muted-foreground">В этом гараже пока нет машин.</div>
                     )}
-                </TabsContent>
-                
-                <TabsContent value="journal" className="mt-8">
-                  <div className="text-center py-12 text-muted-foreground">
-                    Бортжурнал в разработке.
-                  </div>
                 </TabsContent>
                 
                 <TabsContent value="photos" className="mt-8">
