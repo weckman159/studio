@@ -134,6 +134,11 @@ service cloud.firestore {
       // Allow update if user is the document owner and is not changing the authorId.
       allow update: if isSignedIn() && isDocumentOwner(resource.data) && request.resource.data.authorId == resource.data.authorId;
       allow delete: if isSignedIn() && isDocumentOwner(resource.data);
+
+      match /likes/{userId} {
+        allow read: if true;
+        allow create, delete: if isOwner(userId);
+      }
     }
     
     // ------------------------------------------------------------------------
