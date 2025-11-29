@@ -15,8 +15,10 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth, useFirestore } from "@/firebase";
 import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
+  initiateEmailSignUp,
+  initiateEmailSignIn
+} from "@/firebase/non-blocking-login";
+import {
   GoogleAuthProvider,
   signInWithPopup,
   User
@@ -45,6 +47,8 @@ export default function AuthPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // This function is now a standalone utility and can be triggered by auth state listeners.
+  // We keep it here to be called after Google Sign-In which is a popup-based flow.
   const checkAndCreateUserDocument = async (user: User) => {
     if (!firestore) return;
     const userDocRef = doc(firestore, 'users', user.uid);
@@ -53,7 +57,7 @@ export default function AuthPage() {
     if (!userDocSnap.exists()) {
       const displayName = user.displayName || email.split('@')[0] || 'Пользователь';
       await setDoc(userDocRef, {
-        id: user.uid, // This field is required by security rules
+        id: user.uid, // CRITICAL: This field MUST match the security rule
         name: displayName,
         displayName: displayName,
         email: user.email,
@@ -81,25 +85,21 @@ export default function AuthPage() {
       return;
     }
     try {
-      let userCredential;
       if (isLogin) {
-        userCredential = await signInWithEmailAndPassword(auth, email, password);
+        // Non-blocking sign-in. Auth state is handled by the global provider.
+        await initiateEmailSignIn(auth, email, password);
       } else {
-        userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        // Non-blocking sign-up.
+        await initiateEmailSignUp(auth, email, password);
       }
-      
-      await checkAndCreateUserDocument(userCredential.user);
-      
-      const idToken = await userCredential.user.getIdToken();
-      document.cookie = `session=${idToken}; path=/; max-age=${60 * 60 * 24 * 5}; SameSite=Lax`;
-      
-      toast({ title: "Успешно!", description: `Вы успешно ${isLogin ? 'вошли в систему' : 'зарегистрировались'}!` });
-      router.push('/');
+      toast({ title: "Успешно!", description: `Проверяем ваши данные...` });
+      router.push('/'); // Redirect immediately. The auth provider will handle the user state.
     } catch (error: any) {
+      // Errors from initiateEmailSignIn/Up are caught here for immediate feedback
       toast({ variant: "destructive", title: "Ошибка аутентификации", description: error.message });
-    } finally {
       setLoading(false);
     }
+    // No need to set loading to false here, as we are redirecting
   };
 
   const handleGoogleSignIn = async () => {
@@ -112,16 +112,13 @@ export default function AuthPage() {
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
+      // For popup flows, we can await and then create the document.
       await checkAndCreateUserDocument(result.user);
-
-      const idToken = await result.user.getIdToken();
-      document.cookie = `session=${idToken}; path=/; max-age=${60 * 60 * 24 * 5}; SameSite=Lax`;
 
       toast({ title: "Успешно!", description: "Вы вошли с помощью Google!" });
       router.push('/');
     } catch (error: any) {
       toast({ variant: "destructive", title: "Ошибка входа через Google", description: error.message });
-    } finally {
       setLoading(false);
     }
   };
