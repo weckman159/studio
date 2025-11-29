@@ -59,7 +59,7 @@ function PostFeed({ posts, loading }: { posts: Post[], loading?: boolean }) {
 export default function Home() {
   const [activeType, setActiveType] = useState('Все');
   const [searchQuery, setSearchQuery] = useState('');
-  const [feedType, setFeedType] = useState<'global' | 'following'>('following');
+  const [feedType, setFeedType] = useState<'global' | 'following'>('global');
   const firestore = useFirestore();
   const { user } = useUser();
 
@@ -69,13 +69,13 @@ export default function Home() {
 
   // Global Feed Query
   const globalPostsQuery = useMemoFirebase(() => {
-    if (!firestore || (feedType !== 'global' && !user)) return null;
+    if (!firestore) return null;
     let q: Query = query(collection(firestore, 'posts'), orderBy('createdAt', 'desc'), limit(20));
     if (activeType !== 'Все') {
       q = query(q, where('category', '==', activeType));
     }
     return q;
-  }, [firestore, activeType, feedType, user]);
+  }, [firestore, activeType]);
 
   const { data: globalPosts, isLoading: globalLoading } = useCollection<Post>(globalPostsQuery);
 
@@ -89,6 +89,7 @@ export default function Home() {
       
       setIsLoading(true);
       try {
+        // This query now requires an index: users(userId asc, feed asc)
         const feedRef = collection(firestore, 'users', user.uid, 'feed');
         const q = query(feedRef, orderBy('createdAt', 'desc'), limit(50));
         const feedSnapshot = await getDocs(q);
@@ -101,6 +102,12 @@ export default function Home() {
 
         const postIds = feedSnapshot.docs.map(doc => doc.data().postId);
         
+        if (postIds.length === 0) {
+            setFeedPosts([]);
+            setIsLoading(false);
+            return;
+        }
+
         const postPromises = [];
         for (let i = 0; i < postIds.length; i += 30) {
             const chunk = postIds.slice(i, i + 30);
@@ -130,6 +137,7 @@ export default function Home() {
     if (user) {
         fetchFollowingFeed();
     } else {
+        // If user logs out, switch to global feed
         setFeedType('global');
     }
   }, [feedType, user, firestore]);

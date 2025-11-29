@@ -2,7 +2,7 @@
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
 import { FirebaseApp } from 'firebase/app';
-import { Firestore } from 'firebase/firestore';
+import { Firestore, doc, getDoc, setDoc } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseStorage } from 'firebase/storage';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
@@ -56,13 +56,12 @@ export interface UserHookResult { // Renamed from UserAuthHookResult for consist
 // React Context
 export const FirebaseContext = createContext<FirebaseContextState | undefined>(undefined);
 
-const MOCK_USER = {
+const MOCK_USER: User = {
   uid: 'dev-user-01',
   email: 'dev@autosphere.com',
   displayName: 'Разработчик',
   photoURL: 'https://avatar.vercel.sh/dev.png',
   emailVerified: true,
-  // Добавляем остальные обязательные поля типа User, чтобы соответствовать
   isAnonymous: false,
   metadata: {},
   providerData: [],
@@ -76,6 +75,34 @@ const MOCK_USER = {
 } as User;
 
 /**
+ * Ensures a document exists in Firestore for our mock user.
+ * This is crucial for rules that check for user documents and for profile pages.
+ */
+async function ensureMockUserDocument(db: Firestore) {
+    if (!MOCK_USER) return;
+    const userDocRef = doc(db, 'users', MOCK_USER.uid);
+    try {
+        const userDoc = await getDoc(userDocRef);
+        if (!userDoc.exists()) {
+            await setDoc(userDocRef, {
+                id: MOCK_USER.uid,
+                uid: MOCK_USER.uid,
+                displayName: MOCK_USER.displayName,
+                name: MOCK_USER.displayName,
+                email: MOCK_USER.email,
+                photoURL: MOCK_USER.photoURL,
+                role: 'admin', // Make the mock user an admin for full access
+                createdAt: new Date(),
+            });
+            console.log("Mock user document created in Firestore.");
+        }
+    } catch (error) {
+        console.error("Failed to create or check mock user document:", error);
+    }
+}
+
+
+/**
  * FirebaseProvider manages and provides Firebase services and user authentication state.
  */
 export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
@@ -86,30 +113,22 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   storage,
 }) => {
   const [userAuthState, setUserAuthState] = useState<UserAuthState>({
-    user: MOCK_USER,
-    isUserLoading: false, // Assume user is always logged in for development
+    user: null,
+    isUserLoading: true, 
     userError: null,
   });
 
-  // The onAuthStateChanged listener is temporarily disabled for development.
-  // useEffect(() => {
-  //   if (!auth) { 
-  //     setUserAuthState({ user: null, isUserLoading: false, userError: new Error("Auth service not provided.") });
-  //     return;
-  //   }
-  //   setUserAuthState({ user: null, isUserLoading: true, userError: null }); 
-  //   const unsubscribe = onAuthStateChanged(
-  //     auth,
-  //     (firebaseUser) => { 
-  //       setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
-  //     },
-  //     (error) => {
-  //       console.error("FirebaseProvider: onAuthStateChanged error:", error);
-  //       setUserAuthState({ user: null, isUserLoading: false, userError: error });
-  //     }
-  //   );
-  //   return () => unsubscribe();
-  // }, [auth]);
+  useEffect(() => {
+    // In dev mode with mock user, we set the state directly.
+    const setupMockUser = async () => {
+      await ensureMockUserDocument(firestore);
+      setUserAuthState({ user: MOCK_USER, isUserLoading: false, userError: null });
+    };
+
+    setupMockUser();
+    
+  }, [firestore]);
+
 
   // Memoize the context value
   const contextValue = useMemo((): FirebaseContextState => {

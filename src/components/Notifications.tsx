@@ -79,9 +79,10 @@ export function Notifications() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // Memoize the query to prevent re-renders
+  // Memoize the query to prevent re-renders and conform to security rules
   const notificationsQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
+    // This query now includes the 'where' clause required by security rules
     return query(
         collection(firestore, 'notifications'),
         where('recipientId', '==', user.uid),
@@ -93,6 +94,8 @@ export function Notifications() {
   useEffect(() => {
     if (!notificationsQuery) {
       setLoading(false);
+      setNotifications([]);
+      setUnreadCount(0);
       return;
     }
 
@@ -117,12 +120,13 @@ export function Notifications() {
             errorEmitter.emit('permission-error', contextualError);
         } else if (error.code === 'failed-precondition') {
              console.warn(
-              'Firestore query failed. This is likely because a composite index is still building. ' +
+              'Firestore query for notifications failed. This is likely because a composite index is still building. ' +
               'This warning is expected after changing security rules and should resolve itself in a few minutes. ' +
               'Original error: ', error
             );
+        } else {
+           console.error("Error fetching notifications:", error);
         }
-        console.error("Error fetching notifications:", error);
         setLoading(false);
       }
     );
