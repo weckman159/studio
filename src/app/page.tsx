@@ -165,7 +165,7 @@ export default function Home() {
 
   return (
     <div className="flex justify-center gap-8 md:pt-4">
-      <div className="w-full max-w-[470px] flex flex-col">
+      <div className="w-full max-w-[640px] flex flex-col">
         
         <CarOfTheDay />
         
@@ -185,7 +185,7 @@ export default function Home() {
           {loading ? (
             // Skeletons
             [1, 2, 3].map(i => (
-                <div key={i} className="bg-background rounded-xl border h-[400px] animate-pulse p-4">
+                <div key={i} className="bg-background rounded-xl border h-[500px] animate-pulse p-4">
                     <div className="flex gap-3 mb-4">
                         <div className="w-10 h-10 bg-muted rounded-full" />
                         <div className="space-y-2">
@@ -193,7 +193,7 @@ export default function Home() {
                             <div className="w-20 h-3 bg-muted rounded" />
                         </div>
                     </div>
-                    <div className="w-full h-[250px] bg-muted rounded" />
+                    <div className="w-full h-[350px] bg-muted rounded" />
                 </div>
             ))
           ) : filteredPosts.length === 0 ? (
@@ -227,7 +227,7 @@ export default function Home() {
       </div>
 
       {/* Right Sidebar (Desktop) */}
-      <div className="hidden lg:block w-[320px] pl-8">
+      <div className="hidden xl:block w-[350px] pl-4">
         <div className="sticky top-24 space-y-6">
              <AutoNewsWidget />
              

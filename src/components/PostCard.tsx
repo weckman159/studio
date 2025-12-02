@@ -1,4 +1,3 @@
-
 'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
@@ -10,14 +9,15 @@ import {
   MessageCircle, 
   Send, // Иконка "самолетика" как в Инсте
   Bookmark,
-  MoreHorizontal
+  MoreHorizontal,
+  Car as CarIcon
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { Post } from '@/lib/types'
 import { useToast } from '@/hooks/use-toast'
 import { useUser, useFirestore } from '@/firebase';
-import { doc, setDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, arrayRemove, increment } from 'firebase/firestore';
 import { CommentSheet } from './CommentSheet';
 import {
   DropdownMenu,
@@ -26,53 +26,50 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn, stripHtml } from '@/lib/utils';
+import { Badge } from './ui/badge';
 
 export function PostCard({ post }: { post: Post }) {
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+
   const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(post.likesCount || 0);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isCommentSheetOpen, setCommentSheetOpen] = useState(false);
 
   useEffect(() => {
-    if (!user || !firestore) return;
-    // Проверяем наличие документа в подколлекции
-    getDoc(doc(firestore, 'posts', post.id, 'likes', user.uid)).then(snap => {
-        if(snap.exists()) setIsLiked(true);
-    });
-  }, [user, firestore, post.id]);
-
-  useEffect(() => {
+    if (user && post.likedBy) {
+      setIsLiked(post.likedBy.includes(user.uid));
+    }
     setLikesCount(post.likesCount || 0);
-  }, [post.likesCount]);
-
+  }, [user, post]);
 
   const handleLike = async () => {
     if (!user || !firestore) return toast({ title: 'Войдите, чтобы оценить' });
     
-    // Optimistic UI
+    const postRef = doc(firestore, 'posts', post.id);
     const newLikedState = !isLiked;
+    
+    // Optimistic update
     setIsLiked(newLikedState);
     setLikesCount(prev => newLikedState ? prev + 1 : prev - 1);
-    
-    // Ссылка на документ лайка в подколлекции
-    const likeRef = doc(firestore, 'posts', post.id, 'likes', user.uid);
 
     try {
-      if (newLikedState) {
-          // Ставим лайк
-          await setDoc(likeRef, { userId: user.uid, createdAt: new Date() });
+      if (!newLikedState) {
+        await updateDoc(postRef, {
+          likesCount: increment(-1),
+          likedBy: arrayRemove(user.uid)
+        });
       } else {
-          // Убираем лайк
-          await deleteDoc(likeRef);
+        await updateDoc(postRef, {
+          likesCount: increment(1),
+          likedBy: arrayUnion(user.uid)
+        });
       }
-    } catch(e) {
-      console.error(e);
-      // Revert
-      setIsLiked(!newLikedState);
-      setLikesCount(prev => !newLikedState ? prev + 1 : prev - 1);
+    } catch(err) {
+        console.error("Like error: ", err);
+        setIsLiked(!newLikedState); // Revert on error
     }
   };
 
@@ -118,14 +115,24 @@ export function PostCard({ post }: { post: Post }) {
         </div>
 
         {post.imageUrl && (
-          <div className="relative w-full aspect-square bg-muted" onDoubleClick={handleLike}>
-            <Image
-              src={post.imageUrl}
-              alt={post.title}
-              fill
-              className="object-cover"
-              priority
-            />
+          <div className="relative w-full aspect-[4/3] bg-muted/30" onDoubleClick={handleLike}>
+             <Link href={`/posts/${post.id}`}>
+                <Image
+                  src={post.imageUrl}
+                  alt={post.title}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 640px, 50vw"
+                />
+             </Link>
+             {post.carBrand && (
+               <div className="absolute bottom-3 left-3">
+                 <Badge className="bg-black/60 hover:bg-black/80 text-white border-0 backdrop-blur-sm flex gap-1">
+                   <CarIcon className="h-3 w-3" />
+                   {post.carBrand} {post.carModel}
+                 </Badge>
+               </div>
+             )}
           </div>
         )}
 

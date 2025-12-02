@@ -228,7 +228,7 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
                 <div className="p-4 pb-2 font-semibold text-sm">Обложка (для ленты)</div>
                 <CardContent className="p-4 pt-0">
                     {coverPreview ? (
-                        <div className="relative w-full aspect-video rounded-lg overflow-hidden border bg-muted group">
+                        <div className="relative w-full aspect-[4/3] rounded-lg overflow-hidden border bg-muted group">
                             <Image src={coverPreview} alt="Cover" fill className="object-cover" />
                             <Button 
                                 type="button"
@@ -243,7 +243,7 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
                         </div>
                     ) : (
                         <div 
-                            className="flex flex-col items-center justify-center w-full aspect-video border-2 border-dashed border-muted-foreground/20 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                            className="flex flex-col items-center justify-center w-full aspect-[4/3] border-2 border-dashed border-muted-foreground/20 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
                             onClick={() => coverInputRef.current?.click()}
                         >
                             <ImagePlus className="h-8 w-8 text-muted-foreground mb-2" />
