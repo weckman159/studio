@@ -1,25 +1,17 @@
-// components/CKEditorWrapper.tsx
-'use client';
-import React from 'react';
-import { CKEditor } from "@ckeditor/ckeditor5-react";
-import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
 
-interface CKEditorWrapperProps {
-  initialData: string;
-  onChange: (data: string) => void;
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
 }
 
-const CKEditorWrapper = ({ initialData, onChange }: CKEditorWrapperProps) => {
-  return (
-    <CKEditor
-      editor={ClassicEditor}
-      data={initialData}
-      onChange={(event, editor) => {
-        const data = editor.getData();
-        onChange(data);
-      }}
-    />
-  );
-};
-
-export default CKEditorWrapper;
+export function stripHtml(html: string): string {
+   if (!html) return "";
+   if (typeof document === 'undefined') {
+     // Running on the server, return as is or use a server-side library
+     return html.replace(/<[^>]*>?/gm, '');
+   }
+   const tmp = document.createElement("DIV");
+   tmp.innerHTML = html;
+   return tmp.textContent || tmp.innerText || "";
+}

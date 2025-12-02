@@ -1,30 +1,31 @@
-// src/components/PostForm.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, addDoc, updateDoc, serverTimestamp, doc, setDoc } from 'firebase/firestore';
+import Image from 'next/image';
+import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useFirestore, useUser } from '@/firebase';
+import { useFileUpload } from '@/hooks/use-file-upload';
+import { deleteFile } from '@/lib/storage';
+import { Post } from '@/lib/types';
+import dynamic from 'next/dynamic';
+
+// UI Components
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowLeft, Upload, Loader2, AlertCircle, Trash, Users } from 'lucide-react';
-import Link from 'next/link';
-import Image from 'next/image';
-import dynamic from 'next/dynamic';
-import { useFileUpload } from '@/hooks/use-file-upload';
-import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
-import type { Post } from '@/lib/types';
-import { deleteFile } from '@/lib/storage';
+import { Loader2, X, MapPin, ImagePlus, ArrowLeft, Trash } from 'lucide-react';
+import Link from 'next/link';
+import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
-// Динамический импорт редактора
-const CKEditorWrapper = dynamic(() => import('@/components/CKEditorWrapper'), {
+// Динамический импорт Tiptap редактора (чтобы избежать ошибок SSR)
+const RichTextEditor = dynamic(() => import('@/components/RichTextEditor'), {
   ssr: false,
-  loading: () => <div className="border rounded-md h-[200px] bg-muted animate-pulse" />
+  loading: () => <div className="h-[300px] w-full bg-muted rounded-xl animate-pulse" />
 });
 
 const postTypes = [
@@ -42,238 +43,263 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
-  const { uploadFiles, uploading, progress, error: uploadError } = useFileUpload({ maxFiles: 1, maxSizeInMB: 10 });
+  const { uploadFiles, uploading, progress } = useFileUpload({ maxFiles: 1, maxSizeInMB: 10 });
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
-  const [type, setType] = useState(postToEdit?.category || 'Блог');
+  // Генерируем ID поста сразу, чтобы можно было грузить картинки в текст ДО сохранения поста
+  const postId = useMemo(() => postToEdit?.id || doc(collection(firestore, 'posts')).id, [postToEdit, firestore]);
+
+  // State
   const [title, setTitle] = useState(postToEdit?.title || '');
-  const [content, setContent] = useState(postToEdit?.content || '');
+  const [content, setContent] = useState(postToEdit?.content || ''); 
+  const [category, setCategory] = useState(postToEdit?.category || 'Блог');
+  const [location, setLocation] = useState(postToEdit?.location || '');
   
-  // Image states
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>(postToEdit?.imageUrl || '');
+  // Cover Image Logic
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string>(postToEdit?.imageUrl || '');
   
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isEditMode = !!postToEdit;
-  
-  const validate = () => {
-    if (!title.trim() || title.length < 3) { 
-        setError('Заголовок слишком короткий'); 
-        return false; 
-    }
-    // Разрешаем короткий контент если это фотоотчет
-    if ((!content.trim() || content.length < 10) && type !== 'Фотоотчет') { 
-        setError('Напишите хотя бы пару предложений'); 
-        return false; 
-    }
-    return true;
-  };
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Clean up object URL
+  useEffect(() => {
+    return () => {
+      if (coverPreview && coverPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(coverPreview);
+      }
+    };
+  }, [coverPreview]);
+
+  const handleCoverSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (!file.type.startsWith('image/')) { setError('Нужно выбрать изображение'); return; }
-      if (file.size > 10 * 1024 * 1024) { setError('Файл слишком большой (макс 10МБ)'); return; }
-      
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
-      setError('');
+      setCoverFile(file);
+      setCoverPreview(URL.createObjectURL(file));
     }
   };
 
-  const handleRemoveImage = () => {
-    setImageFile(null);
-    setImagePreview('');
-  }
+  const handleRemoveCover = () => {
+    setCoverFile(null);
+    setCoverPreview('');
+    if (coverInputRef.current) coverInputRef.current.value = '';
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
 
     if (!user || !firestore) {
-      toast({ variant: 'destructive', title: 'Ошибка авторизации' });
+      toast({ variant: 'destructive', title: 'Ошибка', description: 'Вы не авторизованы' });
       return;
     }
-    if (!validate()) return;
 
-    setLoading(true);
+    if (!title.trim()) {
+      toast({ variant: 'destructive', title: 'Ошибка', description: 'Введите заголовок' });
+      return;
+    }
+
+    // Для фотоотчетов текст может быть необязательным, если есть фото в тексте или обложка
+    const hasContent = content.trim().length > 0;
+    const hasCover = !!coverPreview;
+    
+    if (!hasContent && !hasCover) {
+        toast({ variant: 'destructive', title: 'Пусто', description: 'Добавьте текст или фото' });
+        return;
+    }
+
+    setIsSubmitting(true);
+
     try {
-        // Генерируем ID сразу, чтобы использовать его в пути к файлу
-        const postId = postToEdit?.id || doc(collection(firestore, 'posts')).id;
-        const postRef = doc(firestore, 'posts', postId);
+      const postRef = doc(firestore, 'posts', postId);
+      let finalCoverUrl = coverPreview;
 
-        let imageUrl = postToEdit?.imageUrl || '';
-
-        // 1. Загрузка фото если выбрано новое
-        if (imageFile) {
-            // Удаляем старое если было
-            if (isEditMode && postToEdit?.imageUrl && postToEdit.imageUrl !== imagePreview) {
-                try { await deleteFile(postToEdit.imageUrl); } catch(e) { console.warn("Old image delete fail", e)}
-            }
-            
-            const uploadResult = await uploadFiles([imageFile], 'posts', postId);
-            if (uploadResult.length > 0) {
-                imageUrl = uploadResult[0].url;
-            }
-        } else if (isEditMode && !imagePreview && postToEdit?.imageUrl) {
-            // Пользователь удалил картинку
-            try { await deleteFile(postToEdit.imageUrl); } catch(e) { console.warn("Old image delete fail", e)}
-            imageUrl = '';
+      // 1. Загрузка обложки (если выбран новый файл)
+      if (coverFile) {
+        // Если меняем старое фото - удаляем его
+        if (isEditMode && postToEdit?.imageUrl && !postToEdit.imageUrl.startsWith('blob:')) {
+             try { await deleteFile(postToEdit.imageUrl); } catch(e) { console.warn('Old image delete fail', e); }
         }
 
-        // 2. Данные поста
-        const postData: any = {
-            id: postId,
-            authorId: user.uid,
-            authorName: user.displayName || 'Пользователь',
-            authorAvatar: user.photoURL || null,
-            type,
-            category: type,
-            title: title.trim(),
-            content: content.trim(),
-            imageUrl,
-            updatedAt: serverTimestamp(),
-        };
-
-        // Добавляем поля только при создании
-        if (!isEditMode) {
-            postData.createdAt = serverTimestamp();
-            postData.likesCount = 0;
-            postData.likedBy = [];
-            postData.commentsCount = 0;
-            postData.views = 0;
-            if (communityId) postData.communityId = communityId;
+        const uploadResult = await uploadFiles([coverFile], 'posts', postId);
+        if (uploadResult.length > 0) {
+            finalCoverUrl = uploadResult[0].url;
         }
+      } else if (!coverPreview) {
+          // Если обложку удалили
+          finalCoverUrl = '';
+      }
 
-        // 3. Запись в базу
-        await setDoc(postRef, postData, { merge: true });
+      // 2. Формирование данных
+      const postData: any = {
+        id: postId,
+        authorId: user.uid,
+        authorName: user.displayName || 'Пользователь',
+        authorAvatar: user.photoURL,
+        title: title.trim(),
+        content: content, // HTML из Tiptap
+        category,
+        type: category, 
+        imageUrl: finalCoverUrl,
+        location: location.trim(),
+        updatedAt: serverTimestamp(),
+      };
 
-        toast({ title: "Успешно!", description: "Ваш пост опубликован." });
-        
-        // Редирект
-        const redirectUrl = communityId 
-            ? `/communities/${communityId}` 
-            : `/posts/${postId}`;
-            
-        router.push(redirectUrl);
-        router.refresh();
+      if (!isEditMode) {
+        postData.createdAt = serverTimestamp();
+        postData.likesCount = 0;
+        postData.likedBy = [];
+        postData.commentsCount = 0;
+        postData.views = 0;
+        if (communityId) postData.communityId = communityId;
+      }
 
-    } catch (err: any) {
-        console.error('Post submit error:', err);
-        setError(err.message || 'Не удалось опубликовать пост');
+      await setDoc(postRef, postData, { merge: true });
+
+      toast({ title: 'Успешно!', description: 'Ваш пост опубликован.' });
+      
+      const redirectUrl = communityId ? `/communities/${communityId}` : `/posts/${postId}`;
+      router.push(redirectUrl);
+
+    } catch (error: any) {
+      console.error(error);
+      toast({ variant: 'destructive', title: 'Ошибка', description: error.message });
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
-  
-  const totalLoading = loading || uploading;
-  let backLink = communityId ? `/communities/${communityId}` : '/posts';
+
+  const loading = isSubmitting || uploading;
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl">
-      <div className="flex items-center justify-between mb-6">
-        <Link href={backLink}>
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Отмена
-          </Button>
-        </Link>
-        <h1 className="text-2xl font-bold">{isEditMode ? 'Редактирование' : 'Новая запись'}</h1>
-        <div className="w-20"></div> {/* Spacer */}
-      </div>
-
-      {communityName && (
-        <Alert className="mb-6 border-primary/20 bg-primary/5">
-            <Users className="h-4 w-4 text-primary" />
-            <AlertDescription>
-                Публикация в сообщество: <span className="font-semibold">{communityName}</span>
-            </AlertDescription>
-        </Alert>
-      )}
-
-      {(error || uploadError) && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error || uploadError}</AlertDescription>
-        </Alert>
-      )}
-
-      <form onSubmit={handleSubmit}>
-        <Card className="border shadow-sm">
-          <CardContent className="p-6 space-y-6">
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="md:col-span-2 space-y-2">
-                    <Label htmlFor="title" className="text-base">Заголовок</Label>
-                    <Input 
-                        id="title" 
-                        value={title} 
-                        onChange={e => setTitle(e.target.value)} 
-                        placeholder="О чем хотите рассказать?" 
-                        className="text-lg font-medium h-12"
-                        maxLength={100}
-                        disabled={totalLoading}
-                    />
-                </div>
-                <div className="space-y-2">
-                    <Label className="text-base">Тип</Label>
-                    <Select value={type} onValueChange={setType} disabled={totalLoading}>
-                        <SelectTrigger className="h-12">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {postTypes.map(pt => <SelectItem value={pt} key={pt}>{pt}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-base">Обложка поста</Label>
-              {imagePreview ? (
-                <div className="relative w-full aspect-video rounded-xl overflow-hidden border bg-muted group">
-                    <Image src={imagePreview} alt="Preview" fill className="object-cover" />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                         <Button type="button" variant="destructive" onClick={handleRemoveImage}>
-                            <Trash className="mr-2 h-4 w-4" /> Удалить фото
-                        </Button>
-                    </div>
-                </div>
-              ) : (
-                <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-muted-foreground/25 rounded-xl cursor-pointer hover:bg-muted/50 transition-colors">
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <Upload className="w-10 h-10 mb-3 text-muted-foreground" />
-                        <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Нажмите для загрузки</span> или перетащите</p>
-                        <p className="text-xs text-muted-foreground">JPG, PNG (макс. 10MB)</p>
-                    </div>
-                    <Input type="file" className="hidden" accept="image/*" onChange={handleImageSelect} disabled={totalLoading} />
-                </label>
-              )}
-              {uploading && <Progress value={progress} className="h-2 mt-2" />}
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-base">Текст</Label>
-              <div className="prose-editor-wrapper min-h-[300px]">
-                 <CKEditorWrapper initialData={content} onChange={(data) => setContent(data)} />
-              </div>
-            </div>
-
-            <Button type="submit" size="lg" className="w-full text-lg h-12" disabled={totalLoading}>
-                {totalLoading ? (
-                    <>
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                        {uploading ? 'Загрузка фото...' : 'Публикация...'}
-                    </>
-                ) : (
-                    isEditMode ? 'Сохранить изменения' : 'Опубликовать'
-                )}
+    <div className="max-w-5xl mx-auto p-4 md:py-8">
+        <div className="flex items-center justify-between mb-6">
+             <div className="flex items-center gap-4">
+                <Link href={communityId ? `/communities/${communityId}` : "/posts"}>
+                    <Button variant="ghost" size="icon"><ArrowLeft /></Button>
+                </Link>
+                <h1 className="text-2xl font-bold">{isEditMode ? 'Редактировать' : 'Создать публикацию'}</h1>
+             </div>
+             <Button type="submit" onClick={handleSubmit} disabled={loading} size="lg">
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isEditMode ? 'Сохранить' : 'Опубликовать'}
             </Button>
+        </div>
 
-          </CardContent>
-        </Card>
-      </form>
+        {communityName && (
+            <Alert className="mb-6 border-primary/20 bg-primary/5">
+                <AlertDescription>
+                    Публикация в сообщество: <strong>{communityName}</strong>
+                </AlertDescription>
+            </Alert>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8">
+            
+          {/* LEFT COLUMN: CONTENT EDITOR */}
+          <div className="space-y-6">
+            
+            {/* Title Input */}
+            <div className="space-y-2">
+                <Input 
+                    id="title" 
+                    placeholder="Заголовок поста" 
+                    value={title}
+                    onChange={e => setTitle(e.target.value)}
+                    disabled={loading}
+                    className="text-2xl font-bold h-14 border-none px-0 shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/50"
+                />
+            </div>
+
+            {/* Rich Text Editor */}
+            <RichTextEditor 
+                content={content} 
+                onChange={setContent} 
+                postId={postId} 
+            />
+
+          </div>
+
+          {/* RIGHT COLUMN: SETTINGS & COVER */}
+          <div className="space-y-6">
+            
+            {/* Cover Image */}
+            <Card className="overflow-hidden">
+                <div className="p-4 pb-2 font-semibold text-sm">Обложка (для ленты)</div>
+                <CardContent className="p-4 pt-0">
+                    {coverPreview ? (
+                        <div className="relative w-full aspect-video rounded-lg overflow-hidden border bg-muted group">
+                            <Image src={coverPreview} alt="Cover" fill className="object-cover" />
+                            <Button 
+                                type="button"
+                                variant="destructive" 
+                                size="icon" 
+                                className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={handleRemoveCover}
+                                disabled={loading}
+                            >
+                                <Trash className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    ) : (
+                        <div 
+                            className="flex flex-col items-center justify-center w-full aspect-video border-2 border-dashed border-muted-foreground/20 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                            onClick={() => coverInputRef.current?.click()}
+                        >
+                            <ImagePlus className="h-8 w-8 text-muted-foreground mb-2" />
+                            <span className="text-xs text-muted-foreground">Загрузить обложку</span>
+                        </div>
+                    )}
+                    
+                    {/* Hidden Input */}
+                    <input 
+                        ref={coverInputRef}
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        onChange={handleCoverSelect}
+                        disabled={loading}
+                    />
+                    {uploading && <Progress value={progress} className="h-1 mt-2" />}
+                </CardContent>
+            </Card>
+
+            {/* Settings */}
+            <Card>
+                 <CardContent className="p-4 space-y-4">
+                    <div className="space-y-2">
+                        <Label>Категория</Label>
+                        <Select value={category} onValueChange={setCategory} disabled={loading}>
+                            <SelectTrigger>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {postTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Локация</Label>
+                        <div className="relative">
+                             <MapPin className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                             <Input 
+                                className="pl-9" 
+                                placeholder="Добавить место" 
+                                value={location} 
+                                onChange={e => setLocation(e.target.value)}
+                                disabled={loading}
+                            />
+                        </div>
+                    </div>
+                 </CardContent>
+            </Card>
+            
+            <div className="text-xs text-muted-foreground px-2">
+                * Обложка будет отображаться в ленте новостей. В самом посте вы можете добавлять сколько угодно фото через редактор слева.
+            </div>
+          </div>
+        </div>
     </div>
   );
 }
