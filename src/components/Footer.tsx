@@ -44,11 +44,11 @@ export function Footer() {
           <div>
             <h4 className="font-semibold mb-4">Юридическая информация</h4>
             <ul className="space-y-2 text-sm">
-              <li><Link href="/impressum" className="text-muted-foreground hover:text-foreground transition-colors">Impressum (Выходные данные)</Link></li>
-              <li><Link href="/privacy" className="text-muted-foreground hover:text-foreground transition-colors">Datenschutz (Конфиденциальность)</Link></li>
-              <li><Link href="/terms" className="text-muted-foreground hover:text-foreground transition-colors">AGB (Условия использования)</Link></li>
-              <li><Link href="/cookies" className="text-muted-foreground hover:text-foreground transition-colors">Cookie-Richtlinie</Link></li>
-              <li><Link href="/widerrufsrecht" className="text-muted-foreground hover:text-foreground transition-colors">Widerrufsrecht (Право на отказ)</Link></li>
+              <li><Link href="/impressum" className="text-muted-foreground hover:text-foreground transition-colors">Выходные данные</Link></li>
+              <li><Link href="/privacy" className="text-muted-foreground hover:text-foreground transition-colors">Политика конфиденциальности</Link></li>
+              <li><Link href="/terms" className="text-muted-foreground hover:text-foreground transition-colors">Условия использования</Link></li>
+              <li><Link href="/cookies" className="text-muted-foreground hover:text-foreground transition-colors">Политика Cookie</Link></li>
+              <li><Link href="/widerrufsrecht" className="text-muted-foreground hover:text-foreground transition-colors">Право на отказ</Link></li>
             </ul>
           </div>
         </div>
@@ -57,9 +57,9 @@ export function Footer() {
         
         {/* Нижняя строка */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-          <p>© {currentYear} AutoSphere. Alle Rechte vorbehalten.</p>
+          <p>© {currentYear} AutoSphere. Все права защищены.</p>
           <div className="flex items-center gap-4">
-             <Link href="/feedback" className="hover:text-foreground transition-colors">Kontakt</Link>
+             <Link href="/feedback" className="hover:text-foreground transition-colors">Контакты</Link>
           </div>
         </div>
       </div>
