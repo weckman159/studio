@@ -63,9 +63,7 @@ service cloud.firestore {
      */
     function isValidPost() {
         let data = request.resource.data;
-        return data.title is string && data.title.size() >= 5 &&
-               data.content is string && data.content.size() >= 20 &&
-               data.type is string && data.type.size() > 0 &&
+        return data.title is string && data.title.size() >= 3 &&
                isRequestingUser('authorId') &&
                data.id == request.resource.id;
     }
@@ -121,6 +119,7 @@ service cloud.firestore {
       // Subcollection for user's personal post feed
       match /feed/{postId} {
         allow read: if isOwner(userId);
+        allow list: if isOwner(userId);
         allow write: if false; // Managed by Cloud Function
       }
     }
@@ -130,9 +129,11 @@ service cloud.firestore {
     // ------------------------------------------------------------------------
     match /posts/{postId} {
       allow get, list: if true; // Posts are public
-      allow create: if isSignedIn() && isValidPost();
-      // Allow update if user is the document owner and is not changing the authorId.
-      allow update: if isSignedIn() && isDocumentOwner(resource.data) && request.resource.data.authorId == resource.data.authorId;
+      allow create: if isSignedIn(); // Simplified - more checks in CF
+      
+      // Client-side updates are limited to likes
+      allow update: if isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount', 'likedBy']);
+
       allow delete: if isSignedIn() && isDocumentOwner(resource.data);
 
       match /likes/{userId} {
@@ -159,6 +160,9 @@ service cloud.firestore {
         allow read, list: if true;
         allow write: if isSignedIn() && isDocumentOwner(get(/databases/$(database)/documents/cars/$(carId)).data);
       }
+      match /expenses/{expenseId} {
+        allow read, list, write: if isSignedIn() && isDocumentOwner(get(/databases/$(database)/documents/cars/$(carId)).data);
+      }
     }
 
     // ------------------------------------------------------------------------
@@ -177,7 +181,7 @@ service cloud.firestore {
      match /comments/{commentId} {
         allow read, list: if true;
         allow create: if isSignedIn() && isRequestingUser('authorId') && request.resource.data.postId is string;
-        allow update, delete: if isSignedIn() && isDocumentOwner(resource.data);
+        allow update, delete: if false; // Deletion handled by Cloud Function
     }
 
     // ------------------------------------------------------------------------
@@ -251,7 +255,7 @@ service cloud.firestore {
     }
 
     match /messages/{messageId} {
-       allow list: if isSignedIn() && request.query.where[0][2] == get(/databases/$(database)/documents/dialogs/$(request.query.where[0][2])).data.participantIds[0]; //This is hacky
+       allow list: if isSignedIn() && request.query.where.size() > 0 && get(/databases/$(database)/documents/dialogs/$(request.query.where[0][2])).data.participantIds.hasAny([request.auth.uid]);
        allow read: if isSignedIn() && get(/databases/$(database)/documents/dialogs/$(resource.data.dialogId)).data.participantIds.hasAny([request.auth.uid]);
        allow create: if isSignedIn() && isRequestingUser('authorId') && get(/databases/$(database)/documents/dialogs/$(request.resource.data.dialogId)).data.participantIds.hasAny([request.auth.uid]);
        allow update, delete: if false;
