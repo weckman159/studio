@@ -205,13 +205,14 @@ export interface Voting {
   id: string;
   question: string;
   options: string[];
-  votes?: { [key: string]: number }; // e.g. { carId1: 10, carId2: 15 }
+  votes: number[];
   votedUserIds?: string[];
-  contenderCarIds?: string[];
+  contenderCarIds?: string[]; // optional for car of the day
   isActive: boolean;
   createdAt: any;
   endsAt?: any;
   totalVotes: number;
+  authorId?: string;
 }
 
 export interface MarketplaceItem {
@@ -312,4 +313,16 @@ export interface Notification {
   relatedEntityType?: 'post' | 'car' | 'comment';
   read: boolean;
   createdAt: any;
+}
+
+export interface AutoNews {
+  id: string;
+  title: string;
+  description: string;
+  imageUrl?: string;
+  source: string;
+  sourceUrl: string;
+  category: string;
+  publishedAt: any;
+  fetchedAt?: any;
 }
