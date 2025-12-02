@@ -23,7 +23,7 @@ export function initializeFirebase() {
     auth = getAuth(firebaseApp);
     
     // Инициализация Firestore с современными настройками кэширования
-    // Это убирает предупреждение о депрекации enableIndexedDbPersistence
+    // Исправляет ошибку deprecated enableIndexedDbPersistence
     firestore = initializeFirestore(firebaseApp, {
       localCache: persistentLocalCache({
         tabManager: persistentMultipleTabManager()

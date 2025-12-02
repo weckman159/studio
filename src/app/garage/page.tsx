@@ -85,7 +85,7 @@ export default function GaragePage() {
     );
   }
 
-  // Convert Firebase Auth User to App User Type for the component
+  // ИСПРАВЛЕНИЕ: Конвертация пользователя Firebase Auth в тип приложения
   const userForCard: UserType = {
       id: user.uid,
       displayName: user.displayName || 'Пользователь',

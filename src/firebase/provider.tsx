@@ -72,7 +72,8 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   useEffect(() => {
     if (!auth) return;
 
-    // Подписываемся на реальные изменения состояния авторизации Firebase
+    // СЛУШАЕМ РЕАЛЬНЫЕ ИЗМЕНЕНИЯ АВТОРИЗАЦИИ
+    // Ранее здесь был MOCK_USER, который блокировал реальный вход
     const unsubscribe = onAuthStateChanged(
       auth,
       (user) => {

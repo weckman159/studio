@@ -1,4 +1,3 @@
-// src/app/search/page.tsx
 'use client';
 import { useSearchParams } from 'next/navigation';
 import { useState, useEffect, Suspense } from 'react';
@@ -8,7 +7,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-// Добавлен Loader2 в импорт
+// ИСПРАВЛЕНИЕ: Добавлен Loader2 в импорт, так как он используется в JSX
 import { FileText, Users, Search as SearchIcon, Loader2 } from 'lucide-react';
 import type { Post, User } from '@/lib/types';
 
@@ -22,17 +21,15 @@ function SearchResultsComponent() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (q.length > 2 && firestore) {
+    if (q.length >= 2 && firestore) {
       setLoading(true);
       
       const fetchResults = async () => {
         try {
-            // Note: Firebase client-side search is limited. 
-            // In a real production app with many docs, use Algolia/Typesense.
-            
+            // Оптимизация: Запрашиваем ограниченное количество записей
             // Fetching users
             const usersRef = collection(firestore, 'users');
-            const usersQ = query(usersRef, limit(20));
+            const usersQ = query(usersRef, limit(20)); 
             const usersSnap = await getDocs(usersQ);
             
             const filteredUsers = usersSnap.docs
@@ -76,7 +73,7 @@ function SearchResultsComponent() {
         <Card className="mt-8">
             <CardContent className='p-12 text-center text-muted-foreground flex flex-col items-center'>
                 <SearchIcon className="h-12 w-12 mb-4 opacity-20" />
-                Введите поисковый запрос (минимум 3 символа).
+                Введите поисковый запрос (минимум 2 символа).
             </CardContent>
         </Card>
     );
