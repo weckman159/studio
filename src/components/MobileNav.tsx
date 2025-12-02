@@ -5,37 +5,44 @@ import { usePathname } from 'next/navigation';
 import { Home, Search, PlusSquare, Heart, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/firebase';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 
 export function MobileNav() {
   const pathname = usePathname();
   const { user } = useUser();
 
-  // Скрываем на десктопе и на странице авторизации
   if (pathname === '/auth') return null;
 
   const isActive = (path: string) => pathname === path;
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t z-50 pb-safe">
-      <div className="flex justify-around items-center h-14">
-        <Link href="/" className={cn("p-2", isActive('/') ? "text-primary" : "text-muted-foreground")}>
-          <Home className="h-6 w-6" />
+    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-t z-50 pb-safe">
+      <div className="flex justify-around items-center h-16 px-2">
+        <Link href="/" className={cn("p-3 rounded-full transition-colors", isActive('/') ? "text-primary" : "text-muted-foreground")}>
+          <Home className="h-6 w-6" strokeWidth={isActive('/') ? 2.5 : 2} />
         </Link>
         
-        <Link href="/search" className={cn("p-2", isActive('/search') ? "text-primary" : "text-muted-foreground")}>
-          <Search className="h-6 w-6" />
+        <Link href="/search" className={cn("p-3 rounded-full transition-colors", isActive('/search') ? "text-primary" : "text-muted-foreground")}>
+          <Search className="h-6 w-6" strokeWidth={isActive('/search') ? 2.5 : 2} />
         </Link>
 
-        <Link href="/posts/create" className="p-2">
-          <PlusSquare className="h-7 w-7 text-primary" />
+        <Link href="/posts/create" className="p-3">
+          <PlusSquare className="h-7 w-7 text-foreground" strokeWidth={2} />
         </Link>
 
-        <Link href="/car-of-the-day" className={cn("p-2", isActive('/car-of-the-day') ? "text-primary" : "text-muted-foreground")}>
-           <Heart className="h-6 w-6" />
+        <Link href="/car-of-the-day" className={cn("p-3 rounded-full transition-colors", isActive('/car-of-the-day') ? "text-primary" : "text-muted-foreground")}>
+           <Heart className="h-6 w-6" strokeWidth={isActive('/car-of-the-day') ? 2.5 : 2} />
         </Link>
 
-        <Link href={user ? `/profile/${user.uid}` : '/auth'} className={cn("p-2", isActive(user ? `/profile/${user.uid}` : '/auth') ? "text-primary" : "text-muted-foreground")}>
-           <User className="h-6 w-6" />
+        <Link href={user ? `/profile/${user.uid}` : '/auth'} className="p-3">
+           {user ? (
+               <Avatar className={cn("h-7 w-7 border-2", isActive(`/profile/${user.uid}`) ? "border-primary" : "border-transparent")}>
+                   <AvatarImage src={user.photoURL || undefined} />
+                   <AvatarFallback className="text-[10px]">{user.displayName?.[0]}</AvatarFallback>
+               </Avatar>
+           ) : (
+               <User className="h-6 w-6 text-muted-foreground" />
+           )}
         </Link>
       </div>
     </div>

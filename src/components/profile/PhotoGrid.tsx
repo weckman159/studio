@@ -5,7 +5,7 @@ import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Image as ImageIcon } from 'lucide-react';
 
 export function PhotoGrid({ userId }: { userId: string }) {
   const firestore = useFirestore();
@@ -17,27 +17,19 @@ export function PhotoGrid({ userId }: { userId: string }) {
     
     const fetchPhotos = async () => {
         try {
-            // Ищем посты пользователя, у которых есть imageUrl
+            // В идеале нужен индекс, но пока делаем простой запрос и фильтруем на клиенте
+            // чтобы не ломать приложение ошибками индексов
             const q = query(
-                collection(firestore, 'posts'), 
-                where('authorId', '==', userId),
-                where('imageUrl', '!=', ''), // Firestore требует композитный индекс для этого
-                orderBy('imageUrl'), // Хитрость: сортировка по полю, по которому фильтруем неравенство
-                orderBy('createdAt', 'desc')
-            );
-            // Если индекс не создан, этот запрос может упасть. 
-            // Упрощенная версия без сложного индекса:
-            const simpleQ = query(
                 collection(firestore, 'posts'), 
                 where('authorId', '==', userId),
                 orderBy('createdAt', 'desc')
             );
 
-            const snap = await getDocs(simpleQ);
-            // Фильтруем на клиенте
+            const snap = await getDocs(q);
+            
             const items = snap.docs
                 .map(d => ({ id: d.id, url: d.data().imageUrl }))
-                .filter(item => item.url);
+                .filter(item => item.url); // Оставляем только посты с фото
                 
             setPhotos(items);
         } catch (e) {
@@ -51,7 +43,12 @@ export function PhotoGrid({ userId }: { userId: string }) {
 
   if (loading) return <div className="flex justify-center p-10"><Loader2 className="animate-spin" /></div>;
 
-  if (photos.length === 0) return <div className="text-center py-12 text-muted-foreground">Нет фотографий</div>;
+  if (photos.length === 0) return (
+      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground border-2 border-dashed rounded-xl">
+          <ImageIcon className="h-12 w-12 mb-2 opacity-50" />
+          <p>Нет фотографий</p>
+      </div>
+  );
 
   return (
     <div className="grid grid-cols-3 gap-1 md:gap-4">
@@ -61,9 +58,9 @@ export function PhotoGrid({ userId }: { userId: string }) {
                     src={photo.url} 
                     alt="Post photo" 
                     fill 
-                    className="object-cover transition-transform duration-300 group-hover:scale-110"
+                    className="object-cover transition-transform duration-500 group-hover:scale-110"
                 />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
             </Link>
         ))}
     </div>

@@ -124,7 +124,7 @@ export default function RootLayout({
                 <AppSidebar />
                 <div className="flex flex-col flex-1 min-w-0">
                   <Header />
-                  <main className="flex-1 container mx-auto px-4 py-8">
+                  <main className="flex-1 container mx-auto px-4 py-8 pb-24">
                      {children}
                   </main>
                   <Footer />
