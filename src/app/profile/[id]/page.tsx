@@ -17,6 +17,24 @@ async function getProfileData(profileId: string) {
     // 1. Fetch Profile
     const profileRef = adminDb.collection('users').doc(profileId);
     const profileSnap = await profileRef.get();
+
+    // If mock user doesn't exist, create it on the fly. This is a dev-only convenience.
+    if (!profileSnap.exists && profileId === 'dev-user-01') {
+        const mockUserData = {
+            id: 'dev-user-01',
+            uid: 'dev-user-01',
+            displayName: 'Разработчик',
+            name: 'Разработчик',
+            email: 'dev@autosphere.com',
+            photoURL: 'https://avatar.vercel.sh/dev.png',
+            role: 'admin',
+            createdAt: new Date(),
+        };
+        await profileRef.set(mockUserData);
+        const newSnap = await profileRef.get();
+        return getProfileData(profileId); // Recurse to get full data
+    }
+    
     if (!profileSnap.exists) {
       return { profile: null, cars: [], posts: [], followers: [], following: [] };
     }
@@ -72,4 +90,3 @@ export default async function ProfilePage({ params }: { params: { id: string } }
         </Suspense>
     );
 }
-

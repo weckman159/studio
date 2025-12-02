@@ -121,7 +121,7 @@ service cloud.firestore {
       // Subcollection for user's personal post feed
       match /feed/{postId} {
         allow read: if isOwner(userId);
-        allow list: if isSignedIn() && request.query.where.size() > 0 && request.query.where[0][0] == 'authorId' && request.query.where[0][2] == request.auth.uid;
+        allow list: if isSignedIn() && request.query.where[0][0] == 'authorId' && request.query.where[0][2] == request.auth.uid;
         allow write: if false; // Managed by Cloud Function
       }
     }
@@ -215,7 +215,7 @@ service cloud.firestore {
     match /notifications/{notificationId} {
       allow get: if isSignedIn() && resource.data.recipientId == request.auth.uid;
       // Allow list only if querying by recipientId
-      allow list: if isSignedIn() && request.query.where.size() > 0 && request.query.where[0][2] == request.auth.uid;
+      allow list: if isSignedIn() && request.query.where[0][2] == request.auth.uid;
       allow update: if isSignedIn()
                     && resource.data.recipientId == request.auth.uid
                     && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);

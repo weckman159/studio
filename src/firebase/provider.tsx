@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
@@ -75,34 +76,6 @@ const MOCK_USER: User = {
 } as User;
 
 /**
- * Ensures a document exists in Firestore for our mock user.
- * This is crucial for rules that check for user documents and for profile pages.
- */
-async function ensureMockUserDocument(db: Firestore) {
-    if (!MOCK_USER) return;
-    const userDocRef = doc(db, 'users', MOCK_USER.uid);
-    try {
-        const userDoc = await getDoc(userDocRef);
-        if (!userDoc.exists()) {
-            await setDoc(userDocRef, {
-                id: MOCK_USER.uid,
-                uid: MOCK_USER.uid,
-                displayName: MOCK_USER.displayName,
-                name: MOCK_USER.displayName,
-                email: MOCK_USER.email,
-                photoURL: MOCK_USER.photoURL,
-                role: 'admin', // Make the mock user an admin for full access
-                createdAt: new Date(),
-            });
-            console.log("Mock user document created in Firestore.");
-        }
-    } catch (error) {
-        console.error("Failed to create or check mock user document:", error);
-    }
-}
-
-
-/**
  * FirebaseProvider manages and provides Firebase services and user authentication state.
  */
 export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
@@ -121,7 +94,8 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   useEffect(() => {
     // In dev mode with mock user, we set the state directly.
     const setupMockUser = async () => {
-      await ensureMockUserDocument(firestore);
+      // The user document is now created server-side in `profile/page.tsx`
+      // This provider just needs to provide the mock user object to the client context.
       setUserAuthState({ user: MOCK_USER, isUserLoading: false, userError: null });
     };
 

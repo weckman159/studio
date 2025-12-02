@@ -45,24 +45,33 @@ function initializeFirebaseAdmin(): boolean {
 // Геттеры с ленивой инициализацией
 export function getAdminDb(): admin.firestore.Firestore {
   if (!_adminDb) {
-    initializeFirebaseAdmin();
-    _adminDb = admin.firestore();
+    if (initializeFirebaseAdmin()) {
+      _adminDb = admin.firestore();
+    } else {
+        throw new Error("Admin DB could not be initialized");
+    }
   }
   return _adminDb;
 }
 
 export function getAdminAuth(): admin.auth.Auth {
   if (!_adminAuth) {
-    initializeFirebaseAdmin();
-    _adminAuth = admin.auth();
+    if (initializeFirebaseAdmin()) {
+      _adminAuth = admin.auth();
+    } else {
+        throw new Error("Admin Auth could not be initialized");
+    }
   }
   return _adminAuth;
 }
 
 export function getAdminStorage(): admin.storage.Storage {
   if (!_adminStorage) {
-    initializeFirebaseAdmin();
-    _adminStorage = admin.storage();
+    if (initializeFirebaseAdmin()) {
+      _adminStorage = admin.storage();
+    } else {
+        throw new Error("Admin Storage could not be initialized");
+    }
   }
   return _adminStorage;
 }

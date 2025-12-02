@@ -83,14 +83,14 @@ export default function Home() {
   useEffect(() => {
     const fetchFollowingFeed = async () => {
       if (feedType !== 'following' || !user || !firestore) {
-         if(feedType === 'following' || !user) setIsLoading(false);
+         if(feedType === 'following' && !user) setIsLoading(false);
          return;
       };
       
       setIsLoading(true);
       try {
-        // This query now requires an index: users(userId asc, feed asc)
         const feedRef = collection(firestore, 'users', user.uid, 'feed');
+        // This query now requires an index: users(userId asc) -> feed (createdAt desc)
         const q = query(feedRef, orderBy('createdAt', 'desc'), limit(50));
         const feedSnapshot = await getDocs(q);
         
@@ -108,6 +108,7 @@ export default function Home() {
             return;
         }
 
+        // Firestore 'in' query is limited to 30 items per query
         const postPromises = [];
         for (let i = 0; i < postIds.length; i += 30) {
             const chunk = postIds.slice(i, i + 30);
@@ -123,6 +124,7 @@ export default function Home() {
             snap.forEach(doc => posts.push({ id: doc.id, ...doc.data() } as Post));
         });
         
+        // Sort by createdAt descending as 'in' query doesn't guarantee order
         posts.sort((a, b) => b.createdAt.toDate() - a.createdAt.toDate());
 
         setFeedPosts(posts);
