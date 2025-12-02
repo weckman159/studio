@@ -1,218 +1,219 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { doc, collection, query, where, orderBy, addDoc, serverTimestamp, updateDoc, increment } from 'firebase/firestore';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { doc, collection, addDoc, query, orderBy, onSnapshot, updateDoc, serverTimestamp, increment } from 'firebase/firestore';
 import { useFirestore, useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Star, MapPin, Phone, Wrench, ArrowLeft, AlertCircle, Loader2 } from 'lucide-react';
-import Link from 'next/link';
-import type { Workshop, Review } from '@/lib/types';
+import { Textarea } from '@/components/ui/textarea';
+import { MapPin, Phone, Globe, Star, Clock, Navigation, Send } from 'lucide-react';
+import { Workshop, Review } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
 
-
-interface WorkshopDetailClientProps {
-    initialWorkshop: Workshop;
-    initialReviews: Review[];
-}
-
-export default function WorkshopDetailClient({ initialWorkshop, initialReviews }: WorkshopDetailClientProps) {
-  const router = useRouter();
+export default function WorkshopDetailClient({ initialWorkshop }: { initialWorkshop: Workshop }) {
   const { user } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
+  const [reviews, setReviews] = useState<Review[]>([]);
   
-  const [workshop, setWorkshop] = useState<Workshop>(initialWorkshop);
-  const [reviews, setReviews] = useState<Review[]>(initialReviews);
+  // Review State
+  const [rating, setRating] = useState(5);
   const [reviewText, setReviewText] = useState('');
-  const [reviewRating, setReviewRating] = useState(5);
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleAddReview = async () => {
-    if (!user || !firestore) {
-      setError('Войдите, чтобы оставить отзыв');
-      return;
-    }
-    if (!reviewText.trim()) {
-      setError('Введите текст отзыва');
-      return;
-    }
-    setSending(true);
-    setError('');
-    setSuccess('');
-    try {
-      await addDoc(collection(firestore, 'workshopReviews'), {
-        workshopId: workshop.id,
-        userId: user.uid,
-        userName: user.displayName,
-        userAvatar: user.photoURL,
-        rating: reviewRating,
-        text: reviewText.trim(),
-        createdAt: serverTimestamp()
-      });
+  // Real-time reviews
+  useEffect(() => {
+    if (!firestore) return;
+    const q = query(collection(firestore, 'workshops', initialWorkshop.id, 'reviews'), orderBy('createdAt', 'desc'));
+    const unsub = onSnapshot(q, (snap) => {
+        setReviews(snap.docs.map(d => ({ id: d.id, ...d.data() } as Review)));
+    });
+    return () => unsub();
+  }, [firestore, initialWorkshop.id]);
 
-      if (workshop) {
-        const newRating = ((workshop.rating * workshop.reviewsCount) + reviewRating) / (workshop.reviewsCount + 1);
-        await updateDoc(doc(firestore, 'workshops', workshop.id), {
-          rating: newRating,
-          reviewsCount: increment(1),
-          updatedAt: serverTimestamp()
-        });
-        setWorkshop(prev => ({...prev!, rating: newRating, reviewsCount: prev!.reviewsCount + 1}));
+  const handleSubmitReview = async () => {
+      if (!user || !reviewText.trim()) return;
+      setSubmitting(true);
+      try {
+          // 1. Add review
+          await addDoc(collection(firestore, 'workshops', initialWorkshop.id, 'reviews'), {
+              userId: user.uid,
+              userName: user.displayName || 'User',
+              userAvatar: user.photoURL,
+              rating,
+              text: reviewText,
+              createdAt: serverTimestamp()
+          });
+
+          // 2. Update average rating (Simple approximation for client-side)
+          // In production, use Cloud Functions for precise math
+          await updateDoc(doc(firestore, 'workshops', initialWorkshop.id), {
+              reviewsCount: increment(1)
+          });
+
+          setReviewText('');
+          toast({ title: 'Отзыв опубликован!' });
+      } catch (e) {
+          console.error(e);
+          toast({ variant: 'destructive', title: 'Ошибка' });
+      } finally {
+          setSubmitting(false);
       }
-
-      setReviewText('');
-      setReviewRating(5);
-      setSuccess('Ваш отзыв добавлен!');
-      // Optimistically add to UI
-      const newReview: Review = {
-        id: 'temp-' + Date.now(),
-        userId: user.uid,
-        userName: user.displayName || 'Пользователь',
-        userAvatar: user.photoURL || undefined,
-        rating: reviewRating,
-        text: reviewText.trim(),
-        createdAt: new Date()
-      };
-      setReviews(prev => [newReview, ...prev]);
-
-    } catch (e) {
-      setError('Ошибка добавления отзыва');
-      console.error(e);
-    } finally {
-      setSending(false);
-    }
   };
 
-  const formatDate = (ts: any) => {
-    if (!ts) return '';
-    const date = ts.toDate ? ts.toDate() : new Date(ts);
-    return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'short', year: 'numeric' }).format(date);
-  };
-  
   return (
-    <div className="max-w-3xl">
-      <Link href="/workshops">
-        <Button variant="ghost" size="sm" className="mb-4">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          К мастерским
-        </Button>
-      </Link>
-      <Card className="mb-8">
-        <CardHeader>
-          <div className="flex flex-wrap items-center gap-4">
-            {workshop.imageUrl && (
-              <div className="w-28 h-20 relative">
-                <Image src={workshop.imageUrl} alt={workshop.name} fill className="rounded object-cover" />
-              </div>
-            )}
-            <div>
-              <CardTitle className="mb-2 text-2xl">{workshop.name}</CardTitle>
-              <div className="flex gap-2 flex-wrap items-center text-muted-foreground text-sm">
-                <Badge variant="outline">{workshop.specialization}</Badge>
-                <span className="flex items-center gap-1"><MapPin className="h-4 w-4" />{workshop.city} {workshop.address && `- ${workshop.address}`}</span>
-                <span className="flex items-center gap-1"><Star className="h-4 w-4 text-yellow-500" />{workshop.rating?.toFixed(1) || 0} ({workshop.reviewsCount} отзывов)</span>
-                {workshop.source && <span className="text-xs">Источник: {workshop.source}</span>}
-              </div>
-              {workshop.phone && (
-                <a href={`tel:${workshop.phone}`} className="flex gap-2 mt-1 items-center underline text-sm">
-                  <Phone className="h-4 w-4" />{workshop.phone}
-                </a>
-              )}
-              {workshop.website && (
-                 <a href={workshop.website} target="_blank" rel="noopener noreferrer" className="flex gap-2 mt-1 items-center underline text-sm text-primary">
-                    <Wrench className="h-4 w-4" />
-                    Перейти на сайт
-                </a>
-              )}
+    <div className="min-h-screen pb-10">
+        {/* Header Image */}
+        <div className="relative h-[300px] md:h-[400px] w-full bg-muted">
+            <Image 
+                src={initialWorkshop.imageUrl || '/workshop-placeholder.jpg'} 
+                alt={initialWorkshop.name} 
+                fill 
+                className="object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
+            
+            <div className="absolute bottom-0 left-0 p-6 md:p-10 w-full">
+                <div className="flex justify-between items-end">
+                    <div>
+                        <Badge className="mb-3">{initialWorkshop.specialization}</Badge>
+                        <h1 className="text-3xl md:text-4xl font-bold mb-2">{initialWorkshop.name}</h1>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                            <MapPin className="h-4 w-4" />
+                            {initialWorkshop.city}, {initialWorkshop.address}
+                        </div>
+                    </div>
+                    <div className="hidden md:block">
+                         <div className="flex items-center gap-1 bg-background/80 backdrop-blur px-4 py-2 rounded-full">
+                            <Star className="h-5 w-5 text-yellow-400 fill-current" />
+                            <span className="font-bold text-lg">{initialWorkshop.rating.toFixed(1)}</span>
+                            <span className="text-muted-foreground text-sm">({initialWorkshop.reviewsCount} отзывов)</span>
+                         </div>
+                    </div>
+                </div>
             </div>
-          </div>
-        </CardHeader>
-        {workshop.description && (
-            <CardContent>
-                <p className="text-muted-foreground">{workshop.description}</p>
-            </CardContent>
-        )}
-      </Card>
-      
-       <Card>
-          <CardHeader>
-              <CardTitle>Отзывы ({workshop.reviewsCount})</CardTitle>
-          </CardHeader>
-          <CardContent>
-               <div className="mb-8">
-                    {user ? (
-                        <div className="space-y-4">
-                             <h3 className="font-semibold">Оставить отзыв</h3>
-                             {error && <Alert variant="destructive"><AlertCircle className="h-4 w-4"/><AlertDescription>{error}</AlertDescription></Alert>}
-                             {success && <Alert className="bg-green-100 dark:bg-green-900"><AlertDescription>{success}</AlertDescription></Alert>}
-                             <div className="flex items-center gap-2">
-                                 {[1,2,3,4,5].map(star => (
-                                     <Star 
-                                        key={star}
-                                        className={`h-6 w-6 cursor-pointer ${reviewRating >= star ? 'text-yellow-500 fill-yellow-500' : 'text-muted-foreground'}`}
-                                        onClick={() => setReviewRating(star)}
-                                     />
-                                 ))}
-                             </div>
-                             <Textarea
-                                value={reviewText}
-                                onChange={(e) => setReviewText(e.target.value)}
-                                placeholder="Напишите ваш отзыв..."
-                                rows={4}
-                                disabled={sending}
-                             />
-                            <Button onClick={handleAddReview} disabled={sending}>
-                               {sending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Отправить отзыв
-                            </Button>
-                        </div>
-                    ) : (
-                        <Alert>
-                            <AlertCircle className="h-4 w-4" />
-                            <AlertDescription>
-                                <Link href="/auth" className="underline">Войдите</Link>, чтобы оставить отзыв.
-                            </AlertDescription>
-                        </Alert>
-                    )}
-               </div>
+        </div>
 
-              <div className="space-y-6">
-                {reviews.length > 0 ? reviews.map(review => (
-                     <div key={review.id} className="flex gap-4">
-                        <Avatar>
-                            <AvatarImage src={review.userAvatar} />
-                            <AvatarFallback>{review.userName?.[0]}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                             <div className="flex items-center justify-between mb-1">
-                                <span className="font-semibold">{review.userName}</span>
-                                <span className="text-xs text-muted-foreground">{formatDate(review.createdAt)}</span>
-                             </div>
-                              <div className="flex items-center gap-1 mb-2">
-                                 {[1,2,3,4,5].map(star => (
-                                     <Star 
-                                        key={star}
-                                        className={`h-4 w-4 ${review.rating >= star ? 'text-yellow-500 fill-yellow-500' : 'text-muted-foreground'}`}
-                                     />
-                                 ))}
-                             </div>
-                             <p className="text-muted-foreground whitespace-pre-line break-words">{review.text}</p>
+        <div className="container mx-auto px-4 mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Left: Info & Reviews */}
+            <div className="lg:col-span-2 space-y-8">
+                <Card>
+                    <CardHeader><CardTitle>О мастерской</CardTitle></CardHeader>
+                    <CardContent>
+                        <p className="text-muted-foreground leading-relaxed">
+                            {initialWorkshop.description || "Описание отсутствует."}
+                        </p>
+                    </CardContent>
+                </Card>
+
+                {/* Reviews Section */}
+                <div>
+                    <h3 className="text-2xl font-bold mb-4">Отзывы</h3>
+                    
+                    {/* Add Review Form */}
+                    {user && (
+                        <Card className="mb-6 bg-muted/30 border-dashed">
+                            <CardContent className="p-4">
+                                <div className="flex gap-1 mb-3">
+                                    {[1,2,3,4,5].map(s => (
+                                        <Star 
+                                            key={s} 
+                                            className={`h-6 w-6 cursor-pointer ${s <= rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
+                                            onClick={() => setRating(s)}
+                                        />
+                                    ))}
+                                </div>
+                                <Textarea 
+                                    placeholder="Поделитесь впечатлениями о сервисе..." 
+                                    value={reviewText}
+                                    onChange={e => setReviewText(e.target.value)}
+                                    className="mb-3"
+                                />
+                                <Button onClick={handleSubmitReview} disabled={submitting || !reviewText}>
+                                    Опубликовать
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    <div className="space-y-4">
+                        {reviews.length === 0 && <p className="text-muted-foreground">Пока нет отзывов.</p>}
+                        {reviews.map(review => (
+                            <Card key={review.id}>
+                                <CardContent className="p-4">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <Avatar>
+                                            <AvatarImage src={review.userAvatar} />
+                                            <AvatarFallback>{review.userName[0]}</AvatarFallback>
+                                        </Avatar>
+                                        <div>
+                                            <div className="font-semibold text-sm">{review.userName}</div>
+                                            <div className="flex items-center">
+                                                {Array.from({length: review.rating}).map((_, i) => (
+                                                    <Star key={i} className="h-3 w-3 text-yellow-400 fill-current" />
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="ml-auto text-xs text-muted-foreground">
+                                            {review.createdAt?.toDate().toLocaleDateString()}
+                                        </div>
+                                    </div>
+                                    <p className="text-sm">{review.text}</p>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Right: Contacts & Map */}
+            <div className="space-y-6">
+                <Card>
+                    <CardContent className="p-6 space-y-4">
+                        <div className="flex items-center gap-3">
+                            <Phone className="h-5 w-5 text-primary" />
+                            <span className="font-medium">{initialWorkshop.phone || "Нет телефона"}</span>
                         </div>
-                     </div>
-                )) : (
-                    <p className="text-center text-muted-foreground py-8">Отзывов пока нет. Будьте первым!</p>
-                )}
-              </div>
-          </CardContent>
-       </Card>
+                        {initialWorkshop.website && (
+                            <div className="flex items-center gap-3">
+                                <Globe className="h-5 w-5 text-primary" />
+                                <a href={initialWorkshop.website} target="_blank" rel="noopener noreferrer" className="hover:underline text-primary">
+                                    Перейти на сайт
+                                </a>
+                            </div>
+                        )}
+                         <div className="flex items-center gap-3">
+                            <Clock className="h-5 w-5 text-primary" />
+                            <span>Пн-Вс: 09:00 - 21:00</span>
+                        </div>
+                        <Button className="w-full gap-2">
+                            <Navigation className="h-4 w-4" /> Построить маршрут
+                        </Button>
+                        <Button variant="outline" className="w-full gap-2">
+                            <Send className="h-4 w-4" /> Написать сообщение
+                        </Button>
+                    </CardContent>
+                </Card>
+                
+                {/* Fake Map */}
+                <div className="w-full h-64 bg-muted rounded-xl flex items-center justify-center text-muted-foreground relative overflow-hidden group cursor-pointer">
+                    <Image 
+                        src="https://placehold.co/600x400/png?text=Map+Placeholder" 
+                        alt="Map" 
+                        fill 
+                        className="object-cover opacity-50 group-hover:opacity-40 transition-opacity" 
+                    />
+                    <span className="relative z-10 font-semibold flex items-center gap-2">
+                        <MapPin className="h-5 w-5" /> Показать на карте
+                    </span>
+                </div>
+            </div>
+        </div>
     </div>
   );
 }
