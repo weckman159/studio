@@ -1,3 +1,4 @@
+// src/app/search/page.tsx
 'use client';
 import { useSearchParams } from 'next/navigation';
 import { useState, useEffect, Suspense } from 'react';
@@ -7,7 +8,8 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FileText, Users, Search as SearchIcon } from 'lucide-react';
+// Добавлен Loader2 в импорт
+import { FileText, Users, Search as SearchIcon, Loader2 } from 'lucide-react';
 import type { Post, User } from '@/lib/types';
 
 function SearchResultsComponent() {
@@ -27,12 +29,10 @@ function SearchResultsComponent() {
         try {
             // Note: Firebase client-side search is limited. 
             // In a real production app with many docs, use Algolia/Typesense.
-            // Here we fetch a limited set and filter client-side for "contains" logic
-            // or use specific fields if structured properly.
             
             // Fetching users
             const usersRef = collection(firestore, 'users');
-            const usersQ = query(usersRef, limit(20)); // Optimistic limit
+            const usersQ = query(usersRef, limit(20));
             const usersSnap = await getDocs(usersQ);
             
             const filteredUsers = usersSnap.docs
