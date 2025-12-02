@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -11,6 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useFirestore } from '@/firebase';
 import { doc, updateDoc, increment } from 'firebase/firestore';
 import type { Car, TimelineEntry } from '@/lib/types';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 interface CarDetailClientProps {
     initialCar: Car;
@@ -89,9 +90,17 @@ export default function CarDetailClient({ initialCar, initialTimeline }: CarDeta
                 </TabsContent>
                 
                 <TabsContent value="inventory">
-                    <div className="text-center py-12 text-muted-foreground">
-                    Управление инвентарём в разработке
-                    </div>
+                    <Card>
+                        <CardHeader><CardTitle>Инвентарь</CardTitle></CardHeader>
+                        <CardContent>
+                            {/* Здесь можно добавить логику отображения инвентаря */}
+                            <div className="text-center py-8 text-muted-foreground flex flex-col items-center">
+                                <Package className="h-10 w-10 mb-2 opacity-50" />
+                                <p>Список запчастей и инструментов пуст.</p>
+                                <Button variant="outline" className="mt-4">Добавить запись</Button>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </TabsContent>
                 
                 <TabsContent value="files">

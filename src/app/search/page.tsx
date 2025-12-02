@@ -1,14 +1,14 @@
 'use client';
 import { useSearchParams } from 'next/navigation';
 import { useState, useEffect, Suspense } from 'react';
-import { collection, query, getDocs } from 'firebase/firestore';
+import { collection, query, getDocs, limit, where, orderBy } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FileText, Users } from 'lucide-react';
-import type { Post, User } from '@/lib/data';
+import { FileText, Users, Search as SearchIcon } from 'lucide-react';
+import type { Post, User } from '@/lib/types';
 
 function SearchResultsComponent() {
   const params = useSearchParams();
@@ -20,36 +20,63 @@ function SearchResultsComponent() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (q && firestore) {
+    if (q.length > 2 && firestore) {
       setLoading(true);
-      Promise.all([
-        getDocs(query(collection(firestore, 'posts'))),
-        getDocs(query(collection(firestore, 'users')))
-      ]).then(([postsSnap, usersSnap]) => {
-        
-        const filteredPosts = postsSnap.docs
-          .map(d => ({ id: d.id, ...d.data() } as Post))
-          .filter(p => p.title?.toLowerCase()?.includes(q) || p.content?.toLowerCase()?.includes(q));
-        setPosts(filteredPosts);
+      
+      const fetchResults = async () => {
+        try {
+            // Note: Firebase client-side search is limited. 
+            // In a real production app with many docs, use Algolia/Typesense.
+            // Here we fetch a limited set and filter client-side for "contains" logic
+            // or use specific fields if structured properly.
+            
+            // Fetching users
+            const usersRef = collection(firestore, 'users');
+            const usersQ = query(usersRef, limit(20)); // Optimistic limit
+            const usersSnap = await getDocs(usersQ);
+            
+            const filteredUsers = usersSnap.docs
+                .map(d => ({ id: d.id, ...d.data() } as User))
+                .filter(u => 
+                    u.name?.toLowerCase().includes(q) || 
+                    u.displayName?.toLowerCase().includes(q) ||
+                    u.nickname?.toLowerCase().includes(q)
+                );
+            setUsers(filteredUsers);
 
-        const filteredUsers = usersSnap.docs
-          .map(d => ({ id: d.id, ...d.data() } as User))
-          .filter(u => u.name?.toLowerCase()?.includes(q) || u.nickname?.toLowerCase()?.includes(q));
-        setUsers(filteredUsers);
-        
-        setLoading(false);
-      }).catch(err => {
-        console.error("Search failed:", err);
-        setLoading(false);
-      });
+            // Fetching posts
+            const postsRef = collection(firestore, 'posts');
+            const postsQ = query(postsRef, orderBy('createdAt', 'desc'), limit(50));
+            const postsSnap = await getDocs(postsQ);
+
+            const filteredPosts = postsSnap.docs
+                .map(d => ({ id: d.id, ...d.data() } as Post))
+                .filter(p => 
+                    p.title?.toLowerCase().includes(q) || 
+                    p.content?.toLowerCase().includes(q)
+                );
+            setPosts(filteredPosts);
+
+        } catch (e) {
+            console.error("Search error:", e);
+        } finally {
+            setLoading(false);
+        }
+      };
+
+      fetchResults();
+    } else {
+        setPosts([]);
+        setUsers([]);
     }
   }, [q, firestore]);
 
   if (!q) {
     return (
-        <Card>
-            <CardContent className='p-8 text-center text-muted-foreground'>
-                Введите поисковый запрос.
+        <Card className="mt-8">
+            <CardContent className='p-12 text-center text-muted-foreground flex flex-col items-center'>
+                <SearchIcon className="h-12 w-12 mb-4 opacity-20" />
+                Введите поисковый запрос (минимум 3 символа).
             </CardContent>
         </Card>
     );
@@ -57,90 +84,73 @@ function SearchResultsComponent() {
 
   if (loading) {
     return (
-        <div className="space-y-6">
-            <Card>
-                <CardHeader>
-                    <Skeleton className="h-8 w-48" />
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader>
-                    <Skeleton className="h-8 w-48" />
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <Skeleton className="h-12 w-full" />
-                    <Skeleton className="h-12 w-full" />
-                </CardContent>
-            </Card>
+        <div className="space-y-6 mt-8">
+            <Skeleton className="h-48 w-full rounded-xl" />
+            <Skeleton className="h-48 w-full rounded-xl" />
         </div>
     );
   }
   
   return (
-    <div className="space-y-8">
-      <h1 className="text-3xl font-bold">Результаты поиска: <span className="text-primary">{q}</span></h1>
+    <div className="space-y-8 mt-8">
+      <h1 className="text-3xl font-bold">Результаты для: <span className="text-primary">{q}</span></h1>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className='flex items-center'><FileText className='mr-2 h-5 w-5'/> Посты ({posts.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {posts.length === 0 ? (
-            <p className="text-muted-foreground">Посты не найдены.</p>
-          ) : (
-            <div className='space-y-3'>
-              {posts.map(post => (
-                <Link key={post.id} href={`/posts/${post.id}`}>
-                    <div className="p-3 rounded-md hover:bg-muted">
-                        <p className="font-semibold">{post.title}</p>
-                        <p className="text-sm text-muted-foreground line-clamp-2" dangerouslySetInnerHTML={{ __html: post.content }}></p>
-                    </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className='flex items-center'><Users className='mr-2 h-5 w-5'/> Пользователи ({users.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {users.length === 0 ? (
-            <p className="text-muted-foreground">Пользователи не найдены.</p>
-          ) : (
-            <div className='space-y-2'>
-              {users.map(user => (
-                <Link key={user.id} href={`/profile/${user.id}`}>
-                    <div className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
-                        <Avatar>
-                            <AvatarImage src={user.photoURL} />
-                            <AvatarFallback>{user.name[0]}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                            <p className="font-semibold">{user.name}</p>
-                            {user.nickname && <p className="text-sm text-muted-foreground">@{user.nickname}</p>}
+      {users.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className='flex items-center'><Users className='mr-2 h-5 w-5'/> Пользователи ({users.length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                  {users.map(user => (
+                    <Link key={user.id} href={`/profile/${user.id}`}>
+                        <div className="flex items-center gap-3 p-3 rounded-md hover:bg-muted border">
+                            <Avatar>
+                                <AvatarImage src={user.photoURL} />
+                                <AvatarFallback>{user.displayName?.[0] || 'U'}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                                <p className="font-semibold">{user.displayName || user.name}</p>
+                                {user.nickname && <p className="text-sm text-muted-foreground">@{user.nickname}</p>}
+                            </div>
                         </div>
-                    </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                    </Link>
+                  ))}
+                </div>
+            </CardContent>
+          </Card>
+      )}
+
+      {posts.length > 0 ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className='flex items-center'><FileText className='mr-2 h-5 w-5'/> Посты ({posts.length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className='space-y-4'>
+                  {posts.map(post => (
+                    <Link key={post.id} href={`/posts/${post.id}`}>
+                        <div className="p-4 rounded-lg hover:bg-muted border transition-colors">
+                            <p className="font-semibold text-lg">{post.title}</p>
+                            <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                                {post.content.replace(/<[^>]*>?/gm, '').substring(0, 150)}...
+                            </p>
+                        </div>
+                    </Link>
+                  ))}
+                </div>
+            </CardContent>
+          </Card>
+      ) : (
+          users.length === 0 && <p className="text-muted-foreground text-center py-10">Ничего не найдено.</p>
+      )}
     </div>
   );
 }
 
-
 export default function SearchPage() {
     return (
-        <Suspense fallback={<div>Загрузка...</div>}>
+        <Suspense fallback={<div className="flex justify-center p-8"><Loader2 className="animate-spin"/></div>}>
             <SearchResultsComponent />
         </Suspense>
     )
