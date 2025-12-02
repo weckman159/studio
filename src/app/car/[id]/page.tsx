@@ -58,20 +58,6 @@ async function getCarData(carId: string): Promise<{ car: Car | null, timeline: T
   }
 }
 
-// Динамические метаданные
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
-  try {
-    const { car } = await getCarData(params.id);
-    if (!car) return { title: 'Автомобиль не найден' };
-    return {
-      title: `${car.brand} ${car.model} ${car.year} | AutoSphere`,
-      description: car.description || `${car.brand} ${car.model} - подробная информация`,
-    };
-  } catch {
-    return { title: 'AutoSphere' };
-  }
-}
-
 export default async function CarPage({ params }: { params: { id: string } }) {
   const { id } = params;
   const { car, timeline } = await getCarData(id);
@@ -81,4 +67,33 @@ export default async function CarPage({ params }: { params: { id: string } }) {
   }
 
   return <CarDetailClient initialCar={car} initialTimeline={timeline} />;
+}
+
+// Добавляем генерацию метаданных
+export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+  const { id } = params;
+  const { car } = await getCarData(id); // Используем существующую функцию
+
+  if (!car) return { title: 'Автомобиль не найден' };
+
+  const title = `${car.brand} ${car.model} ${car.year}`;
+  const description = `${car.engine}, ${car.specs?.currentHP || '?'} л.с. Смотри бортжурнал на AutoSphere.`;
+  const image = car.photoUrl || car.photos?.[0] || 'https://autosphere.app/og-default.jpg';
+
+  return {
+    title: title,
+    description: description,
+    openGraph: {
+      title: title,
+      description: description,
+      images: [image],
+      type: 'article',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: title,
+      description: description,
+      images: [image],
+    },
+  };
 }
