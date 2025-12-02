@@ -27,6 +27,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { MarketplaceItem } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 
 interface MarketplaceItemClientProps {
     item: MarketplaceItem;
@@ -36,6 +37,7 @@ export default function MarketplaceItemClient({ item }: MarketplaceItemClientPro
   const router = useRouter();
   const { user } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
 
   const allImages = [item.imageUrl, ...(item.gallery || [])].filter(Boolean) as string[];
   const [selectedImage, setSelectedImage] = useState<string>(allImages[0] || '');
@@ -63,19 +65,22 @@ export default function MarketplaceItemClient({ item }: MarketplaceItemClientPro
   };
 
   const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: item?.title,
-          text: item?.description,
-          url: window.location.href
-        });
-      } catch (error) {
-        console.log('Ошибка при попытке поделиться:', error);
+    const shareData = {
+      title: item.title,
+      text: `Посмотрите объявление: ${item.title} за ${formatPrice(item.price, item.currency)}`,
+      url: window.location.href,
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        toast({ title: 'Успешно!', description: 'Объявление отправлено.' });
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        toast({ title: 'Ссылка скопирована!' });
       }
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-      alert('Ссылка скопирована в буфер обмена');
+    } catch (error) {
+      console.error('Ошибка при попытке поделиться:', error);
+      toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось поделиться объявлением.' });
     }
   };
 

@@ -60,10 +60,24 @@ export function PostActions({ post }: PostActionsProps) {
     }
   };
 
-  const handleShare = () => {
-    navigator.clipboard.writeText(window.location.href)
-      .then(() => toast({ title: 'Ссылка на пост скопирована!' }))
-      .catch(() => toast({ variant: 'destructive', title: 'Не удалось скопировать ссылку' }));
+  const handleShare = async () => {
+    const shareData = {
+      title: post.title,
+      text: post.excerpt || post.title,
+      url: window.location.href,
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        toast({ title: 'Успешно!', description: 'Пост отправлен.' });
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        toast({ title: 'Ссылка скопирована!' });
+      }
+    } catch (error) {
+      console.error('Ошибка при попытке поделиться:', error);
+      toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось поделиться постом.' });
+    }
   };
 
   const isAuthor = user && post.authorId === user.uid;

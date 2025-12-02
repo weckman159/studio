@@ -27,6 +27,7 @@ import {
 import Link from 'next/link';
 import Image from 'next/image';
 import type { Event, User } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
 
 interface EventDetailClientProps {
     initialEvent: Event;
@@ -37,6 +38,7 @@ export default function EventDetailClient({ initialEvent, initialParticipants }:
   const router = useRouter();
   const { user } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
 
   const [event, setEvent] = useState<Event>(initialEvent);
   const [participants, setParticipants] = useState<User[]>(initialParticipants);
@@ -96,19 +98,22 @@ export default function EventDetailClient({ initialEvent, initialParticipants }:
   };
 
   const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: event?.title,
-          text: event?.description,
-          url: window.location.href
-        });
-      } catch (error) {
-        console.log('Ошибка при попытке поделиться:', error);
+    const shareData = {
+      title: event.title,
+      text: `Присоединяйтесь к событию: ${event.title}`,
+      url: window.location.href,
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        toast({ title: 'Успешно!', description: 'Событие отправлено.' });
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        toast({ title: 'Ссылка скопирована!' });
       }
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-      alert('Ссылка скопирована в буфер обмена');
+    } catch (error) {
+      console.error('Ошибка при попытке поделиться:', error);
+      toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось поделиться событием.' });
     }
   };
 
