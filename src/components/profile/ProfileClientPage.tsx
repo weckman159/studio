@@ -15,6 +15,7 @@ import { EditProfileModal } from '@/components/EditProfileModal';
 import { UserListDialog } from '@/components/UserListDialog';
 import { PostCard } from '@/components/PostCard';
 import { ProfilePageSkeleton } from './ProfilePageSkeleton';
+import { PhotoGrid } from './PhotoGrid';
 
 
 interface ProfileClientPageProps {
@@ -204,9 +205,7 @@ export function ProfileClientPage({
                 </TabsContent>
                 
                 <TabsContent value="photos" className="mt-8">
-                   <div className="text-center py-12 text-muted-foreground">
-                    Фотопоток в разработке.
-                  </div>
+                   <PhotoGrid userId={profile.id} />
                 </TabsContent>
                 
                 <TabsContent value="shop" className="mt-8">

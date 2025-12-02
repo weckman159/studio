@@ -12,6 +12,7 @@ import { doc, updateDoc, increment } from 'firebase/firestore';
 import type { Car, TimelineEntry } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { CarExpenses } from './CarExpenses';
 
 interface CarDetailClientProps {
     initialCar: Car;
@@ -84,9 +85,7 @@ export default function CarDetailClient({ initialCar, initialTimeline }: CarDeta
                 </TabsContent>
                 
                 <TabsContent value="expenses">
-                    <div className="text-center py-12 text-muted-foreground">
-                    Финансовая аналитика в разработке
-                    </div>
+                   <CarExpenses carId={car.id} />
                 </TabsContent>
                 
                 <TabsContent value="inventory">

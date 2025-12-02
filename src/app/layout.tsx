@@ -17,6 +17,7 @@ import { useUser } from '@/firebase';
 import type { User as UserData } from '@/lib/types';
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { CookieConsent } from "@/components/CookieConsent";
+import { MobileNav } from "@/components/MobileNav";
 
 
 const navLinks = [
@@ -129,6 +130,7 @@ export default function RootLayout({
                   <Footer />
                 </div>
               </div>
+              <MobileNav />
               <Toaster />
             </SidebarProvider>
           </FirebaseClientProvider>
