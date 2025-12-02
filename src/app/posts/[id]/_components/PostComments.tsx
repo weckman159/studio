@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useUser, useFirestore } from '@/firebase';
-import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, doc, writeBatch, increment } from 'firebase/firestore';
 import type { Post, Comment } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -62,7 +62,11 @@ export function PostComments({ post, initialComments }: PostCommentsProps) {
     if (!user || !commentText.trim() || !firestore) return;
     setSubmitting(true);
     try {
-      await addDoc(collection(firestore, 'comments'), {
+      const batch = writeBatch(firestore);
+      
+      // 1. Создаем комментарий
+      const commentRef = doc(collection(firestore, 'comments'));
+      batch.set(commentRef, {
         postId: post.id,
         authorId: user.uid,
         authorName: user.displayName || 'Пользователь',
@@ -70,10 +74,17 @@ export function PostComments({ post, initialComments }: PostCommentsProps) {
         content: commentText.trim(),
         createdAt: serverTimestamp()
       });
-      // Cloud Function обновит счетчик, убираем обновление с клиента
+
+      // 2. Обновляем счетчик поста
+      const postRef = doc(firestore, 'posts', post.id);
+      batch.update(postRef, {
+        commentsCount: increment(1)
+      });
+
+      await batch.commit();
       setCommentText('');
     } catch (error) {
-      console.error('Ошибка добавления комментария:', error);
+      console.error('Ошибка:', error);
     } finally {
       setSubmitting(false);
     }

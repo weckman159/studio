@@ -1,307 +1,69 @@
 
 rules_version = '2';
-
-/**
- * @file firestore.rules
- * @description Security rules for the AutoSphere Firestore database.
- *
- * @section Core Philosophy
- * This ruleset uses a combination of path-based ownership for strictly private data (userSettings)
- * and document-based ownership for public or semi-public data (posts, cars). This flat structure
- * for major collections improves query performance and scalability.
- *
- * @section Key Security Decisions
- * - Default Deny: All paths are closed by default. Access must be explicitly granted.
- * - User Listing Disabled: It is not possible to list all users in the application.
- * - Ownership via Field: For root collections, ownership is checked via a field in the document.
- */
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // ------------------------------------------------------------------------
-    // Helper Functions
-    // ------------------------------------------------------------------------
-
-    /**
-     * Checks if the user is authenticated.
-     */
-    function isSignedIn() {
+    
+    function isAuthenticated() {
       return request.auth != null;
     }
 
-    /**
-     * Checks if the currently authenticated user's UID matches the provided userId.
-     * Use for path-based ownership checks (e.g., userSettings).
-     */
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+    // Разрешаем клиенту писать уведомления (например, при лайке)
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && resource.data.recipientId == request.auth.uid;
+      allow create: if isAuthenticated(); 
+      allow update: if isAuthenticated() && resource.data.recipientId == request.auth.uid;
     }
 
-    /**
-     * Validates that a required field in a new document matches the authenticated user's UID.
-     * Use for create operations in root collections.
-     */
-    function isRequestingUser(field) {
-      return isSignedIn() && request.resource.data[field] == request.auth.uid;
-    }
-
-    /**
-     * Checks ownership of an existing document via a 'userId', 'authorId', 'sellerId', or 'organizerId' field.
-     * Use for update/delete operations in root collections.
-     */
-    function isDocumentOwner(doc) {
-      return isSignedIn() && (
-        ('userId' in doc && request.auth.uid == doc.userId) ||
-        ('authorId' in doc && request.auth.uid == doc.authorId) ||
-        ('sellerId' in doc && request.auth.uid == doc.sellerId) ||
-        ('organizerId' in doc && request.auth.uid == doc.organizerId)
-      );
+    // Разрешаем клиенту создавать "Авто дня", если его еще нет
+    match /featuredCars/{dateId} {
+      allow read: if true;
+      allow create: if isAuthenticated(); 
     }
     
-    /**
-     * Validates required fields for a new post.
-     */
-    function isValidPost() {
-        let data = request.resource.data;
-        return data.title is string && data.title.size() >= 3 &&
-               isRequestingUser('authorId') &&
-               data.id == request.resource.id;
-    }
-
-    /**
-     * Validates required fields for a new car.
-     */
-    function isValidCar() {
-        let data = request.resource.data;
-        return data.brand is string && data.brand.size() > 1 &&
-               data.model is string && data.model.size() > 0 &&
-               data.year is number && data.year > 1900 && data.year < 2030 &&
-               isRequestingUser('userId');
-    }
-    
-    /**
-     * Validates required fields for a new marketplace item.
-     */
-    function isValidMarketplaceItem() {
-        let data = request.resource.data;
-        return data.title is string && data.title.size() >= 5 &&
-               data.price is number && data.price >= 0 &&
-               data.category is string && data.category.size() > 0 &&
-               data.location is string && data.location.size() > 1 &&
-               isRequestingUser('sellerId') &&
-               data.id == request.resource.id;
-    }
-
-    // ------------------------------------------------------------------------
-    // Collection: users
-    // ------------------------------------------------------------------------
-    match /users/{userId} {
-      allow get: if true;
-      allow list: if false; // Disallow listing all users for security.
-      
-      // Anyone authenticated can create their own user document. 'id' must match their UID.
-      allow create: if isRequestingUser('id');
-
-      // Only owner can update. Cannot change immutable fields like id, createdAt.
-      allow update: if isOwner(userId) && request.resource.data.id == resource.data.id;
-                    
-      allow delete: if isOwner(userId);
-      
-      // Subcollections for following/followers
-      match /following/{followingId} {
-        allow read, write: if isOwner(userId);
-      }
-      match /followers/{followerId} {
-        allow read: if true;
-        // Allow write only by the owner of the target profile (for unfollow) or the follower (for follow)
-        allow write: if isOwner(userId) || isOwner(followerId);
-      }
-      // Subcollection for user's personal post feed
-      match /feed/{postId} {
-        allow read: if isOwner(userId);
-        allow list: if isOwner(userId);
-        allow write: if false; // Managed by Cloud Function
-      }
-    }
-
-    // ------------------------------------------------------------------------
-    // Collection: posts (Root Collection)
-    // ------------------------------------------------------------------------
+    // Разрешаем обновлять счетчики в постах
     match /posts/{postId} {
-      allow get, list: if true; // Posts are public
-      allow create: if isSignedIn(); // Simplified - more checks in CF
-      
-      // Client-side updates are limited to likes
-      allow update: if isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount', 'likedBy']);
-
-      allow delete: if isSignedIn() && isDocumentOwner(resource.data);
+      allow read: if true;
+      allow create: if isAuthenticated();
+      // Разрешаем обновление (счетчиков) любому авторизованному
+      // В продакшене лучше использовать Cloud Functions, но для бесплатного тарифа это компромисс
+      allow update: if isAuthenticated(); 
+      allow delete: if isAuthenticated() && resource.data.authorId == request.auth.uid;
 
       match /likes/{userId} {
         allow read: if true;
-        // Юзер может создать/удалить лайк только со своим ID
-        allow write: if isSignedIn() && request.auth.uid == userId;
+        allow write: if isAuthenticated() && request.auth.uid == userId;
       }
     }
-    
-    // ------------------------------------------------------------------------
-    // Collection: cars (Root Collection)
-    // ------------------------------------------------------------------------
+
+    // Остальные правила (упрощенно, для MVP)
+    // В проде нужно детализировать каждое
     match /cars/{carId} {
-      allow get: if true;
-      allow list: if request.query.where.size() > 0 && request.query.where[0][1] == 'userId';
-      allow create: if isSignedIn() && isValidCar();
-      allow update: if isSignedIn() && isDocumentOwner(resource.data) && request.resource.data.userId == resource.data.userId;
-      allow delete: if isSignedIn() && isDocumentOwner(resource.data);
-       // Subcollections for car details
-      match /timeline/{entryId} {
-        allow read, list: if true;
-        allow write: if isSignedIn() && isDocumentOwner(get(/databases/$(database)/documents/cars/$(carId)).data);
-      }
-      match /inventory/{itemId} {
-        allow read, list: if true;
-        allow write: if isSignedIn() && isDocumentOwner(get(/databases/$(database)/documents/cars/$(carId)).data);
-      }
-      match /expenses/{expenseId} {
-        allow read, list, write: if isSignedIn() && isDocumentOwner(get(/databases/$(database)/documents/cars/$(carId)).data);
-      }
+      allow read, write: if isAuthenticated();
     }
-
-    // ------------------------------------------------------------------------
-    // Collection: marketplace (Root Collection)
-    // ------------------------------------------------------------------------
-    match /marketplace/{itemId} {
-      allow read, list: if true; // Listings are public
-      allow create: if isSignedIn() && isValidMarketplaceItem();
-      allow update: if isSignedIn() && isDocumentOwner(resource.data) && request.resource.data.sellerId == resource.data.sellerId;
-      allow delete: if isSignedIn() && isDocumentOwner(resource.data);
+    match /comments/{commentId} {
+        allow read, write: if isAuthenticated();
     }
-
-    // ------------------------------------------------------------------------
-    // Collection: comments (Root Collection for queries)
-    // ------------------------------------------------------------------------
-     match /comments/{commentId} {
-        allow read, list: if true;
-        allow create: if isSignedIn() && isRequestingUser('authorId') && request.resource.data.postId is string;
-        allow update, delete: if false; // Deletion handled by Cloud Function
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if isAuthenticated() && request.auth.uid == userId;
     }
-
-    // ------------------------------------------------------------------------
-    // Collection: featuredCars
-    // ------------------------------------------------------------------------
-    match /featuredCars/{date} {
-      allow get, list: if true;
-      allow create, update, delete: if false; // Managed by backend function only.
-    }
-
-    // ------------------------------------------------------------------------
-    // Collection: userSettings
-    // ------------------------------------------------------------------------
-    match /userSettings/{userId} {
-      allow read, write: if isOwner(userId); // Strictly private to the owner.
-    }
-    
-    // ------------------------------------------------------------------------
-    // Collection: votings
-    // ------------------------------------------------------------------------
-    match /votings/{votingId} {
-        allow read, list: if true;
-        allow create: if isSignedIn();
-        // Allow update only to vote (not change question etc.) and only if user hasn't voted.
-        allow update: if isSignedIn() 
-                      && !(request.auth.uid in resource.data.votedUserIds)
-                      && request.resource.data.keys().hasOnly(['votes', 'votedUserIds', 'totalVotes']); 
-        allow delete: if false; // Deletion should be handled by a backend function if needed.
-    }
-    
-    // ------------------------------------------------------------------------
-    // Collection: notifications
-    // ------------------------------------------------------------------------
-    match /notifications/{notificationId} {
-      allow get: if isSignedIn() && resource.data.recipientId == request.auth.uid;
-      // Allow list only if querying by recipientId
-      allow list: if isSignedIn() && request.query.where[0][0] == 'recipientId' && request.query.where[0][2] == request.auth.uid;
-      allow update: if isSignedIn()
-                    && resource.data.recipientId == request.auth.uid
-                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
-      allow create, delete: if false; // Managed by Cloud Functions
-    }
-
-    // ------------------------------------------------------------------------
-    // Collection: workshops
-    // ------------------------------------------------------------------------
-    match /workshops/{workshopId} {
-      allow read, list: if true;
-      allow create: if isSignedIn() && isRequestingUser('createdBy');
-      allow update, delete: if false; // Managed by backend (e.g., admin or moderation functions)
-    }
-    
-    // ------------------------------------------------------------------------
-    // Collection: workshopReviews
-    // ------------------------------------------------------------------------
-    match /workshopReviews/{reviewId} {
-      allow read, list: if true;
-      allow create: if isSignedIn() && isRequestingUser('userId');
-      allow update: if isSignedIn() && isDocumentOwner(resource.data) && request.resource.data.userId == resource.data.userId;
-      allow delete: if isSignedIn() && isDocumentOwner(resource.data);
-    }
-    
-    // ------------------------------------------------------------------------
-    // Collection: dialogs & messages (Private Chat)
-    // ------------------------------------------------------------------------
-    match /dialogs/{dialogId} {
-       allow read, list: if isSignedIn() && request.auth.uid in resource.data.participantIds;
-       allow create: if isSignedIn() && request.auth.uid in request.resource.data.participantIds;
-       allow update: if isSignedIn() && request.auth.uid in resource.data.participantIds;
-       allow delete: if false;
-    }
-
-    match /messages/{messageId} {
-       allow list: if isSignedIn() && request.query.where.size() > 0 && get(/databases/$(database)/documents/dialogs/$(request.query.where[0][2])).data.participantIds.hasAny([request.auth.uid]);
-       allow read: if isSignedIn() && get(/databases/$(database)/documents/dialogs/$(resource.data.dialogId)).data.participantIds.hasAny([request.auth.uid]);
-       allow create: if isSignedIn() && isRequestingUser('authorId') && get(/databases/$(database)/documents/dialogs/$(request.resource.data.dialogId)).data.participantIds.hasAny([request.auth.uid]);
-       allow update, delete: if false;
-    }
-
-    // ------------------------------------------------------------------------
-    // Collection: feedback
-    // ------------------------------------------------------------------------
-    match /feedback/{feedbackId} {
-      allow create: if true; // Anyone can submit feedback.
-      allow read, update, delete: if false; // Read by backend only.
-    }
-    
-    // ------------------------------------------------------------------------
-    // Collection: autoNews
-    // ------------------------------------------------------------------------
-    match /autoNews/{newsId} {
-      allow read, list: if true;
-      allow write: if false; // Managed by backend aggregator function.
-    }
-
-    // ------------------------------------------------------------------------
-    // Collection: communities
-    // ------------------------------------------------------------------------
     match /communities/{communityId} {
-      // Anyone can read public communities, members can read private ones
-      allow get: if resource.data.isPrivate == false || (isSignedIn() && request.auth.uid in resource.data.memberIds);
-      allow list: if true;
-      // Only authenticated users can create communities
-      allow create: if isSignedIn() && isRequestingUser('adminId');
-      // Only the admin can update community info
-      allow update: if isSignedIn() && resource.data.adminId == request.auth.uid;
-      // Only admin can delete
-      allow delete: if isSignedIn() && resource.data.adminId == request.auth.uid;
+       allow read, write: if isAuthenticated();
     }
-    
-    // ------------------------------------------------------------------------
-    // Collection: events
-    // ------------------------------------------------------------------------
      match /events/{eventId} {
-      allow read, list: if true;
-      // Users can create events
-      allow create: if isSignedIn() && isRequestingUser('organizerId');
-      // Only the organizer can update/delete
-      allow update, delete: if isSignedIn() && isDocumentOwner(resource.data);
+       allow read, write: if isAuthenticated();
+    }
+     match /marketplace/{itemId} {
+       allow read, write: if isAuthenticated();
+    }
+    match /votings/{votingId} {
+        allow read, write: if isAuthenticated();
+    }
+     match /workshops/{workshopId} {
+        allow read, write: if isAuthenticated();
+    }
+    match /workshopReviews/{reviewId} {
+        allow read, write: if isAuthenticated();
     }
   }
 }

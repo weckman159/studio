@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useUser, useFirestore } from '@/firebase';
-import { doc, setDoc, deleteDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { doc, onSnapshot, writeBatch, increment, serverTimestamp, collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Heart, MessageCircle, Share2, Edit3 } from 'lucide-react';
@@ -22,23 +22,23 @@ export function PostActions({ post }: PostActionsProps) {
   const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(post.likesCount || 0);
 
-  // Проверяем, лайкнул ли текущий юзер этот пост
+  // Следим за состоянием лайка текущего юзера
   useEffect(() => {
     if (!user || !firestore) return;
-    
-    // Слушаем конкретный документ лайка текущего пользователя
     const likeDocRef = doc(firestore, 'posts', post.id, 'likes', user.uid);
-    const unsubscribe = onSnapshot(likeDocRef, (snap) => {
-        setIsLiked(snap.exists());
-    });
-    
-    return () => unsubscribe();
+    const unsub = onSnapshot(likeDocRef, (snap) => setIsLiked(snap.exists()));
+    return () => unsub();
   }, [user, firestore, post.id]);
 
-  // Следим за изменением счетчика из базы (если Cloud Function обновит его)
+  // Следим за реальным счетчиком поста (чтобы видеть лайки других)
   useEffect(() => {
-      setLikesCount(post.likesCount || 0);
-  }, [post.likesCount]);
+      if (!firestore) return;
+      const postRef = doc(firestore, 'posts', post.id);
+      const unsub = onSnapshot(postRef, (snap) => {
+          if (snap.exists()) setLikesCount(snap.data().likesCount || 0);
+      });
+      return () => unsub();
+  }, [firestore, post.id]);
 
   const handleLike = async () => {
     if (!user || !firestore) {
@@ -46,28 +46,49 @@ export function PostActions({ post }: PostActionsProps) {
       return;
     }
 
-    // Оптимистичное обновление UI (чтобы было мгновенно)
-    setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
-    setIsLiked(!isLiked);
-
-    const likeDocRef = doc(firestore, 'posts', post.id, 'likes', user.uid);
+    // Оптимистичное обновление (для мгновенной реакции интерфейса)
+    const newIsLiked = !isLiked;
+    setIsLiked(newIsLiked);
+    setLikesCount(prev => newIsLiked ? prev + 1 : prev - 1);
 
     try {
-      if (isLiked) {
-        // Удаляем лайк (Cloud Function уменьшит счетчик)
-        await deleteDoc(likeDocRef);
+      const batch = writeBatch(firestore);
+      const postRef = doc(firestore, 'posts', post.id);
+      const likeRef = doc(firestore, 'posts', post.id, 'likes', user.uid);
+
+      if (newIsLiked) {
+        // Создаем лайк
+        batch.set(likeRef, { userId: user.uid, createdAt: serverTimestamp() });
+        // Увеличиваем счетчик
+        batch.update(postRef, { likesCount: increment(1) });
+        
+        // Опционально: Создаем уведомление (тоже с клиента)
+        if (post.authorId !== user.uid) {
+            const notifRef = doc(collection(firestore, 'notifications'));
+            batch.set(notifRef, {
+                recipientId: post.authorId,
+                senderId: user.uid,
+                type: 'like',
+                title: 'Новый лайк',
+                message: 'понравился ваш пост',
+                actionURL: `/posts/${post.id}`,
+                read: false,
+                createdAt: serverTimestamp()
+            });
+        }
       } else {
-        // Создаем лайк (Cloud Function увеличит счетчик и отправит уведомление)
-        await setDoc(likeDocRef, {
-            userId: user.uid,
-            createdAt: serverTimestamp()
-        });
+        // Удаляем лайк
+        batch.delete(likeRef);
+        // Уменьшаем счетчик
+        batch.update(postRef, { likesCount: increment(-1) });
       }
+
+      await batch.commit();
     } catch (error) {
-      console.error('Ошибка лайка:', error);
-      // Откат изменений при ошибке
-      setIsLiked(isLiked); 
-      setLikesCount(prev => isLiked ? prev + 1 : prev - 1);
+      console.error('Like error:', error);
+      // Откат при ошибке
+      setIsLiked(!newIsLiked);
+      setLikesCount(prev => !newIsLiked ? prev + 1 : prev - 1);
     }
   };
 
