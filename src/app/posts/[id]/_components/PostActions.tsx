@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useUser, useFirestore } from '@/firebase';
-import { doc, updateDoc, arrayUnion, arrayRemove, increment } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Heart, MessageCircle, Share2, Edit3 } from 'lucide-react';
@@ -22,69 +22,73 @@ export function PostActions({ post }: PostActionsProps) {
   const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(post.likesCount || 0);
 
+  // Проверяем, лайкнул ли текущий юзер этот пост
   useEffect(() => {
-    if (user && post.likedBy) {
-      setIsLiked(post.likedBy.includes(user.uid));
-    }
-  }, [user, post.likedBy]);
+    if (!user || !firestore) return;
+    
+    // Слушаем конкретный документ лайка текущего пользователя
+    const likeDocRef = doc(firestore, 'posts', post.id, 'likes', user.uid);
+    const unsubscribe = onSnapshot(likeDocRef, (snap) => {
+        setIsLiked(snap.exists());
+    });
+    
+    return () => unsubscribe();
+  }, [user, firestore, post.id]);
+
+  // Следим за изменением счетчика из базы (если Cloud Function обновит его)
+  useEffect(() => {
+      setLikesCount(post.likesCount || 0);
+  }, [post.likesCount]);
 
   const handleLike = async () => {
     if (!user || !firestore) {
-      toast({ variant: 'destructive', title: 'Необходимо войти в систему' });
+      toast({ variant: 'destructive', title: 'Войдите, чтобы оценить' });
       return;
     }
 
-    const postRef = doc(firestore, 'posts', post.id);
-    // Optimistic update
-    setIsLiked(!isLiked);
+    // Оптимистичное обновление UI (чтобы было мгновенно)
     setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
+    setIsLiked(!isLiked);
+
+    const likeDocRef = doc(firestore, 'posts', post.id, 'likes', user.uid);
 
     try {
       if (isLiked) {
-        await updateDoc(postRef, {
-          likedBy: arrayRemove(user.uid),
-          likesCount: increment(-1)
-        });
+        // Удаляем лайк (Cloud Function уменьшит счетчик)
+        await deleteDoc(likeDocRef);
       } else {
-        await updateDoc(postRef, {
-          likedBy: arrayUnion(user.uid),
-          likesCount: increment(1)
+        // Создаем лайк (Cloud Function увеличит счетчик и отправит уведомление)
+        await setDoc(likeDocRef, {
+            userId: user.uid,
+            createdAt: serverTimestamp()
         });
       }
     } catch (error) {
       console.error('Ошибка лайка:', error);
-      // Revert optimistic update on error
-      setIsLiked(isLiked);
+      // Откат изменений при ошибке
+      setIsLiked(isLiked); 
       setLikesCount(prev => isLiked ? prev + 1 : prev - 1);
-      toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось обработать лайк' });
     }
   };
 
   const handleShare = async () => {
-    const shareData = {
-      title: post.title,
-      text: post.excerpt || post.title,
-      url: window.location.href,
-    };
-    try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-        toast({ title: 'Успешно!', description: 'Пост отправлен.' });
-      } else {
-        await navigator.clipboard.writeText(window.location.href);
-        toast({ title: 'Ссылка скопирована!' });
-      }
-    } catch (error) {
-      console.error('Ошибка при попытке поделиться:', error);
-      toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось поделиться постом.' });
-    }
+     const url = window.location.href;
+     try {
+        if (navigator.share) {
+            await navigator.share({ title: post.title, url });
+        } else {
+            await navigator.clipboard.writeText(url);
+            toast({ title: 'Ссылка скопирована' });
+        }
+     } catch(e) {
+        toast({ title: 'Ошибка', description: 'Не удалось поделиться', variant: 'destructive' });
+     }
   };
 
   const isAuthor = user && post.authorId === user.uid;
 
   return (
-    <>
-      <div className="flex items-center gap-4 ml-auto">
+    <div className="flex items-center gap-4 ml-auto">
         {isAuthor && (
             <Link href={`/posts/edit/${post.id}`}>
                 <Button variant="outline" size="icon">
@@ -93,24 +97,25 @@ export function PostActions({ post }: PostActionsProps) {
             </Link>
         )}
         <Button
-          variant={isLiked ? 'default' : 'outline'}
+          variant="ghost"
           size="sm"
           onClick={handleLike}
-          disabled={!user}
+          className={isLiked ? 'text-red-500 hover:text-red-600' : ''}
         >
-          <Heart className={`mr-2 h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
+          <Heart className={`mr-2 h-5 w-5 ${isLiked ? 'fill-current' : ''}`} />
           {likesCount}
         </Button>
-        <Button variant="outline" size="sm" asChild>
-            <a href="#comments">
-                <MessageCircle className="mr-2 h-4 w-4" />
-                {post.commentsCount}
-            </a>
+        
+        <Button variant="ghost" size="sm" asChild>
+           <a href="#comments">
+             <MessageCircle className="mr-2 h-5 w-5" />
+             {post.commentsCount}
+           </a>
         </Button>
-        <Button variant="outline" size="sm" onClick={handleShare}>
-          <Share2 className="h-4 w-4" />
+
+        <Button variant="ghost" size="icon" onClick={handleShare}>
+          <Share2 className="h-5 w-5" />
         </Button>
       </div>
-    </>
   );
 }

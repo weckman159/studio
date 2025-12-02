@@ -1,3 +1,4 @@
+
 'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
@@ -16,7 +17,7 @@ import { ru } from 'date-fns/locale'
 import { Post } from '@/lib/types'
 import { useToast } from '@/hooks/use-toast'
 import { useUser, useFirestore } from '@/firebase';
-import { doc, updateDoc, arrayUnion, arrayRemove, increment } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import { CommentSheet } from './CommentSheet';
 import {
   DropdownMenu,
@@ -36,27 +37,42 @@ export function PostCard({ post }: { post: Post }) {
   const [isCommentSheetOpen, setCommentSheetOpen] = useState(false);
 
   useEffect(() => {
-    if (user && post.likedBy) {
-      setIsLiked(post.likedBy.includes(user.uid));
-    }
+    if (!user || !firestore) return;
+    // Проверяем наличие документа в подколлекции
+    getDoc(doc(firestore, 'posts', post.id, 'likes', user.uid)).then(snap => {
+        if(snap.exists()) setIsLiked(true);
+    });
+  }, [user, firestore, post.id]);
+
+  useEffect(() => {
     setLikesCount(post.likesCount || 0);
-  }, [user, post]);
+  }, [post.likesCount]);
+
 
   const handleLike = async () => {
     if (!user || !firestore) return toast({ title: 'Войдите, чтобы оценить' });
+    
+    // Optimistic UI
     const newLikedState = !isLiked;
     setIsLiked(newLikedState);
     setLikesCount(prev => newLikedState ? prev + 1 : prev - 1);
     
-    const postRef = doc(firestore, 'posts', post.id);
+    // Ссылка на документ лайка в подколлекции
+    const likeRef = doc(firestore, 'posts', post.id, 'likes', user.uid);
+
     try {
-      await updateDoc(postRef, {
-        likesCount: increment(newLikedState ? 1 : -1),
-        likedBy: newLikedState ? arrayUnion(user.uid) : arrayRemove(user.uid)
-      });
+      if (newLikedState) {
+          // Ставим лайк
+          await setDoc(likeRef, { userId: user.uid, createdAt: new Date() });
+      } else {
+          // Убираем лайк
+          await deleteDoc(likeRef);
+      }
     } catch(e) {
       console.error(e);
-      setIsLiked(!newLikedState); // Revert on error
+      // Revert
+      setIsLiked(!newLikedState);
+      setLikesCount(prev => !newLikedState ? prev + 1 : prev - 1);
     }
   };
 

@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useUser, useFirestore } from '@/firebase';
-import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
 import type { Post, Comment } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -70,9 +70,7 @@ export function PostComments({ post, initialComments }: PostCommentsProps) {
         content: commentText.trim(),
         createdAt: serverTimestamp()
       });
-      await updateDoc(doc(firestore, 'posts', post.id), {
-        commentsCount: increment(1)
-      });
+      // Cloud Function обновит счетчик, убираем обновление с клиента
       setCommentText('');
     } catch (error) {
       console.error('Ошибка добавления комментария:', error);
@@ -140,7 +138,7 @@ export function PostComments({ post, initialComments }: PostCommentsProps) {
                 <Link href={`/profile/${comment.authorId}`}>
                   <Avatar>
                     <AvatarImage src={comment.authorAvatar} />
-                    <AvatarFallback>{comment.authorName[0]}</AvatarFallback>
+                    <AvatarFallback>{comment.authorName?.[0]}</AvatarFallback>
                   </Avatar>
                 </Link>
                 <div className="flex-1">
