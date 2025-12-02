@@ -1,3 +1,4 @@
+
 It looks like you’ve shared a snapshot of the local configuration for your project (the Local Config file), a handful of TypeScript interfaces (Notification, Car, etc.), and some supporting utilities such as Tailwind CSS configuration, middleware, and helper functions.
 
 If you’re looking for guidance on how to use or extend any part of this setup, here are a few common questions people often ask when they expose a codebase like this:

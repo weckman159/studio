@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -389,6 +390,12 @@ export default function SettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                      <strong>Внимание:</strong> удаление аккаунта — необратимое действие. Все ваши данные, включая посты, фотографии и информацию о гараже, будут навсегда удалены без возможности восстановления.
+                  </AlertDescription>
+              </Alert>
               <div className="space-y-2">
                 <Label htmlFor="currentPasswordSec">Текущий пароль</Label>
                 <Input
