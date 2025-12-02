@@ -76,57 +76,29 @@
 }
 
 @layer base {
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    background-color: #fafafa; 
+  }
+  .dark body {
+    background-color: #000000;
+  }
+
   * {
     @apply border-border;
   }
-  body {
-    @apply bg-background text-foreground;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-  }
-  /* CKEditor Dark Theme */
-  .dark .ck.ck-editor__main > .ck-editor__editable,
-  .dark .ck-editor__editable.ck-focused {
-    @apply bg-card text-foreground border-border !important;
-  }
-
-  .dark .ck.ck-toolbar {
-    @apply bg-muted border-border !important;
-  }
-
-  .dark .ck.ck-button,
-  .dark .ck.ck-button.ck-on,
-  .dark .ck.ck-button.ck-disabled:hover {
-    @apply text-foreground !important;
-  }
-  
-  .dark .ck.ck-button:not(.ck-disabled):hover,
-  .dark .ck.ck-button.ck-on {
-    @apply bg-accent text-accent-foreground !important;
-  }
-
-  .dark .ck.ck-button .ck-icon {
-     @apply text-foreground;
-  }
-
-  .dark .ck.ck-button:not(.ck-disabled):hover .ck-icon,
-  .dark .ck.ck-button.ck-on .ck-icon {
-    @apply text-accent-foreground;
-  }
-
-  .dark .ck.ck-dropdown .ck-dropdown__arrow {
-      @apply text-foreground;
-  }
-  
-  .dark .ck.ck-input {
-      @apply bg-input text-foreground;
-  }
-
-  .ck-editor__editable_inline {
-    @apply min-h-[200px];
-  }
 }
+
+.dark .card {
+    background-color: #121212;
+    border: 1px solid #262626;
+}
+
+::-webkit-scrollbar {
+  width: 0px;
+  background: transparent;
+}
+
 
 @layer components {
   .timeline-item:last-child .timeline-connector {
