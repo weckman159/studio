@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Calendar, FileText } from 'lucide-react';
 import type { Post, Comment } from '@/lib/types';
 import { notFound } from 'next/navigation';
+import { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,6 +55,27 @@ const formatDate = (timestamp: any) => {
       minute: '2-digit'
     }).format(date);
 };
+
+export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+  const { id } = params;
+  const { post } = await getPostData(id);
+
+  if (!post) return { title: 'Пост не найден' };
+
+  const cleanDescription = post.content?.replace(/<[^>]*>?/gm, '').slice(0, 150) || 'Смотрите подробнее на AutoSphere';
+
+  return {
+    title: `${post.title} | ${post.authorName}`,
+    description: cleanDescription,
+    openGraph: {
+      title: post.title,
+      description: cleanDescription,
+      images: post.imageUrl ? [post.imageUrl] : [],
+      type: 'article',
+      siteName: 'AutoSphere',
+    },
+  };
+}
 
 
 export default async function PostDetailPage({ params }: { params: { id: string } }) {

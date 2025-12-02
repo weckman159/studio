@@ -1,4 +1,3 @@
-
 // src/app/car/[id]/page.tsx
 import type { Car, TimelineEntry } from '@/lib/types';
 import CarDetailClient from './_components/CarDetailClient';
@@ -77,20 +76,13 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   if (!car) return { title: 'Автомобиль не найден' };
 
   const title = `${car.brand} ${car.model} ${car.year}`;
-  const description = `${car.engine}, ${car.specs?.currentHP || '?'} л.с. Смотри бортжурнал на AutoSphere.`;
-  const image = car.photoUrl || car.photos?.[0] || 'https://autosphere.app/og-default.jpg';
+  const description = `${car.engine}, ${car.specs?.currentHP || '?'} л.с. Бортжурнал и история обслуживания на AutoSphere.`;
+  const image = car.photoUrl || car.photos?.[0] || 'https://autosphere.app/default-og.jpg'; // Замените на свой дефолт
 
   return {
-    title: title,
+    title: `${title} | Гараж AutoSphere`,
     description: description,
     openGraph: {
-      title: title,
-      description: description,
-      images: [image],
-      type: 'article',
-    },
-    twitter: {
-      card: 'summary_large_image',
       title: title,
       description: description,
       images: [image],
