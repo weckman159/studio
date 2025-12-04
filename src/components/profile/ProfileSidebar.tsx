@@ -17,7 +17,7 @@ interface UserProfile {
   badges: string[]
   stats: {
     followers: number
-    reputation: number
+    reputation?: number
     cars: number
   }
   tier: 'bronze' | 'silver' | 'gold' | 'platinum'
