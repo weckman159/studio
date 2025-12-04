@@ -1,4 +1,3 @@
-
 // src/components/profile/ProfileClientPage.tsx
 'use client';
 
@@ -146,12 +145,12 @@ export function ProfileClientPage({
         />
         
         <div className="container mx-auto px-4 py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-[350px_1fr] gap-8">
-            <div className="hidden lg:block">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <div className="hidden lg:block lg:col-span-1">
               <ProfileSidebar profile={heroProfile} />
             </div>
             
-            <div>
+            <div className="lg:col-span-3">
               <Tabs defaultValue="journal" className="w-full">
                 <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent">
                    <TabsTrigger 

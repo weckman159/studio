@@ -194,7 +194,7 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
             </Alert>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             
           {/* LEFT COLUMN: CONTENT EDITOR */}
           <div className="space-y-6">
@@ -220,9 +220,27 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
 
           </div>
 
-          {/* RIGHT COLUMN: SETTINGS & COVER */}
+          {/* RIGHT COLUMN: PREVIEW & SETTINGS */}
           <div className="space-y-6">
             
+             <div className="lg:border-l lg:pl-6">
+                <h3 className="text-xl font-bold mb-4">Предпросмотр</h3>
+                <div className="border rounded-lg overflow-hidden bg-card shadow-sm">
+                    {coverPreview && (
+                        <div className="relative w-full h-48 bg-muted">
+                            <Image src={coverPreview} alt="Превью обложки" fill className="object-cover" />
+                        </div>
+                    )}
+                    <div className="p-4 space-y-3">
+                        <h4 className="text-2xl font-bold">{title.trim() || "Заголовок поста..."}</h4>
+                        <div 
+                            className="text-sm prose prose-sm dark:prose-invert max-w-none"
+                            dangerouslySetInnerHTML={{ __html: content || "<p class='text-muted-foreground'>Здесь появится ваш текст...</p>" }}
+                        />
+                    </div>
+                </div>
+            </div>
+
             {/* Cover Image */}
             <Card className="overflow-hidden">
                 <div className="p-4 pb-2 font-semibold text-sm">Обложка (для ленты)</div>
