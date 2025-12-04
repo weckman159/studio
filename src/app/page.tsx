@@ -1,167 +1,27 @@
-'use client';
+// src/app/page.tsx - SERVER ONLY (НЕТ useFirestore!)
+import { getAdminDb } from '@/lib/firebase-admin';
+import { PostCard } from '@/components/PostCard';
+import { Car } from 'lucide-react';
+import type { Post } from '@/lib/types';
+import { PostFilters } from '@/components/PostFilters';
+import { AutoNewsWidget } from '@/components/AutoNewsWidget';
+import { CarOfTheDay } from '@/components/CarOfTheDay';
 
-import { useState, useEffect } from "react";
-import { collection, query, orderBy, limit, getDocs, startAfter, where, DocumentSnapshot } from 'firebase/firestore';
-import { useFirestore, useUser } from "@/firebase";
-import { PostCard } from "@/components/PostCard";
-import { Post } from "@/lib/types";
-import { useInView } from 'react-intersection-observer';
-import { Loader2, AlertCircle } from "lucide-react";
-import { CarOfTheDay } from "@/components/CarOfTheDay";
-import { PostFilters } from "@/components/PostFilters";
-import { AutoNewsWidget } from "@/components/AutoNewsWidget";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Skeleton } from "@/components/ui/skeleton";
+export const dynamic = 'force-dynamic';
 
-export default function Home() {
-  const firestore = useFirestore();
-  const { user } = useUser();
+export default async function HomePage() {
+  const adminDb = getAdminDb();
   
-  // State
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [lastDoc, setLastDoc] = useState<DocumentSnapshot | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  
-  // Filters
-  const [activeType, setActiveType] = useState('Все');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [feedType, setFeedType] = useState<'global' | 'following'>('global');
-
-  // Infinite Scroll Trigger
-  const { ref, inView } = useInView({
-    threshold: 0,
-    rootMargin: '100px', // Начинаем грузить за 100px до конца
-  });
-
-  // 1. Первичная загрузка (при смене фильтров)
-  useEffect(() => {
-    if (!firestore) return;
+  // ✅ Серверный запрос - НЕ БЛОКИРУЕТСЯ
+  const postsSnapshot = await adminDb.collection('posts')
+    .orderBy('createdAt', 'desc')
+    .limit(20) // Увеличим лимит для серверной страницы
+    .get();
     
-    const loadInitial = async () => {
-      setLoading(true);
-      setHasMore(true);
-      setLastDoc(null);
-      setPosts([]); // Очищаем старые посты
-
-      try {
-        let q;
-        
-        if (feedType === 'following' && user) {
-            // Логика для подписок (требует индекса!)
-            // Упрощенно: берем коллекцию feed пользователя
-            const feedRef = collection(firestore, 'users', user.uid, 'feed');
-            q = query(feedRef, orderBy('createdAt', 'desc'), limit(10));
-            
-            // Примечание: Здесь нужно будет догружать сами посты по ID, 
-            // для MVP пока оставим глобальную ленту как основную, 
-            // так как лента подписок требует сложной логики (batch get).
-            // Переключаем на глобальную для стабильности если нет логики batch:
-            // setFeedType('global'); 
-            // return;
-        } 
-        
-        // Глобальная лента
-        const postsRef = collection(firestore, 'posts');
-        
-        if (activeType !== 'Все') {
-            q = query(postsRef, where('category', '==', activeType), orderBy('createdAt', 'desc'), limit(10));
-        } else {
-            q = query(postsRef, orderBy('createdAt', 'desc'), limit(10));
-        }
-
-        const snap = await getDocs(q);
-        
-        if (feedType === 'following' && user) {
-             // Если это лента подписок, нам нужно получить сами посты
-             // (Этот код сработает, только если вы реализовали Cloud Function onPostCreated из прошлого шага)
-             const postIds = snap.docs.map(d => d.data().postId);
-             if(postIds.length > 0) {
-                 // Firestore 'in' query limits to 10 (or 30 depending on usage)
-                 const postsQ = query(postsRef, where('id', 'in', postIds.slice(0, 10)));
-                 const postsSnap = await getDocs(postsQ);
-                 const loadedPosts = postsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Post));
-                 // Сортируем обратно по дате, т.к. 'in' ломает порядок
-                 loadedPosts.sort((a,b) => b.createdAt?.seconds - a.createdAt?.seconds);
-                 setPosts(loadedPosts);
-             } else {
-                 setPosts([]);
-             }
-        } else {
-             // Обычная лента
-             const loadedPosts = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Post));
-             setPosts(loadedPosts);
-             setLastDoc(snap.docs[snap.docs.length - 1]);
-             if (snap.size < 10) setHasMore(false);
-        }
-
-      } catch (error) {
-        console.error("Error loading posts:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadInitial();
-  }, [firestore, activeType, feedType, user]);
-
-
-  // 2. Подгрузка (Infinite Scroll)
-  const loadMore = async () => {
-    if (!firestore || !lastDoc || loadingMore || !hasMore || feedType === 'following') return;
-    
-    setLoadingMore(true);
-    try {
-        const postsRef = collection(firestore, 'posts');
-        let q;
-
-        if (activeType !== 'Все') {
-            q = query(
-                postsRef, 
-                where('category', '==', activeType), 
-                orderBy('createdAt', 'desc'), 
-                startAfter(lastDoc), 
-                limit(10)
-            );
-        } else {
-            q = query(
-                postsRef, 
-                orderBy('createdAt', 'desc'), 
-                startAfter(lastDoc), 
-                limit(10)
-            );
-        }
-
-        const snap = await getDocs(q);
-
-        if (snap.empty) {
-            setHasMore(false);
-        } else {
-            const newPosts = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Post));
-            setPosts(prev => [...prev, ...newPosts]);
-            setLastDoc(snap.docs[snap.docs.length - 1]);
-            if (snap.size < 10) setHasMore(false);
-        }
-    } catch (error) {
-        console.error("Error loading more:", error);
-    } finally {
-        setLoadingMore(false);
-    }
-  };
-
-  // Триггер прокрутки
-  useEffect(() => {
-    if (inView) {
-      loadMore();
-    }
-  }, [inView]);
-
-  // Фильтрация поиском (Client side для уже загруженных)
-  const filteredPosts = posts.filter(p => 
-    p.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    p.content?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const posts: Post[] = postsSnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+  } as Post));
 
   return (
     <div className="flex justify-center gap-8 md:pt-4">
@@ -171,57 +31,25 @@ export default function Home() {
         
         <div className="mb-6 px-2">
              <PostFilters 
-                activeType={activeType} 
-                onTypeChange={setActiveType} 
-                searchQuery={searchQuery} 
-                onSearchChange={setSearchQuery} 
-                feedType={feedType}
-                onFeedTypeChange={setFeedType}
-                showFeedToggle={!!user}
+                activeType={'Все'} 
+                onTypeChange={() => {}} 
+                searchQuery={''} 
+                onSearchChange={() => {}} 
+                feedType={'global'}
+                onFeedTypeChange={() => {}}
+                showFeedToggle={false} // Скрываем на серверной версии
              />
         </div>
 
         <div className="flex flex-col gap-6">
-          {loading ? (
-            // Skeletons
-            [1, 2, 3].map(i => (
-                <div key={i} className="bg-background rounded-xl border h-[500px] animate-pulse p-4">
-                    <div className="flex gap-3 mb-4">
-                        <div className="w-10 h-10 bg-muted rounded-full" />
-                        <div className="space-y-2">
-                            <div className="w-32 h-4 bg-muted rounded" />
-                            <div className="w-20 h-3 bg-muted rounded" />
-                        </div>
-                    </div>
-                    <div className="w-full h-[350px] bg-muted rounded" />
-                </div>
-            ))
-          ) : filteredPosts.length === 0 ? (
-             <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                    {feedType === 'following' 
-                        ? "В ваших подписках пока пусто. Подпишитесь на кого-нибудь!" 
-                        : "Постов по этому запросу не найдено."}
-                </AlertDescription>
-             </Alert>
+          {posts.length > 0 ? (
+            posts.map(post => <PostCard key={post.id} post={post} />)
           ) : (
-            <>
-                {filteredPosts.map(post => <PostCard key={post.id} post={post} />)}
-                
-                {/* Невидимый элемент для триггера загрузки */}
-                {hasMore && feedType !== 'following' && (
-                    <div ref={ref} className="flex justify-center py-6">
-                        <Loader2 className="animate-spin h-8 w-8 text-muted-foreground/50" />
-                    </div>
-                )}
-                
-                {!hasMore && filteredPosts.length > 0 && (
-                    <div className="text-center text-muted-foreground text-sm py-8 border-t mt-4">
-                        🎉 Вы посмотрели всё! Время выйти на улицу.
-                    </div>
-                )}
-            </>
+            <div className="text-center py-20 border-2 border-dashed rounded-xl">
+              <Car className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Постов пока нет</h3>
+              <p className="text-muted-foreground">Будьте первым!</p>
+            </div>
           )}
         </div>
       </div>
@@ -237,5 +65,5 @@ export default function Home() {
         </div>
       </div>
     </div>
-  );
+  )
 }
