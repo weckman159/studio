@@ -1,77 +1,35 @@
+// src/lib/firebase-admin.ts - ПРАВИЛЬНАЯ ВЕРСИЯ
+import * as admin from 'firebase-admin'
 
-// src/lib/firebase-admin.ts
-import * as admin from 'firebase-admin';
-
-// Ленивая инициализация - только при первом вызове функции
-let _adminDb: admin.firestore.Firestore | null = null;
-let _adminAuth: admin.auth.Auth | null = null;
-let _adminStorage: admin.storage.Storage | null = null;
-let _initialized = false;
-
-function initializeFirebaseAdmin(): boolean {
-  if (_initialized) return admin.apps.length > 0;
-  _initialized = true;
-
-  if (admin.apps.length > 0) {
-    return true;
-  }
-
+// Эта проверка гарантирует, что мы инициализируем приложение только один раз.
+if (!admin.apps.length) {
   try {
-    const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-
-    if (!serviceAccountKey) {
-      // This is now a critical error for server-side rendering.
-      // Throwing an error will provide a clear message during build or runtime.
-      throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set. Admin SDK cannot be initialized.');
-    }
-
-    const serviceAccount = JSON.parse(serviceAccountKey);
-
     admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+      credential: admin.credential.cert({
+        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID, // Используем NEXT_PUBLIC_ для доступности
+        privateKey: process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, '\n'),
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL!,
+      }),
       storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-    });
-
-    console.log('✅ Firebase Admin SDK initialized');
-    return true;
+    })
+    console.log('✅ Firebase Admin SDK initialized successfully.');
   } catch (error: any) {
-    // Log the original error for debugging, but throw a more helpful one.
-    console.error('❌ Firebase Admin init error:', error.message);
-    throw new Error(`Firebase Admin SDK initialization failed: ${error.message}. Ensure FIREBASE_SERVICE_ACCOUNT_KEY is set correctly in your environment variables.`);
+    console.error('❌ Firebase Admin SDK initialization error:', error.message);
+    // В dev-режиме можно не падать, а просто логировать
+    if (process.env.NODE_ENV === 'production') {
+      throw error;
+    }
   }
 }
 
-// Геттеры с ленивой инициализацией
-export function getAdminDb(): admin.firestore.Firestore {
-  if (!_adminDb) {
-    if (initializeFirebaseAdmin()) {
-      _adminDb = admin.firestore();
-    } else {
-        throw new Error("Admin DB could not be initialized");
-    }
-  }
-  return _adminDb;
+export function getAdminDb() {
+  return admin.firestore();
 }
 
-export function getAdminAuth(): admin.auth.Auth {
-  if (!_adminAuth) {
-    if (initializeFirebaseAdmin()) {
-      _adminAuth = admin.auth();
-    } else {
-        throw new Error("Admin Auth could not be initialized");
-    }
-  }
-  return _adminAuth;
+export function getAdminAuth() {
+    return admin.auth();
 }
 
-export function getAdminStorage(): admin.storage.Storage {
-  if (!_adminStorage) {
-    if (initializeFirebaseAdmin()) {
-      _adminStorage = admin.storage();
-    } else {
-        throw new Error("Admin Storage could not be initialized");
-    }
-  }
-  return _adminStorage;
+export function getAdminStorage() {
+    return admin.storage();
 }
