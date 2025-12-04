@@ -233,7 +233,7 @@ export default function CommunityDetailClient({ initialCommunity, initialPosts, 
               </Card>
             ) : (
               posts.map(post => (
-                <Link key={post.id} href={`/posts/${post.id}`}>
+                <Link key={post.id} href={`/communities/${communityId}/posts/${post.id}`}>
                   <Card className="hover:shadow-lg transition-shadow cursor-pointer">
                     <CardHeader>
                       <div className="flex items-center gap-3 mb-3">
