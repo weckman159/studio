@@ -159,7 +159,10 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
 
       toast({ title: 'Успешно!', description: 'Ваш пост опубликован.' });
       
-      const redirectUrl = communityId ? `/communities/${communityId}` : `/posts/${postId}`;
+      // ИСПРАВЛЕНИЕ 404: Перенаправление на страницу поста внутри сообщества
+      const redirectUrl = communityId 
+        ? `/communities/${communityId}/posts/${postId}` // ВЕДЕТ НА СОЗДАННЫЙ ПОСТ
+        : `/posts/${postId}`;
       router.push(redirectUrl);
 
     } catch (error: any) {
@@ -224,7 +227,8 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
           {/* RIGHT COLUMN: PREVIEW & SETTINGS */}
           <div className="space-y-6">
             
-             <div className="lg:border-l lg:pl-6">
+            {/* ИСПРАВЛЕНИЕ АДАПТИВНОСТИ: Убираем отступ слева на мобильных, делаем его только на больших экранах */}
+            <div className="lg:border-l lg:pl-6 pt-0 lg:pt-0"> 
                 <h3 className="text-xl font-bold mb-4">Предпросмотр</h3>
                 <div className="border rounded-lg overflow-hidden bg-card shadow-sm">
                     {coverPreview && (
@@ -322,5 +326,3 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
     </div>
   );
 }
-
-    
