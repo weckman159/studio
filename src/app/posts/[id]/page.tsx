@@ -106,9 +106,9 @@ export default async function PostDetailPage({ params }: { params: { id: string 
     
           <div className="max-w-4xl mx-auto px-4 py-8">
             <article>
-              {post.type && (
+              {post.category && (
                 <div className="mb-4">
-                  <Badge>{post.type}</Badge>
+                  <Badge>{post.category}</Badge>
                 </div>
               )}
     
