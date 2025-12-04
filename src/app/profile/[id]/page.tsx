@@ -1,67 +1,43 @@
-// src/app/profile/[id]/page.tsx - НИ ОДНОЙ ОШИБКИ!
+// src/app/profile/[id]/page.tsx - "use client" + NO FIREBASE
+'use client'
+
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+
 export default function ProfilePage({ params }: { params: { id: string } }) {
   const { id } = params
+  const [loading, setLoading] = useState(true)
   
+  useEffect(() => {
+    setLoading(false)
+  }, [])
+
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-screen">Загрузка...</div>
+  }
+
   return (
-    <div style={{
-      padding: '40px',
-      maxWidth: '800px',
-      margin: '0 auto',
-      fontFamily: 'system-ui, sans-serif'
-    }}>
-      <h1 style={{ fontSize: '3rem', marginBottom: '20px' }}>
-        🎉 ПРОФИЛЬ РАБОТАЕТ!
-      </h1>
-      <div style={{
-        background: '#f8f9fa',
-        padding: '30px',
-        borderRadius: '16px',
-        border: '2px solid #e9ecef'
-      }}>
-        <p><strong>User ID:</strong> <code style={{ background: '#dee2e6', padding: '4px 8px', borderRadius: '4px' }}>{id}</code></p>
-        <p><strong>Status:</strong> ✅ Server Components OK</p>
-        <p><strong>Время:</strong> {new Date().toLocaleString('ru-RU')}</p>
-        
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginTop: '30px' }}>
-          <div style={{ textAlign: 'center', padding: '20px', background: 'white', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-            <div style={{ fontSize: '2.5rem', color: '#3b82f6' }}>🚗</div>
-            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1f2937' }}>2</div>
-            <div style={{ color: '#6b7280' }}>Машины</div>
-          </div>
-          <div style={{ textAlign: 'center', padding: '20px', background: 'white', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-            <div style={{ fontSize: '2.5rem', color: '#3b82f6' }}>📝</div>
-            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1f2937' }}>15</div>
-            <div style={{ color: '#6b7280' }}>Посты</div>
-          </div>
-          <div style={{ textAlign: 'center', padding: '20px', background: 'white', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-            <div style={{ fontSize: '2.5rem', color: '#3b82f6' }}>👥</div>
-            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1f2937' }}>247</div>
-            <div style={{ color: '#6b7280' }}>Подписчики</div>
-          </div>
-        </div>
-        
-        <div style={{ marginTop: '40px', textAlign: 'center' }}>
-          <a href="/" style={{ 
-            background: '#3b82f6', 
-            color: 'white', 
-            padding: '12px 24px', 
-            borderRadius: '8px', 
-            textDecoration: 'none',
-            fontWeight: 'bold',
-            marginRight: '10px'
-          }}>
-            ← Главная
-          </a>
-          <a href="/posts" style={{ 
-            background: '#10b981', 
-            color: 'white', 
-            padding: '12px 24px', 
-            borderRadius: '8px', 
-            textDecoration: 'none',
-            fontWeight: 'bold'
-          }}>
-            Все посты
-          </a>
+    <div className="container mx-auto px-4 py-12 max-w-4xl">
+      <h1 className="text-5xl font-bold mb-12">✅ ПРОФИЛЬ РАБОТАЕТ</h1>
+      <div className="text-center mb-12">
+        <div className="w-32 h-32 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mx-auto mb-8 animate-spin-slow"></div>
+        <h2 className="text-3xl font-bold mb-4">Вася Петров</h2>
+        <p className="text-xl text-muted-foreground mb-8">vasya@autosphere.ru</p>
+        <code className="bg-muted px-4 py-2 rounded-xl text-lg font-mono">{id}</code>
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-8 mb-12">
+        <Link href="/posts" className="group p-8 bg-gradient-to-br from-primary to-primary/80 rounded-2xl text-white hover:shadow-2xl transition-all h-32 flex flex-col items-center justify-center">
+          <div className="text-4xl mb-4 group-hover:scale-110">📝</div>
+          <div className="text-2xl font-bold mb-1">15 постов</div>
+        </Link>
+        <Link href="/garage" className="group p-8 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl text-white hover:shadow-2xl transition-all h-32 flex flex-col items-center justify-center">
+          <div className="text-4xl mb-4 group-hover:scale-110">🚗</div>
+          <div className="text-2xl font-bold mb-1">3 машины</div>
+        </Link>
+        <div className="group p-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl text-white hover:shadow-2xl transition-all h-32 flex flex-col items-center justify-center cursor-pointer">
+          <div className="text-4xl mb-4 group-hover:scale-110">👥</div>
+          <div className="text-2xl font-bold mb-1">247 подписчиков</div>
         </div>
       </div>
     </div>
