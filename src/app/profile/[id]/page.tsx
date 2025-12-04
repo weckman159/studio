@@ -1,104 +1,136 @@
-
 // src/app/profile/[id]/page.tsx
-import { getAdminDb } from '@/lib/firebase-admin'
-import type { Car, User, Post } from '@/lib/types'
-import { ProfileClientPage } from '@/components/profile/ProfileClientPage'
+import { getAdminDb } from '@/lib/firebase-admin';
 import { notFound } from 'next/navigation'
-import { Suspense } from 'react'
-import { ProfilePageSkeleton } from '@/components/profile/ProfilePageSkeleton'
+import Link from 'next/link'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { User, Car, MapPin, Users } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
-export const revalidate = 0
 
 async function getProfileData(profileId: string) {
   try {
     const adminDb = getAdminDb()
-    
-    // 1. Fetch Profile
     const profileRef = adminDb.collection('users').doc(profileId)
-    let profileSnap = await profileRef.get()
+    const profileSnap = await profileRef.get()
     
-    // ✅ Создаем mock-пользователя БЕЗ рекурсии
-    if (!profileSnap.exists && profileId === 'dev-user-01') {
-      const mockUserData = {
-        id: 'dev-user-01',
-        uid: 'dev-user-01',
-        displayName: 'Dev User',
-        name: 'Dev User',
-        email: 'dev@autosphere.com',
-        photoURL: 'https://avatar.vercel.sh/dev.png',
-        role: 'admin',
-        createdAt: new Date(),
+    if (!profileSnap.exists()) {
+       // Создаем dev-user, если его нет
+      if (profileId === 'dev-user-01') {
+        const mockUserData = {
+          id: 'dev-user-01',
+          uid: 'dev-user-01',
+          displayName: 'Dev User',
+          name: 'Dev User',
+          email: 'dev@autosphere.com',
+          photoURL: 'https://avatar.vercel.sh/dev.png',
+          role: 'admin',
+          createdAt: new Date(),
+        }
+        await profileRef.set(mockUserData);
+        const newSnap = await profileRef.get();
+        return {
+          id: newSnap.id,
+          ...newSnap.data()
+        }
       }
-      await profileRef.set(mockUserData)
-      const newSnap = await profileRef.get()
-      
-      const profile: User = { id: newSnap.id, ...(newSnap.data() as Omit<User, 'id'>) }
-      
-      // ✅ Возвращаем сразу, без рекурсии
-      return {
-        profile,
-        cars: [],
-        posts: [],
-        followers: [],
-        following: [],
-      }
+      return null
     }
     
-    if (!profileSnap.exists) {
-      return { profile: null, cars: [], posts: [], followers: [], following: [] }
+    return {
+      id: profileSnap.id,
+      ...profileSnap.data()
     }
-    
-    const profile: User = { id: profileSnap.id, ...(profileSnap.data() as Omit<User, 'id'>) }
-    
-    // 2. Fetch Cars
-    const carsQuery = adminDb.collection('cars').where('userId', '==', profileId)
-    const carsSnap = await carsQuery.get()
-    const cars: Car[] = carsSnap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Car, 'id'>) }))
-    
-    // 3. Fetch Posts (latest 20)
-    const postsQuery = adminDb.collection('posts')
-      .where('authorId', '==', profileId)
-      .orderBy('createdAt', 'desc')
-      .limit(20)
-    const postsSnap = await postsQuery.get()
-    const posts: Post[] = postsSnap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Post, 'id'>) }))
-    
-    // 4. Fetch Followers
-    const followersQuery = adminDb.collection('users').doc(profileId).collection('followers')
-    const followersSnapshot = await followersQuery.get()
-    const followers: string[] = followersSnapshot.docs.map(doc => doc.id)
-    
-    // 5. Fetch Following
-    const followingQuery = adminDb.collection('users').doc(profileId).collection('following')
-    const followingSnapshot = await followingQuery.get()
-    const following: string[] = followingSnapshot.docs.map(doc => doc.id)
-    
-    return { profile, cars, posts, followers, following }
   } catch (error) {
-    console.error('SERVER Error fetching profile for', profileId, error)
-    return { profile: null, cars: [], posts: [], followers: [], following: [] }
+    console.error('Profile error:', error)
+    return null
   }
 }
 
 export default async function ProfilePage({ params }: { params: { id: string } }) {
   const { id } = params
-  const initialData = await getProfileData(id)
+  const profile: any = await getProfileData(id)
   
-  if (!initialData.profile) {
+  if (!profile) {
     notFound()
   }
-  
+
   return (
-    <Suspense fallback={<ProfilePageSkeleton />}>
-      <ProfileClientPage
-        profileId={id}
-        initialProfile={initialData.profile}
-        initialCars={initialData.cars}
-        initialPosts={initialData.posts}
-        initialFollowers={initialData.followers}
-        initialFollowing={initialData.following}
-      />
-    </Suspense>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-12 max-w-4xl">
+        {/* Hero Section */}
+        <div className="text-center mb-12">
+          <div className="relative mx-auto w-32 h-32 mb-6">
+            <Avatar className="w-32 h-32 border-4 border-primary">
+              <AvatarImage src={profile.photoURL} />
+              <AvatarFallback>{profile.displayName?.[0]}</AvatarFallback>
+            </Avatar>
+          </div>
+          <h1 className="text-4xl font-bold mb-2">{profile.displayName || profile.name}</h1>
+          <p className="text-xl text-muted-foreground mb-4">{profile.email}</p>
+          {profile.role && (
+            <div className="inline-flex items-center gap-2 bg-primary/10 text-primary rounded-full px-4 py-1 text-sm mb-6">
+              <User className="h-4 w-4" />
+              {profile.role}
+            </div>
+          )}
+        </div>
+
+        {/* Stats Grid */}
+        <div className="grid md:grid-cols-3 gap-6 mb-12">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Машины</CardTitle>
+              <Car className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">0</div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Подписчики</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">0</div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Посты</CardTitle>
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">0</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Bio */}
+        {profile.bio && (
+          <Card className="mb-12">
+            <CardHeader>
+              <CardTitle>О себе</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p>{profile.bio}</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Links */}
+        <div className="flex gap-4">
+          <Link href="/posts" className="flex-1 text-center py-4 px-6 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors">
+            Все посты
+          </Link>
+          <Link href="/garage" className="flex-1 text-center py-4 px-6 bg-muted text-muted-foreground rounded-lg font-medium hover:bg-muted/80 transition-colors">
+            Гараж
+          </Link>
+        </div>
+      </div>
+    </div>
   )
 }
