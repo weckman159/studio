@@ -1,3 +1,4 @@
+
 // src/app/communities/[id]/posts/[postId]/page.tsx
 
 import { getAdminDb } from '@/lib/firebase-admin';
