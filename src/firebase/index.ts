@@ -7,7 +7,7 @@ import {
   getFirestore, 
   Firestore, 
   initializeFirestore, 
-  persistentLocalCache, 
+  memoryLocalCache, 
   persistentMultipleTabManager 
 } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
@@ -22,12 +22,9 @@ export function initializeFirebase() {
     firebaseApp = initializeApp(firebaseConfig);
     auth = getAuth(firebaseApp);
     
-    // Инициализация Firestore с современными настройками кэширования
-    // Исправляет ошибку deprecated enableIndexedDbPersistence
+    // Инициализация Firestore с кэшем в памяти для решения проблем "засыпания" вкладок
     firestore = initializeFirestore(firebaseApp, {
-      localCache: persistentLocalCache({
-        tabManager: persistentMultipleTabManager()
-      })
+      localCache: memoryLocalCache()
     });
     
     storage = getStorage(firebaseApp);
