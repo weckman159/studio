@@ -95,9 +95,6 @@ export function PostCard({ post }: { post: Post }) {
                 <Link href={`/profile/${post.authorId}`} className="text-sm font-semibold hover:opacity-80 transition-opacity">
                   {post.authorName}
                 </Link>
-                {post.location && (
-                  <span className="text-[11px] text-muted-foreground leading-none">{post.location}</span>
-                )}
             </div>
           </div>
           
