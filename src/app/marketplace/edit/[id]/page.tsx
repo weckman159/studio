@@ -54,7 +54,7 @@ async function EditMarketplaceItemClient({ itemId }: { itemId: string }) {
   return <MarketplaceItemForm itemToEdit={item} />;
 }
 
-export default async function EditMarketplaceItemPage({ params }: { params: { id: string } }) {
-    const { id } = params;
+export default async function EditMarketplaceItemPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
     return <EditMarketplaceItemClient itemId={id} />
 }

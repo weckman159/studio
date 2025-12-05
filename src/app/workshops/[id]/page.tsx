@@ -38,8 +38,8 @@ async function getWorkshopData(workshopId: string): Promise<{ workshop: Workshop
 }
 
 
-export default async function WorkshopPage({ params }: { params: { id: string } }) {
-    const { id } = params;
+export default async function WorkshopPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
     const { workshop, reviews } = await getWorkshopData(id);
 
     if (!workshop) {
