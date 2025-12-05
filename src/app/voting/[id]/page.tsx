@@ -29,7 +29,9 @@ function VotingDetailClient({ votingId }: { votingId: string }) {
         if(!user || !voting) return;
         setSubmitting(true);
         try {
-            const newVotes = [...voting.votes];
+            // Ensure votes is an array for voting options
+            const currentVotes = Array.isArray(voting.votes) ? voting.votes : [];
+            const newVotes = [...currentVotes];
             newVotes[index] = (newVotes[index] || 0) + 1;
             
             await updateDoc(doc(firestore, 'votings', votingId), {
