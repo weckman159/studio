@@ -10,7 +10,7 @@ import { doc, collection, addDoc, updateDoc, serverTimestamp, getDoc } from 'fir
 import { useFirestore, useUser } from '@/firebase';
 import { useFileUpload } from '@/hooks/use-file-upload';
 import { useToast } from '@/hooks/use-toast';
-import { MarketplaceItem } from '@/lib/data';
+import { MarketplaceItem } from '@/lib/types';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
