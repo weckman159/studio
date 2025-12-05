@@ -89,6 +89,12 @@ function VotingDetailClient({ votingId }: { votingId: string }) {
     );
 }
 
-export default function VotingDetailPage({ params }: { params: { id: string } }) {
-    return <VotingDetailClient votingId={params.id} />
+export default function VotingDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const [votingId, setVotingId] = useState<string>('');
+
+    useEffect(() => {
+        params.then(({ id }) => setVotingId(id));
+    }, [params]);
+
+    return <VotingDetailClient votingId={votingId} />
 }

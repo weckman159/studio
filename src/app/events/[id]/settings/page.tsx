@@ -14,8 +14,8 @@ import { Loader2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { Event } from '@/lib/types';
 
-export default function EventSettingsClient({ params }: { params: { id: string } }) {
-    const { id: eventId } = params;
+export default function EventSettingsClient({ params }: { params: Promise<{ id: string }> }) {
+    const [eventId, setEventId] = useState<string>('');
     const [event, setEvent] = useState<Event | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -24,6 +24,11 @@ export default function EventSettingsClient({ params }: { params: { id: string }
     const { user } = useUser();
     const firestore = useFirestore();
     const { toast } = useToast();
+
+    // Unwrap params Promise
+    useEffect(() => {
+        params.then(({ id }) => setEventId(id));
+    }, [params]);
 
     useEffect(() => {
         if (!user || !firestore || !eventId) return;

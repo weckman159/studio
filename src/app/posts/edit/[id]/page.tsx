@@ -54,7 +54,12 @@ function EditPostClient({ postId }: { postId: string }) {
 }
 
 
-export default function EditPostPage({ params }: { params: { id: string } }) {
-    const { id } = params;
-    return <EditPostClient postId={id} />
+export default function EditPostPage({ params }: { params: Promise<{ id: string }> }) {
+    const [postId, setPostId] = React.useState<string>('');
+
+    React.useEffect(() => {
+        params.then(({ id }) => setPostId(id));
+    }, [params]);
+
+    return <EditPostClient postId={postId} />
 }

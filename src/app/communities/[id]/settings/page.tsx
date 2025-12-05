@@ -14,8 +14,8 @@ import { Loader2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { Community } from '@/lib/types';
 
-export default function CommunitySettingsClient({ params }: { params: { id: string } }) {
-    const { id: communityId } = params;
+export default function CommunitySettingsClient({ params }: { params: Promise<{ id: string }> }) {
+    const [communityId, setCommunityId] = useState<string>('');
     const [community, setCommunity] = useState<Community | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -24,6 +24,11 @@ export default function CommunitySettingsClient({ params }: { params: { id: stri
     const { user } = useUser();
     const firestore = useFirestore();
     const { toast } = useToast();
+
+    // Unwrap params Promise
+    useEffect(() => {
+        params.then(({ id }) => setCommunityId(id));
+    }, [params]);
 
     useEffect(() => {
         if (!user || !firestore || !communityId) return;

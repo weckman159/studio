@@ -4,13 +4,14 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 
-export default function ProfilePage({ params }: { params: { id: string } }) {
-  const { id } = params
+export default function ProfilePage({ params }: { params: Promise<{ id: string }> }) {
+  const [id, setId] = useState<string>('')
   const [loading, setLoading] = useState(true)
   
   useEffect(() => {
+    params.then(({ id }) => setId(id));
     setLoading(false)
-  }, [])
+  }, [params])
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Загрузка...</div>

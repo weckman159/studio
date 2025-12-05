@@ -9,8 +9,8 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Send, ArrowLeft, MoreVertical } from 'lucide-react';
 import Link from 'next/link';
 
-export default function DialogClient({ params }: { params: { id: string } }) {
-  const { id: dialogId } = params;
+export default function DialogClient({ params }: { params: Promise<{ id: string }> }) {
+  const [dialogId, setDialogId] = useState<string>('');
   const { user } = useUser();
   const firestore = useFirestore();
   
@@ -18,6 +18,11 @@ export default function DialogClient({ params }: { params: { id: string } }) {
   const [input, setInput] = useState('');
   const [partner, setPartner] = useState<any>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Unwrap params Promise
+  useEffect(() => {
+    params.then(({ id }) => setDialogId(id));
+  }, [params]);
 
   // Загрузка собеседника
   useEffect(() => {
