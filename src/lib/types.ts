@@ -91,8 +91,8 @@ export interface Car {
   comments: number
   
   // Метаданные
-  createdAt: any
-  updatedAt?: any
+  createdAt: Timestamp
+  updatedAt: Timestamp
 }
 
 export interface WheelSetup {
