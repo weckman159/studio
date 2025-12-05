@@ -50,7 +50,7 @@ export interface Car {
   // Основные данные
   brand: string
   model: string
-  generation?: string
+  generation: string
   year: number
   engine: string;
   nickname?: string
