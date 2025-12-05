@@ -33,7 +33,7 @@ async function getEventData(eventId: string): Promise<{ event: Event | null, par
                 if(chunk.length > 0){
                     const usersQuery = adminDb.collection('users').where('__name__', 'in', chunk);
                     const usersSnapshot = await usersQuery.get();
-                    usersSnapshot.forEach(doc => {
+                    usersSnapshot.forEach((doc: any) => {
                         participants.push({ id: doc.id, ...doc.data() } as User);
                     });
                 }
