@@ -134,13 +134,14 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
         });
       } else {
         // 3b. Create new car
-        const carData: Car = {
+        const carData = {
           ...data,
           id: carId,
           userId: user.uid,
           photos: finalImageUrls,
           photoUrl: finalImageUrls[0] || '',
           createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
         };
         await setDoc(carRef, carData);
       }
