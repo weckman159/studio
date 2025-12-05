@@ -18,7 +18,7 @@ export default async function HomePage() {
     .limit(20) // Увеличим лимит для серверной страницы
     .get();
     
-  const posts: Post[] = postsSnapshot.docs.map(doc => ({
+  const posts: Post[] = postsSnapshot.docs.map((doc: any) => ({
     id: doc.id,
     ...doc.data(),
   } as Post));
