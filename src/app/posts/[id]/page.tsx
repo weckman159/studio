@@ -34,7 +34,7 @@ async function getPostData(postId: string): Promise<{ post: Post | null, comment
             .orderBy('createdAt', 'asc');
         
         const commentsSnapshot = await commentsQuery.get();
-        const comments = commentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Comment));
+        const comments = commentsSnapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as Comment));
 
         return { post, comments };
     } catch (error) {
