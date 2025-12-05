@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useUser, useDoc, useMemoFirebase, useFirestore } from '@/firebase';
 import { doc, DocumentReference }from 'firebase/firestore';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -55,9 +56,9 @@ function EditPostClient({ postId }: { postId: string }) {
 
 
 export default function EditPostPage({ params }: { params: Promise<{ id: string }> }) {
-    const [postId, setPostId] = React.useState<string>('');
+    const [postId, setPostId] = useState<string>('');
 
-    React.useEffect(() => {
+    useEffect(() => {
         params.then(({ id }) => setPostId(id));
     }, [params]);
 
