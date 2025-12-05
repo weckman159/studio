@@ -61,7 +61,8 @@ function VotingDetailClient({ votingId }: { votingId: string }) {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     {voting.options.map((opt: string, idx: number) => {
-                        const percent = voting.totalVotes ? Math.round(((voting.votes?.[idx] || 0) / voting.totalVotes) * 100) : 0;
+                        const votesArray = Array.isArray(voting.votes) ? voting.votes : [];
+                        const percent = voting.totalVotes ? Math.round(((votesArray[idx] || 0) / voting.totalVotes) * 100) : 0;
                         return (
                             <div key={idx} className="space-y-1">
                                 <div className="flex justify-between text-sm">
