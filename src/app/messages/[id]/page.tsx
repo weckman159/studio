@@ -117,7 +117,7 @@ export default function DialogClient({ params }: { params: Promise<{ id: string 
               placeholder="Сообщение..." 
               className="flex-1 rounded-full bg-muted border-0 focus-visible:ring-1"
           />
-          <Button type="submit" size="icon" rounded="full" disabled={!input.trim()}>
+          <Button type="submit" size="icon" className="rounded-full" disabled={!input.trim()}>
               <Send className="h-5 w-5" />
           </Button>
       </form>
