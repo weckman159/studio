@@ -46,5 +46,5 @@ export default async function WorkshopPage({ params }: { params: Promise<{ id: s
         notFound();
     }
     
-    return <WorkshopDetailClient initialWorkshop={workshop} initialReviews={reviews} />
+    return <WorkshopDetailClient initialWorkshop={workshop} />
 }
