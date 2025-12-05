@@ -54,7 +54,6 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
   const [title, setTitle] = useState(postToEdit?.title || '');
   const [content, setContent] = useState(postToEdit?.content || ''); 
   const [category, setCategory] = useState(postToEdit?.category || 'Блог');
-  const [location, setLocation] = useState(postToEdit?.location || '');
   
   // Cover Image Logic
   const [coverFile, setCoverFile] = useState<File | null>(null);
@@ -142,7 +141,6 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
         category,
         type: category, 
         imageUrl: finalCoverUrl,
-        location: location.trim(),
         updatedAt: serverTimestamp(),
       };
 
@@ -302,19 +300,7 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
                         </Select>
                     </div>
 
-                    <div className="space-y-2">
-                        <Label>Локация</Label>
-                        <div className="relative">
-                             <MapPin className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                             <Input 
-                                className="pl-9" 
-                                placeholder="Добавить место" 
-                                value={location} 
-                                onChange={e => setLocation(e.target.value)}
-                                disabled={loading}
-                            />
-                        </div>
-                    </div>
+
                  </CardContent>
             </Card>
             
