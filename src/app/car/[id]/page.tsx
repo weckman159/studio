@@ -34,7 +34,7 @@ async function getCarData(carId: string): Promise<{ car: Car | null, timeline: T
     const timelineRef = carRef.collection('timeline');
     const timelineQuery = timelineRef.orderBy('date', 'desc');
     const timelineSnap = await timelineQuery.get();
-    const timeline = timelineSnap.docs.map(doc => {
+    const timeline = timelineSnap.docs.map((doc: any) => {
       const data = doc.data();
       return { 
         id: doc.id,
