@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { doc, collection, addDoc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { doc, collection, addDoc, updateDoc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { useFirestore, useUser } from '@/firebase';
 import { useFileUpload } from '@/hooks/use-file-upload';
 import { useToast } from '@/hooks/use-toast';
