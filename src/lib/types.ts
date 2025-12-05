@@ -64,7 +64,7 @@ export interface Car {
   badges?: string[] // ['car-of-the-day', 'top-10-region', 'stage-2']
   
   // Спеки
-  specs?: {
+  specs: {
     stockHP: number
     currentHP: number
     acceleration: number
@@ -83,12 +83,12 @@ export interface Car {
   description?: string;
   
   // Модификации
-  modifications?: Record<ModCategory, Modification[]>
+  modifications: Record<ModCategory, Modification[]>
   
   // Статистика
-  views?: number
-  likes?: number
-  comments?: number
+  views: number
+  likes: number
+  comments: number
   
   // Метаданные
   createdAt: any
