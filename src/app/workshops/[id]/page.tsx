@@ -28,7 +28,7 @@ async function getWorkshopData(workshopId: string): Promise<{ workshop: Workshop
             .orderBy('createdAt', 'desc');
 
         const reviewsSnapshot = await reviewsQuery.get();
-        const reviews = reviewsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Review));
+        const reviews = reviewsSnapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as Review));
         
         return { workshop, reviews };
     } catch (error) {
