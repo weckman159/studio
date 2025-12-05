@@ -7,7 +7,7 @@ import { doc, DocumentReference } from 'firebase/firestore';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import Link from 'next/link';
-import type { MarketplaceItem } from '@/lib/data';
+import type { MarketplaceItem } from '@/lib/types';
 
 
 async function EditMarketplaceItemClient({ itemId }: { itemId: string }) {
