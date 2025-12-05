@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useUser, useFirestore } from '@/firebase';
-import type { Comment, User } from '@/lib/data';
+import type { Comment, User } from '@/lib/types';
 import Link from 'next/link';
 import { Send, MessageSquare } from 'lucide-react';
 import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
