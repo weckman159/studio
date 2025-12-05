@@ -1,4 +1,10 @@
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
 import type { Timestamp } from 'firebase/firestore';
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
 
 /**
  * Converts Firestore Timestamp to JavaScript Date
@@ -60,4 +66,18 @@ export function serializeFirestoreData<T>(data: T): T {
   }
   
   return result as T;
+}
+
+/**
+ * Strips HTML tags from a string
+ */
+export function stripHtml(html: string): string {
+   if (!html) return "";
+   if (typeof document === 'undefined') {
+     // Running on the server, return as is or use a server-side library
+     return html.replace(/<[^>]*>?/gm, '');
+   }
+   const tmp = document.createElement("DIV");
+   tmp.innerHTML = html;
+   return tmp.textContent || tmp.innerText || "";
 }
