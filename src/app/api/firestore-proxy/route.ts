@@ -1,90 +1,150 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebase-admin';
 
-/**
- * Firestore Proxy API - обходит блокировщики рекламы
- * 
- * Этот endpoint работает как прокси между клиентом и Firestore,
- * обходя блокировки firestore.googleapis.com
- */
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
-export async function POST(request: Request) {
+/**
+ * Firestore Proxy API Route
+ * Provides server-side Firestore operations using Firebase Admin SDK
+ * This is useful when you need to bypass security rules for admin operations
+ */
+export async function POST(request: NextRequest) {
   try {
-    const { operation, collection, documentId, data, queryParams } = await request.json();
-    const db = getAdminDb();
+    const body = await request.json();
+    const { operation, collection, documentId, data, queryParams } = body;
+
+    const adminDb = getAdminDb();
 
     switch (operation) {
       case 'getDocument': {
-        const docRef = db.collection(collection).doc(documentId);
-        const doc = await docRef.get();
-        
-        if (!doc.exists) {
-          return NextResponse.json({ error: 'Document not found' }, { status: 404 });
+        if (!collection || !documentId) {
+          return NextResponse.json(
+            { error: 'Missing collection or documentId' },
+            { status: 400 }
+          );
         }
-        
+
+        const docRef = adminDb.collection(collection).doc(documentId);
+        const docSnap = await docRef.get();
+
+        if (!docSnap.exists) {
+          return NextResponse.json(
+            { error: 'Document not found' },
+            { status: 404 }
+          );
+        }
+
         return NextResponse.json({
-          id: doc.id,
-          data: doc.data(),
-          exists: true
+          id: docSnap.id,
+          ...docSnap.data(),
         });
       }
 
       case 'getCollection': {
-        let query: any = db.collection(collection);
-        
-        // Применяем фильтры если есть
-        if (queryParams?.where) {
-          for (const [field, operator, value] of queryParams.where) {
+        if (!collection) {
+          return NextResponse.json(
+            { error: 'Missing collection' },
+            { status: 400 }
+          );
+        }
+
+        let query: any = adminDb.collection(collection);
+
+        // Apply filters if provided
+        if (queryParams) {
+          if (queryParams.where) {
+            const { field, operator, value } = queryParams.where;
             query = query.where(field, operator, value);
           }
+
+          if (queryParams.orderBy) {
+            const { field, direction = 'asc' } = queryParams.orderBy;
+            query = query.orderBy(field, direction);
+          }
+
+          if (queryParams.limit) {
+            query = query.limit(queryParams.limit);
+          }
         }
-        
-        // Применяем сортировку
-        if (queryParams?.orderBy) {
-          const [field, direction = 'asc'] = queryParams.orderBy;
-          query = query.orderBy(field, direction);
-        }
-        
-        // Применяем лимит
-        if (queryParams?.limit) {
-          query = query.limit(queryParams.limit);
-        }
-        
+
         const snapshot = await query.get();
-        const documents = snapshot.docs.map(doc => ({
+        const documents = snapshot.docs.map((doc: any) => ({
           id: doc.id,
-          data: doc.data()
+          ...doc.data(),
         }));
-        
+
         return NextResponse.json({ documents });
       }
 
       case 'setDocument': {
-        const docRef = db.collection(collection).doc(documentId);
-        await docRef.set(data, { merge: queryParams?.merge || false });
+        if (!collection || !documentId || !data) {
+          return NextResponse.json(
+            { error: 'Missing required fields' },
+            { status: 400 }
+          );
+        }
+
+        const docRef = adminDb.collection(collection).doc(documentId);
+        const options = queryParams?.merge ? { merge: true } : {};
         
-        return NextResponse.json({ success: true, id: documentId });
+        await docRef.set(data, options);
+
+        return NextResponse.json({
+          success: true,
+          id: documentId,
+        });
       }
 
       case 'updateDocument': {
-        const docRef = db.collection(collection).doc(documentId);
+        if (!collection || !documentId || !data) {
+          return NextResponse.json(
+            { error: 'Missing required fields' },
+            { status: 400 }
+          );
+        }
+
+        const docRef = adminDb.collection(collection).doc(documentId);
         await docRef.update(data);
-        
-        return NextResponse.json({ success: true, id: documentId });
+
+        return NextResponse.json({
+          success: true,
+          id: documentId,
+        });
       }
 
       case 'deleteDocument': {
-        const docRef = db.collection(collection).doc(documentId);
+        if (!collection || !documentId) {
+          return NextResponse.json(
+            { error: 'Missing collection or documentId' },
+            { status: 400 }
+          );
+        }
+
+        const docRef = adminDb.collection(collection).doc(documentId);
         await docRef.delete();
-        
-        return NextResponse.json({ success: true, id: documentId });
+
+        return NextResponse.json({
+          success: true,
+          id: documentId,
+        });
       }
 
       case 'addDocument': {
-        const collectionRef = db.collection(collection);
+        if (!collection || !data) {
+          return NextResponse.json(
+            { error: 'Missing collection or data' },
+            { status: 400 }
+          );
+        }
+
+        const collectionRef = adminDb.collection(collection);
         const docRef = await collectionRef.add(data);
-        
-        return NextResponse.json({ success: true, id: docRef.id });
+
+        return NextResponse.json({
+          success: true,
+          id: docRef.id,
+        });
       }
 
       default:
