@@ -21,7 +21,6 @@ import {
 import { Badge } from '@/components/ui/badge';
 import type { Car, User } from '@/lib/types';
 import { MoreVertical, Edit, Trash2 } from 'lucide-react';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 interface GarageCardProps {
   car: Car;
