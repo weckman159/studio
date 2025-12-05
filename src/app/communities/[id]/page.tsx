@@ -26,7 +26,7 @@ async function getCommunityData(communityId: string): Promise<{ community: Commu
         // Fetch posts
         const postsQuery = adminDb.collection('posts').where('communityId', '==', communityId).orderBy('createdAt', 'desc').limit(20);
         const postsSnapshot = await postsQuery.get();
-        const posts = postsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Post));
+        const posts = postsSnapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as Post));
 
         // Fetch members (limit to 50 for performance)
         const members: User[] = [];
@@ -43,7 +43,7 @@ async function getCommunityData(communityId: string): Promise<{ community: Commu
                  if (chunk.length > 0) {
                     const usersQuery = adminDb.collection('users').where('__name__', 'in', chunk);
                     const usersSnapshot = await usersQuery.get();
-                    usersSnapshot.forEach(doc => {
+                    usersSnapshot.forEach((doc: any) => {
                         members.push({ id: doc.id, ...doc.data() } as User);
                     });
                 }
