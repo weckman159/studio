@@ -45,7 +45,7 @@ export type ModCategory = 'engine' | 'suspension' | 'exterior' | 'interior' | 'a
 export interface Car {
   id: string
   userId: string
-  status?: CarStatus
+  status: CarStatus
   
   // Основные данные
   brand: string
