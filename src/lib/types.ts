@@ -205,7 +205,7 @@ export interface Voting {
   id: string;
   question: string;
   options: string[];
-  votes: number[];
+  votes: number[] | { [key: string]: number }; // number[] for polls, object for car voting
   votedUserIds?: string[];
   contenderCarIds?: string[]; // optional for car of the day
   isActive: boolean;

@@ -62,10 +62,13 @@ export default function CarOfTheDayPage() {
                                 const userDoc = await getDoc(doc(firestore, 'users', car.userId));
                                 if (userDoc.exists()) {
                                     const owner = { id: userDoc.id, ...userDoc.data() } as User;
+                                    const votesMap = typeof votingData.votes === 'object' && !Array.isArray(votingData.votes) 
+                                        ? votingData.votes 
+                                        : {};
                                     contendersData.push({
                                         ...car,
                                         owner,
-                                        votes: (votingData.votes?.[car.id] || 0) as number
+                                        votes: (votesMap[car.id] || 0) as number
                                     });
                                 }
                             }
