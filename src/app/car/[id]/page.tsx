@@ -57,8 +57,8 @@ async function getCarData(carId: string): Promise<{ car: Car | null, timeline: T
   }
 }
 
-export default async function CarPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default async function CarPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const { car, timeline } = await getCarData(id);
 
   if (!car) {
@@ -69,8 +69,8 @@ export default async function CarPage({ params }: { params: { id: string } }) {
 }
 
 // Добавляем генерацию метаданных
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
-  const { id } = params;
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
   const { car } = await getCarData(id); // Используем существующую функцию
 
   if (!car) return { title: 'Автомобиль не найден' };

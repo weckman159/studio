@@ -56,8 +56,8 @@ const formatDate = (timestamp: any) => {
     }).format(date);
 };
 
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
-  const { id } = params;
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
   const { post } = await getPostData(id);
 
   if (!post) return { title: 'Пост не найден' };
@@ -78,8 +78,8 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
 }
 
 
-export default async function PostDetailPage({ params }: { params: { id: string } }) {
-    const { id: postId } = params;
+export default async function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id: postId } = await params;
     const { post, comments } = await getPostData(postId);
 
     if (!post) {

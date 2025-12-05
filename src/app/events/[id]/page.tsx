@@ -48,8 +48,8 @@ async function getEventData(eventId: string): Promise<{ event: Event | null, par
 }
 
 
-export default async function EventDetailPage({ params }: { params: { id: string } }) {
-    const { id } = params;
+export default async function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
     const { event, participants } = await getEventData(id);
     
     if (!event) {

@@ -26,8 +26,8 @@ async function getCommunity(communityId: string): Promise<Community | null> {
     }
 }
 
-export default async function CreateCommunityPostPage({ params }: { params: { id: string } }) {
-    const { id } = params;
+export default async function CreateCommunityPostPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
     const community = await getCommunity(id);
 
     if (!community) {
