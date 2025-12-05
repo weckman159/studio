@@ -19,6 +19,7 @@ import { useRouter } from 'next/navigation';
 import { User as UserData, Workshop, Feedback, Post } from '@/lib/types';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useToast } from '@/hooks/use-toast';
+import { serializeFirestoreData } from '@/lib/utils';
 
 // UI Components
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -120,10 +121,10 @@ export default function AdminPage() {
                     getDocs(query(fbRef, orderBy('createdAt', 'desc'), limit(50)))
                 ]);
 
-                setUsers(usersSnap.docs.map(d => ({ id: d.id, ...d.data() } as UserData)));
-                setPosts(postsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Post)));
-                setWorkshops(wsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Workshop)));
-                setFeedbacks(fbSnap.docs.map(d => ({ id: d.id, ...d.data() } as Feedback)));
+                setUsers(usersSnap.docs.map((d: any) => serializeFirestoreData({ id: d.id, ...d.data() } as UserData)));
+                setPosts(postsSnap.docs.map((d: any) => serializeFirestoreData({ id: d.id, ...d.data() } as Post)));
+                setWorkshops(wsSnap.docs.map((d: any) => serializeFirestoreData({ id: d.id, ...d.data() } as Workshop)));
+                setFeedbacks(fbSnap.docs.map((d: any) => serializeFirestoreData({ id: d.id, ...d.data() } as Feedback)));
 
                 // Get rough counts (using the snapshot size for now, implies < 50 recent, 
                 // strictly we should use separate counters for total stats)
@@ -285,7 +286,7 @@ export default function AdminPage() {
                                                 )}
                                             </TableCell>
                                             <TableCell className="text-muted-foreground text-sm">
-                                                {u.createdAt?.toDate ? u.createdAt.toDate().toLocaleDateString('ru-RU') : 'Недавно'}
+                                                {u.createdAt ? new Date(u.createdAt).toLocaleDateString('ru-RU') : 'Недавно'}
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex justify-end gap-2">

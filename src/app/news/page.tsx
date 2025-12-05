@@ -10,6 +10,7 @@ import { Newspaper, ExternalLink } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
+import { serializeFirestoreData } from '@/lib/utils';
 
 interface NewsItem {
     id: string;
@@ -33,7 +34,7 @@ export default function NewsPage() {
             try {
                 const q = query(collection(firestore, 'autoNews'), orderBy('publishedAt', 'desc'), limit(20));
                 const snap = await getDocs(q);
-                setNews(snap.docs.map(d => ({id: d.id, ...d.data()} as NewsItem)));
+                setNews(snap.docs.map((d: any) => serializeFirestoreData({id: d.id, ...d.data()} as NewsItem)));
             } catch(e) {
                 console.error(e);
             } finally {
@@ -70,7 +71,7 @@ export default function NewsPage() {
                                 <div className="flex justify-between items-start mb-2">
                                     <Badge variant="secondary">{item.category}</Badge>
                                     <span className="text-xs text-muted-foreground">
-                                        {item.publishedAt?.toDate().toLocaleDateString()}
+                                        {item.publishedAt ? new Date(item.publishedAt).toLocaleDateString() : ''}
                                     </span>
                                 </div>
                                 <CardTitle className="line-clamp-2 text-lg">

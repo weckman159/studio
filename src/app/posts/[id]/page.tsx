@@ -10,6 +10,7 @@ import { Calendar, FileText } from 'lucide-react';
 import type { Post, Comment } from '@/lib/types';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
+import { serializeFirestoreData } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,14 +28,14 @@ async function getPostData(postId: string): Promise<{ post: Post | null, comment
             return { post: null, comments: [] };
         }
 
-        const post = { id: postDocSnap.id, ...postDocSnap.data() } as Post;
+        const post = serializeFirestoreData({ id: postDocSnap.id, ...postDocSnap.data() } as Post);
 
         const commentsQuery = adminDb.collection('comments')
             .where('postId', '==', postId)
             .orderBy('createdAt', 'asc');
         
         const commentsSnapshot = await commentsQuery.get();
-        const comments = commentsSnapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as Comment));
+        const comments = commentsSnapshot.docs.map((doc: any) => serializeFirestoreData({ id: doc.id, ...doc.data() } as Comment));
 
         return { post, comments };
     } catch (error) {

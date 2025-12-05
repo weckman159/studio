@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 // ИСПРАВЛЕНИЕ: Добавлен Loader2 в импорт, так как он используется в JSX
 import { FileText, Users, Search as SearchIcon, Loader2 } from 'lucide-react';
 import type { Post, User } from '@/lib/types';
+import { serializeFirestoreData } from '@/lib/utils';
 
 function SearchResultsComponent() {
   const params = useSearchParams();
@@ -33,8 +34,8 @@ function SearchResultsComponent() {
             const usersSnap = await getDocs(usersQ);
             
             const filteredUsers = usersSnap.docs
-                .map(d => ({ id: d.id, ...d.data() } as User))
-                .filter(u => 
+                .map((d: any) => serializeFirestoreData({ id: d.id, ...d.data() } as User))
+                .filter((u: User) => 
                     u.name?.toLowerCase().includes(q) || 
                     u.displayName?.toLowerCase().includes(q) ||
                     u.nickname?.toLowerCase().includes(q)
@@ -47,8 +48,8 @@ function SearchResultsComponent() {
             const postsSnap = await getDocs(postsQ);
 
             const filteredPosts = postsSnap.docs
-                .map(d => ({ id: d.id, ...d.data() } as Post))
-                .filter(p => 
+                .map((d: any) => serializeFirestoreData({ id: d.id, ...d.data() } as Post))
+                .filter((p: Post) => 
                     p.title?.toLowerCase().includes(q) || 
                     p.content?.toLowerCase().includes(q)
                 );
