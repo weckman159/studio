@@ -9,7 +9,7 @@ import { useFirestore, useUser } from '@/firebase';
 import { useFileUpload } from '@/hooks/use-file-upload';
 import { deleteFile } from '@/lib/storage';
 import { Post } from '@/lib/types';
-import dynamic from 'next/dynamic';
+import { GithubEditor } from '@/components/GithubEditor';
 
 // UI Components
 import { Button } from '@/components/ui/button';
@@ -22,12 +22,6 @@ import { Loader2, X, MapPin, ImagePlus, ArrowLeft, Trash } from 'lucide-react';
 import Link from 'next/link';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-
-// Динамический импорт Tiptap редактора (чтобы избежать ошибок SSR)
-const RichTextEditor = dynamic(() => import('@/components/RichTextEditor'), {
-  ssr: false,
-  loading: () => <div className="h-[300px] w-full bg-muted rounded-xl animate-pulse" />
-});
 
 const postTypes = [
   'Блог', 'Фотоотчет', 'Вопрос', 'Мой опыт', 'Обзор', 'Ремонт', 'Тюнинг', 'Путешествия'
@@ -47,15 +41,12 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
   const { uploadFiles, uploading, progress } = useFileUpload({ maxFiles: 1, maxSizeInMB: 10 });
   const coverInputRef = useRef<HTMLInputElement>(null);
 
-  // Генерируем ID поста сразу, чтобы можно было грузить картинки в текст ДО сохранения поста
   const [postId] = useState(() => postToEdit?.id || doc(collection(firestore, 'posts')).id);
 
-  // State
   const [title, setTitle] = useState(postToEdit?.title || '');
   const [content, setContent] = useState(postToEdit?.content || ''); 
   const [category, setCategory] = useState(postToEdit?.category || 'Блог');
   
-  // Cover Image Logic
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string>(postToEdit?.imageUrl || '');
   
@@ -63,7 +54,6 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
 
   const isEditMode = !!postToEdit;
 
-  // Clean up object URL
   useEffect(() => {
     return () => {
       if (coverPreview && coverPreview.startsWith('blob:')) {
@@ -99,7 +89,6 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
       return;
     }
 
-    // Для фотоотчетов текст может быть необязательным, если есть фото в тексте или обложка
     const hasContent = content.trim().length > 0;
     const hasCover = !!coverPreview;
     
@@ -114,9 +103,7 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
       const postRef = doc(firestore, 'posts', postId);
       let finalCoverUrl = coverPreview;
 
-      // 1. Загрузка обложки (если выбран новый файл)
       if (coverFile) {
-        // Если меняем старое фото - удаляем его
         if (isEditMode && postToEdit?.imageUrl && !postToEdit.imageUrl.startsWith('blob:')) {
              try { await deleteFile(postToEdit.imageUrl); } catch(e) { console.warn('Old image delete fail', e); }
         }
@@ -126,18 +113,16 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
             finalCoverUrl = uploadResult[0].url;
         }
       } else if (!coverPreview) {
-          // Если обложку удалили
           finalCoverUrl = '';
       }
 
-      // 2. Формирование данных
       const postData: any = {
         id: postId,
         authorId: user.uid,
         authorName: user.displayName || 'Пользователь',
         authorAvatar: user.photoURL,
         title: title.trim(),
-        content: content, // HTML из Tiptap
+        content: content,
         category,
         type: category, 
         imageUrl: finalCoverUrl,
@@ -157,9 +142,8 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
 
       toast({ title: 'Успешно!', description: 'Ваш пост опубликован.' });
       
-      // ИСПРАВЛЕНИЕ 404: Перенаправление на страницу поста внутри сообщества
       const redirectUrl = communityId 
-        ? `/communities/${communityId}/posts/${postId}` // ВЕДЕТ НА СОЗДАННЫЙ ПОСТ
+        ? `/communities/${communityId}/posts/${postId}`
         : `/posts/${postId}`;
       router.push(redirectUrl);
 
@@ -196,55 +180,22 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
             </Alert>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="space-y-6">
+            <Input 
+                id="title" 
+                placeholder="Заголовок поста" 
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+                disabled={loading}
+                className="text-2xl font-bold h-14 border-2 focus-visible:ring-primary"
+            />
             
-          {/* LEFT COLUMN: CONTENT EDITOR */}
-          <div className="space-y-6">
-            
-            {/* Title Input */}
-            <div className="space-y-2">
-                <Input 
-                    id="title" 
-                    placeholder="Заголовок поста" 
-                    value={title}
-                    onChange={e => setTitle(e.target.value)}
-                    disabled={loading}
-                    className="text-2xl font-bold h-14 border-none px-0 shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/50"
-                />
-            </div>
-
-            {/* Rich Text Editor */}
-            <RichTextEditor 
-                content={content} 
-                onChange={setContent} 
-                postId={postId} 
+            <GithubEditor 
+                value={content}
+                onChange={setContent}
+                placeholder="Напишите вашу историю здесь..."
             />
 
-          </div>
-
-          {/* RIGHT COLUMN: PREVIEW & SETTINGS */}
-          <div className="space-y-6">
-            
-            {/* ИСПРАВЛЕНИЕ АДАПТИВНОСТИ: Убираем отступ слева на мобильных, делаем его только на больших экранах */}
-            <div className="lg:border-l lg:pl-6 pt-0 lg:pt-0"> 
-                <h3 className="text-xl font-bold mb-4">Предпросмотр</h3>
-                <div className="border rounded-lg overflow-hidden bg-card shadow-sm">
-                    {coverPreview && (
-                        <div className="relative w-full h-48 bg-muted">
-                            <Image src={coverPreview} alt="Превью обложки" fill className="object-cover" />
-                        </div>
-                    )}
-                    <div className="p-4 space-y-3">
-                        <h4 className="text-2xl font-bold">{title.trim() || "Заголовок поста..."}</h4>
-                        <div 
-                            className="text-sm prose prose-sm dark:prose-invert max-w-none"
-                            dangerouslySetInnerHTML={{ __html: content || "<p class='text-muted-foreground'>Здесь появится ваш текст...</p>" }}
-                        />
-                    </div>
-                </div>
-            </div>
-
-            {/* Cover Image */}
             <Card className="overflow-hidden">
                 <div className="p-4 pb-2 font-semibold text-sm">Обложка (для ленты)</div>
                 <CardContent className="p-4 pt-0">
@@ -272,7 +223,6 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
                         </div>
                     )}
                     
-                    {/* Hidden Input */}
                     <input 
                         ref={coverInputRef}
                         type="file" 
@@ -285,7 +235,6 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
                 </CardContent>
             </Card>
 
-            {/* Settings */}
             <Card>
                  <CardContent className="p-4 space-y-4">
                     <div className="space-y-2">
@@ -299,15 +248,8 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
                             </SelectContent>
                         </Select>
                     </div>
-
-
                  </CardContent>
             </Card>
-            
-            <div className="text-xs text-muted-foreground px-2">
-                * Обложка будет отображаться в ленте новостей. В самом посте вы можете добавлять сколько угодно фото через редактор слева.
-            </div>
-          </div>
         </div>
     </div>
   );

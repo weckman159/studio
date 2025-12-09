@@ -8,11 +8,11 @@ import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp,
 import type { Post, Comment } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Send, AlertCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { GithubEditor } from '@/components/GithubEditor';
 
 interface PostCommentsProps {
   post: Post;
@@ -103,28 +103,21 @@ export function PostComments({ post, initialComments }: PostCommentsProps) {
       </CardHeader>
       <CardContent className="space-y-6">
         {user ? (
-          <div className="flex gap-3">
-            <Avatar>
-              <AvatarImage src={user.photoURL || undefined} />
-              <AvatarFallback>{user.displayName?.[0] || 'U'}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1 space-y-2">
-              <Textarea
-                placeholder="Написать комментарий..."
+          <div className="flex flex-col gap-3">
+             <GithubEditor
                 value={commentText}
-                onChange={e => setCommentText(e.target.value)}
-                rows={3}
-                disabled={submitting}
+                onChange={setCommentText}
+                placeholder="Оставьте комментарий..."
               />
               <Button
                 onClick={handleAddComment}
                 disabled={!commentText.trim() || submitting}
                 size="sm"
+                className="self-end"
               >
                 <Send className="mr-2 h-4 w-4" />
                 Отправить
               </Button>
-            </div>
           </div>
         ) : (
           <Alert>
@@ -163,7 +156,7 @@ export function PostComments({ post, initialComments }: PostCommentsProps) {
                       {formatDate(comment.createdAt)}
                     </span>
                   </div>
-                  <p className="text-muted-foreground whitespace-pre-line break-words">
+                  <p className="text-sm text-muted-foreground whitespace-pre-line break-words">
                     {comment.content}
                   </p>
                 </div>
