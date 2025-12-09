@@ -16,7 +16,7 @@ export function MobileNav() {
   const isActive = (path: string) => pathname === path;
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-t z-50 pb-4 pt-1">
+    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-xl border-t border-border/50 z-50 pb-4 pt-1">
       <div className="flex justify-around items-center h-16 px-2">
         <Link href="/" className={cn("p-3 rounded-full transition-colors", isActive('/') ? "text-primary" : "text-muted-foreground")}>
           <Home className="h-6 w-6" strokeWidth={isActive('/') ? 2.5 : 2} />

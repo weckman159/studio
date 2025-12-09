@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { 
   Heart, 
   MessageCircle, 
-  Send, // Иконка "самолетика" как в Инсте
+  Send,
   Bookmark,
   MoreHorizontal,
   Car as CarIcon
@@ -79,9 +79,9 @@ export function PostCard({ post }: { post: Post }) {
     <>
       <CommentSheet isOpen={isCommentSheetOpen} onOpenChange={setCommentSheetOpen} postId={post.id} />
       
-      <div className="bg-background border-b md:border md:rounded-xl overflow-hidden mb-4 md:mb-8 last:border-b-0">
+      <div className="glass-card rounded-2xl overflow-hidden mb-6 group">
         
-        <div className="flex items-center justify-between p-3">
+        <div className="flex items-center justify-between p-4">
           <div className="flex items-center gap-3">
             <Link href={`/profile/${post.authorId}`} className="relative">
               <div className="p-[2px] rounded-full bg-gradient-to-tr from-yellow-400 to-purple-600">
@@ -112,15 +112,16 @@ export function PostCard({ post }: { post: Post }) {
         </div>
 
         {post.imageUrl && (
-          <div className="relative w-full aspect-[4/3] bg-muted/30" onDoubleClick={handleLike}>
+          <div className="relative w-full aspect-[16/9] bg-muted/30 overflow-hidden cursor-pointer" onDoubleClick={handleLike}>
              <Link href={`/posts/${post.id}`}>
                 <Image
                   src={post.imageUrl}
                   alt={post.title}
                   fill
-                  className="object-cover"
+                  className="object-cover transition-transform duration-700 group-hover:scale-105"
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 640px, 50vw"
                 />
+                <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
              </Link>
              {post.carBrand && (
                <div className="absolute bottom-3 left-3">
@@ -133,27 +134,25 @@ export function PostCard({ post }: { post: Post }) {
           </div>
         )}
 
-        <div className="p-3 pb-2">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-4">
-              <button onClick={handleLike} className="hover:opacity-60 transition-opacity focus:outline-none scale-100 active:scale-90 duration-150">
-                <Heart 
-                    className={cn("h-7 w-7 transition-colors", isLiked ? "fill-red-500 text-red-500" : "text-foreground")} 
-                    strokeWidth={1.5}
-                />
-              </button>
-              <button onClick={() => setCommentSheetOpen(true)} className="hover:opacity-60 transition-opacity focus:outline-none">
-                <MessageCircle className="h-7 w-7 -rotate-90 text-foreground" strokeWidth={1.5} />
-              </button>
-              <button className="hover:opacity-60 transition-opacity focus:outline-none">
-                <Send className="h-7 w-7 -rotate-45 -mt-1 text-foreground" strokeWidth={1.5} />
-              </button>
-            </div>
-            <button onClick={() => setIsBookmarked(!isBookmarked)} className="hover:opacity-60 transition-opacity">
-                <Bookmark className={cn("h-7 w-7", isBookmarked ? "fill-foreground" : "")} strokeWidth={1.5} />
-            </button>
-          </div>
-
+        <div className="px-4 py-3 flex items-center gap-6">
+          <button onClick={handleLike} className="hover:opacity-60 transition-opacity focus:outline-none scale-100 active:scale-90 duration-150">
+            <Heart 
+                className={cn("h-7 w-7 transition-colors", isLiked ? "fill-red-500 text-red-500" : "text-foreground")} 
+                strokeWidth={1.5}
+            />
+          </button>
+          <button onClick={() => setCommentSheetOpen(true)} className="hover:opacity-60 transition-opacity focus:outline-none">
+            <MessageCircle className="h-7 w-7 -rotate-90 text-foreground" strokeWidth={1.5} />
+          </button>
+          <button className="hover:opacity-60 transition-opacity focus:outline-none">
+            <Send className="h-7 w-7 -rotate-45 -mt-1 text-foreground" strokeWidth={1.5} />
+          </button>
+          <button onClick={() => setIsBookmarked(!isBookmarked)} className="ml-auto hover:opacity-60 transition-opacity">
+              <Bookmark className={cn("h-7 w-7", isBookmarked ? "fill-foreground" : "")} strokeWidth={1.5} />
+          </button>
+        </div>
+        
+        <div className="px-4 pb-4">
           <div className="font-semibold text-sm mb-1">
             {likesCount > 0 ? `${likesCount.toLocaleString()} отметок "Нравится"` : 'Станьте первым, кто оценит'}
           </div>
