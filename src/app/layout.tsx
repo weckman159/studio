@@ -1,3 +1,4 @@
+
 'use client';
 
 import "./globals.css";
@@ -16,6 +17,7 @@ import type { User as UserData } from '@/lib/types';
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { CookieConsent } from "@/components/CookieConsent";
 import { MobileNav } from "@/components/MobileNav";
+import { Analytics } from '@vercel/analytics/react';
 
 
 const navLinks = [
@@ -134,6 +136,7 @@ export default function RootLayout({
           </FirebaseClientProvider>
         </ThemeProvider>
         <CookieConsent />
+        <Analytics />
       </body>
     </html>
   );
