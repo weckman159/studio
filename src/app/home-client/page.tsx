@@ -9,6 +9,7 @@ import { AutoNewsWidget } from '@/components/AutoNewsWidget';
 import { CarOfTheDay } from '@/components/CarOfTheDay';
 import { useFirestore } from '@/firebase';
 import { serializeFirestoreData } from '@/lib/utils';
+import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,7 +29,6 @@ export default function HomeClientPage() {
       try {
         setLoading(true);
         // Using client-side Firestore for interactivity
-        const { collection, query, orderBy, limit, getDocs } = await import('firebase/firestore');
         const postsRef = collection(firestore, 'posts');
         const postsQuery = query(postsRef, orderBy('createdAt', 'desc'), limit(20));
         const snapshot = await getDocs(postsQuery);
@@ -64,7 +64,7 @@ export default function HomeClientPage() {
       const query = searchQuery.toLowerCase();
       result = result.filter((post: Post) => 
         post.title?.toLowerCase().includes(query) || 
-        post.content?.toLowerCase().includes(query)
+        (post.content && post.content.toLowerCase().includes(query))
       );
     }
     
