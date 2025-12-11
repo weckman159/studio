@@ -64,6 +64,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   if (!post) return { title: 'Пост не найден' };
 
   const cleanDescription = post.content?.replace(/<[^>]*>?/gm, '').slice(0, 150) || 'Смотрите подробнее на AutoSphere';
+  const coverImage = (post as any).coverImage || (post as any).imageUrl;
 
   return {
     title: `${post.title} | ${post.authorName}`,
@@ -71,7 +72,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     openGraph: {
       title: post.title,
       description: cleanDescription,
-      images: post.imageUrl ? [post.imageUrl] : [],
+      images: coverImage ? [coverImage] : [],
       type: 'article',
       siteName: 'AutoSphere',
     },
@@ -86,13 +87,16 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
     if (!post) {
         notFound();
     }
+
+    // Поддержка как coverImage, так и imageUrl для обратной совместимости
+    const coverImage = (post as any).coverImage || (post as any).imageUrl;
     
     return (
         <div className="min-h-screen">
-          {post.imageUrl ? (
+          {coverImage ? (
             <div className="w-full h-[400px] overflow-hidden bg-muted relative">
               <Image
-                src={post.imageUrl}
+                src={coverImage}
                 alt={post.title}
                 fill
                 className="object-cover"
@@ -141,8 +145,13 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                 <PostActions post={post} />
               </div>
     
+              {/* Tiptap HTML контент с правильными стилями */}
               <div 
-                className="prose prose-lg dark:prose-invert max-w-none mb-8"
+                className="prose prose-lg dark:prose-invert max-w-none mb-8
+                           prose-img:rounded-xl prose-img:shadow-lg
+                           prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline
+                           prose-code:bg-white/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded
+                           prose-pre:bg-white/5 prose-pre:border prose-pre:border-white/10"
                 dangerouslySetInnerHTML={{ __html: post.content }}
               />
     
