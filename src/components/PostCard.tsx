@@ -1,9 +1,10 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Heart, MessageCircle, Clock, Bookmark, TrendingUp } from 'lucide-react'
+import { Heart, MessageCircle, ChevronRight, Image as ImageIcon } from 'lucide-react'
 
 interface PostCardProps {
   post: {
@@ -11,6 +12,8 @@ interface PostCardProps {
     title: string
     content: string
     category?: string
+    coverImage?: string
+    imageUrl?: string
     authorId: string
     authorName?: string
     authorAvatar?: string
@@ -27,21 +30,10 @@ export function PostCard({ post, communityId }: PostCardProps) {
   const formatDate = (timestamp: any) => {
     if (!timestamp) return ''
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp)
-    const now = new Date()
-    const diffMs = now.getTime() - date.getTime()
-    const diffMins = Math.floor(diffMs / 60000)
-    const diffHours = Math.floor(diffMs / 3600000)
-    const diffDays = Math.floor(diffMs / 86400000)
-
-    if (diffMins < 1) return 'только что'
-    if (diffMins < 60) return `${diffMins} мин назад`
-    if (diffHours < 24) return `${diffHours} ч назад`
-    if (diffDays === 1) return 'вчера'
-    if (diffDays < 7) return `${diffDays} д назад`
-    
     return date.toLocaleDateString('ru-RU', {
       day: 'numeric',
-      month: 'short'
+      month: 'short',
+      year: 'numeric'
     })
   }
 
@@ -50,100 +42,114 @@ export function PostCard({ post, communityId }: PostCardProps) {
       .replace(/<[^>]*>/g, '')
       .replace(/\s+/g, ' ')
       .trim()
-      .slice(0, 280)
-  }
-
-  const getReadTime = (html: string) => {
-    const words = html.replace(/<[^>]*>/g, '').split(/\s+/).length
-    const minutes = Math.ceil(words / 200)
-    return `${minutes} мин`
+      .slice(0, 180)
   }
 
   const likesCount = post.likesCount ?? post.likes ?? 0
   const commentsCount = post.commentsCount ?? post.comments ?? 0
+  const coverImage = post.coverImage || post.imageUrl
 
   const postUrl = communityId 
     ? `/communities/${communityId}/posts/${post.id}`
     : `/posts/${post.id}`
 
   return (
-    <article className="group relative mb-6 rounded-2xl border border-border/50 bg-card/30 backdrop-blur-sm p-6 transition-all duration-300 hover:border-primary/30 hover:bg-card/50 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1">
-      {/* Градиентный акцент */}
-      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-      
-      <div className="relative">
-        {/* Автор + мета */}
-        <div className="flex items-center justify-between mb-4">
-          <Link 
-            href={`/profile/${post.authorId}`}
-            className="flex items-center gap-3 hover:opacity-80 transition-opacity"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Avatar className="w-9 h-9 ring-2 ring-border/50 transition-all duration-300 group-hover:ring-primary/50">
-              <AvatarImage src={post.authorAvatar} />
-              <AvatarFallback className="text-sm font-semibold bg-gradient-to-br from-primary/20 to-primary/5">
-                {post.authorName?.[0]?.toUpperCase() || 'A'}
-              </AvatarFallback>
-            </Avatar>
+    <Link href={postUrl}>
+      <article className="group mb-6 rounded-3xl border border-border/40 bg-card overflow-hidden transition-all duration-300 hover:border-primary/40 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-1">
+        <div className="flex flex-col md:flex-row">
+          {/* Изображение слева */}
+          <div className="relative w-full md:w-2/5 h-56 md:h-auto bg-muted overflow-hidden">
+            {coverImage ? (
+              <Image
+                src={coverImage}
+                alt={post.title}
+                fill
+                className="object-cover transition-transform duration-500 group-hover:scale-105"
+                sizes="(max-width: 768px) 100vw, 40vw"
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
+                <ImageIcon className="w-16 h-16 text-muted-foreground/30" />
+              </div>
+            )}
+            {/* Градиентный оверлей */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-background/20 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+          </div>
+
+          {/* Контент справа */}
+          <div className="flex-1 p-6 md:p-8 flex flex-col justify-between">
             <div>
-              <p className="text-sm font-medium leading-none mb-1">
-                {post.authorName}
+              {/* Заголовок */}
+              <h2 className="text-2xl md:text-3xl font-bold leading-tight mb-4 transition-colors duration-300 group-hover:text-primary">
+                {post.title}
+              </h2>
+
+              {/* Отрывок */}
+              <p className="text-muted-foreground leading-relaxed mb-6 line-clamp-2">
+                {getExcerpt(post.content)}
               </p>
-              <time className="text-xs text-muted-foreground">
-                {formatDate(post.createdAt)}
-              </time>
-            </div>
-          </Link>
-
-          {/* Категория */}
-          {post.category && (
-            <Badge 
-              variant="secondary" 
-              className="bg-primary/10 text-primary border-primary/20 font-medium px-3 py-1"
-            >
-              {post.category}
-            </Badge>
-          )}
-        </div>
-
-        <Link href={postUrl} className="block space-y-3">
-          {/* Заголовок */}
-          <h2 className="text-2xl md:text-3xl font-bold leading-tight tracking-tight transition-colors duration-300 group-hover:text-primary">
-            {post.title}
-          </h2>
-
-          {/* Краткое описание */}
-          <p className="text-muted-foreground leading-relaxed line-clamp-2 text-base">
-            {getExcerpt(post.content)}
-          </p>
-
-          {/* Футер: время чтения + статистика */}
-          <div className="flex items-center justify-between pt-3 border-t border-border/30">
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1.5">
-                <Clock className="w-4 h-4" />
-                <span>{getReadTime(post.content)}</span>
-              </div>
-              
-              <div className="flex items-center gap-1.5 transition-colors duration-300 group-hover:text-red-500">
-                <Heart className="w-4 h-4 transition-all duration-300 group-hover:fill-red-500" />
-                <span className="font-medium">{likesCount}</span>
-              </div>
-              
-              <div className="flex items-center gap-1.5">
-                <MessageCircle className="w-4 h-4" />
-                <span className="font-medium">{commentsCount}</span>
-              </div>
             </div>
 
-            {/* Читать далее */}
-            <div className="flex items-center gap-2 text-sm font-semibold text-primary transition-all duration-300 group-hover:gap-3">
-              <span>Читать</span>
-              <TrendingUp className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
+            {/* Футер */}
+            <div className="space-y-4">
+              {/* Автор + дата */}
+              <div className="flex items-center justify-between">
+                <div 
+                  className="flex items-center gap-3"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    window.location.href = `/profile/${post.authorId}`
+                  }}
+                >
+                  <Avatar className="w-10 h-10 ring-2 ring-border/30">
+                    <AvatarImage src={post.authorAvatar} />
+                    <AvatarFallback className="text-sm font-semibold">
+                      {post.authorName?.[0]?.toUpperCase() || 'A'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-sm font-semibold leading-none mb-1">
+                      {post.authorName || 'Автор'}
+                    </p>
+                    <time className="text-xs text-muted-foreground">
+                      {formatDate(post.createdAt)}
+                    </time>
+                  </div>
+                </div>
+
+                {/* Стрелка */}
+                <div className="text-primary transition-transform duration-300 group-hover:translate-x-1">
+                  <ChevronRight className="w-6 h-6" />
+                </div>
+              </div>
+
+              {/* Статистика + категория */}
+              <div className="flex items-center justify-between pt-4 border-t border-border/30">
+                <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-2 text-muted-foreground transition-colors duration-300 group-hover:text-red-500">
+                    <Heart className="w-5 h-5 transition-all duration-300 group-hover:fill-red-500" />
+                    <span className="text-sm font-semibold">{likesCount}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <MessageCircle className="w-5 h-5" />
+                    <span className="text-sm font-semibold">{commentsCount}</span>
+                  </div>
+                </div>
+
+                {post.category && (
+                  <Badge 
+                    variant="secondary" 
+                    className="bg-primary/10 text-primary border-primary/20 font-medium px-3 py-1.5"
+                  >
+                    {post.category}
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
-        </Link>
-      </div>
-    </article>
+        </div>
+      </article>
+    </Link>
   )
 }
