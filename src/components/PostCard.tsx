@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Heart, MessageCircle, Clock, Bookmark } from 'lucide-react'
+import { Heart, MessageCircle, Clock, Bookmark, TrendingUp } from 'lucide-react'
 
 interface PostCardProps {
   post: {
@@ -34,15 +34,14 @@ export function PostCard({ post, communityId }: PostCardProps) {
     const diffDays = Math.floor(diffMs / 86400000)
 
     if (diffMins < 1) return 'только что'
-    if (diffMins < 60) return `${diffMins} минут назад`
-    if (diffHours < 24) return `${diffHours} часов назад`
+    if (diffMins < 60) return `${diffMins} мин назад`
+    if (diffHours < 24) return `${diffHours} ч назад`
     if (diffDays === 1) return 'вчера'
-    if (diffDays < 7) return `${diffDays} дней назад`
+    if (diffDays < 7) return `${diffDays} д назад`
     
     return date.toLocaleDateString('ru-RU', {
       day: 'numeric',
-      month: 'long',
-      year: 'numeric'
+      month: 'short'
     })
   }
 
@@ -51,7 +50,7 @@ export function PostCard({ post, communityId }: PostCardProps) {
       .replace(/<[^>]*>/g, '')
       .replace(/\s+/g, ' ')
       .trim()
-      .slice(0, 300)
+      .slice(0, 280)
   }
 
   const getReadTime = (html: string) => {
@@ -68,74 +67,83 @@ export function PostCard({ post, communityId }: PostCardProps) {
     : `/posts/${post.id}`
 
   return (
-    <article className="py-6 border-b border-border last:border-0 hover:bg-accent/30 transition-colors -mx-4 px-4 rounded-lg">
-      <div className="flex items-center gap-3 mb-3">
-        <Link 
-          href={`/profile/${post.authorId}`}
-          className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <Avatar className="w-6 h-6">
-            <AvatarImage src={post.authorAvatar} />
-            <AvatarFallback className="text-xs">
-              {post.authorName?.[0]?.toUpperCase() || 'A'}
-            </AvatarFallback>
-          </Avatar>
-          <span className="text-sm text-muted-foreground">
-            {post.authorName}
-          </span>
-        </Link>
-        <span className="text-sm text-muted-foreground">•</span>
-        <time className="text-sm text-muted-foreground">
-          {formatDate(post.createdAt)}
-        </time>
-      </div>
+    <article className="group relative mb-6 rounded-2xl border border-border/50 bg-card/30 backdrop-blur-sm p-6 transition-all duration-300 hover:border-primary/30 hover:bg-card/50 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1">
+      {/* Градиентный акцент */}
+      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+      
+      <div className="relative">
+        {/* Автор + мета */}
+        <div className="flex items-center justify-between mb-4">
+          <Link 
+            href={`/profile/${post.authorId}`}
+            className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Avatar className="w-9 h-9 ring-2 ring-border/50 transition-all duration-300 group-hover:ring-primary/50">
+              <AvatarImage src={post.authorAvatar} />
+              <AvatarFallback className="text-sm font-semibold bg-gradient-to-br from-primary/20 to-primary/5">
+                {post.authorName?.[0]?.toUpperCase() || 'A'}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="text-sm font-medium leading-none mb-1">
+                {post.authorName}
+              </p>
+              <time className="text-xs text-muted-foreground">
+                {formatDate(post.createdAt)}
+              </time>
+            </div>
+          </Link>
 
-      <Link href={postUrl} className="block group">
-        <h2 className="text-xl md:text-2xl font-bold mb-3 group-hover:text-primary transition-colors">
-          {post.title}
-        </h2>
-
-        <div className="flex flex-wrap items-center gap-3 mb-3 text-sm text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <Clock className="w-4 h-4" />
-            {getReadTime(post.content)}
-          </div>
+          {/* Категория */}
           {post.category && (
-            <>
-              <span>•</span>
-              <Badge variant="secondary" className="font-normal">
-                {post.category}
-              </Badge>
-            </>
+            <Badge 
+              variant="secondary" 
+              className="bg-primary/10 text-primary border-primary/20 font-medium px-3 py-1"
+            >
+              {post.category}
+            </Badge>
           )}
         </div>
 
-        <p className="text-muted-foreground leading-relaxed mb-4 line-clamp-3">
-          {getExcerpt(post.content)}
-        </p>
+        <Link href={postUrl} className="block space-y-3">
+          {/* Заголовок */}
+          <h2 className="text-2xl md:text-3xl font-bold leading-tight tracking-tight transition-colors duration-300 group-hover:text-primary">
+            {post.title}
+          </h2>
 
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-primary font-medium group-hover:underline">
-            Читать далее
-          </span>
-          
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <Heart className="w-4 h-4" />
-              <span>{likesCount}</span>
+          {/* Краткое описание */}
+          <p className="text-muted-foreground leading-relaxed line-clamp-2 text-base">
+            {getExcerpt(post.content)}
+          </p>
+
+          {/* Футер: время чтения + статистика */}
+          <div className="flex items-center justify-between pt-3 border-t border-border/30">
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-1.5">
+                <Clock className="w-4 h-4" />
+                <span>{getReadTime(post.content)}</span>
+              </div>
+              
+              <div className="flex items-center gap-1.5 transition-colors duration-300 group-hover:text-red-500">
+                <Heart className="w-4 h-4 transition-all duration-300 group-hover:fill-red-500" />
+                <span className="font-medium">{likesCount}</span>
+              </div>
+              
+              <div className="flex items-center gap-1.5">
+                <MessageCircle className="w-4 h-4" />
+                <span className="font-medium">{commentsCount}</span>
+              </div>
             </div>
-            <div className="flex items-center gap-1">
-              <Bookmark className="w-4 h-4" />
-              <span>0</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <MessageCircle className="w-4 h-4" />
-              <span>{commentsCount}</span>
+
+            {/* Читать далее */}
+            <div className="flex items-center gap-2 text-sm font-semibold text-primary transition-all duration-300 group-hover:gap-3">
+              <span>Читать</span>
+              <TrendingUp className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
             </div>
           </div>
-        </div>
-      </Link>
+        </Link>
+      </div>
     </article>
   )
 }
