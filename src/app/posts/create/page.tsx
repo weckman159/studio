@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useFirestore } from '@/firebase';
-import { doc, collection, setDoc, serverTimestamp } from 'firebase/firestore';
+import { useUser } from '@/firebase';
 import { useFileUpload } from '@/hooks/use-file-upload';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,7 +22,6 @@ import Placeholder from '@tiptap/extension-placeholder';
 import { 
   Bold, 
   Italic, 
-  Link as LinkIcon, 
   List, 
   Code, 
   ImagePlus,
@@ -43,11 +41,8 @@ const categories = [
 export default function CreatePostPage() {
   const router = useRouter();
   const { user, isUserLoading: authLoading } = useUser();
-  const firestore = useFirestore();
   const { toast } = useToast();
   const { uploadFiles, uploading } = useFileUpload({maxSizeInMB: 10}); 
-  
-  const [postId] = useState(() => doc(collection(firestore, 'temp')).id);
   
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('Блог');
@@ -101,7 +96,7 @@ export default function CreatePostPage() {
       if (!file || !editor) return;
 
       try {
-        const uploadResults = await uploadFiles([file], 'posts', postId);
+        const uploadResults = await uploadFiles([file], 'posts');
         if (uploadResults.length > 0) {
           editor.chain().focus().setImage({ src: uploadResults[0].url }).run();
         } else {
@@ -118,45 +113,56 @@ export default function CreatePostPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !editor || !firestore) return;
+    if (!user || !editor) return;
     if (!title.trim()) {
       toast({variant: 'destructive', title: 'Ошибка', description: 'Введите заголовок'});
       return;
     }
+    
     setSubmitting(true);
+    
     try {
+      // Загружаем обложку если есть
       let coverUrl = '';
       if (coverImage) {
-        const uploadResults = await uploadFiles([coverImage], 'posts', postId);
+        const uploadResults = await uploadFiles([coverImage], 'posts');
         if(uploadResults.length > 0) coverUrl = uploadResults[0].url;
       }
       
+      // Получаем HTML контент из редактора
       const content = editor.getHTML();
-      const postRef = doc(firestore, 'posts', postId);
 
-      await setDoc(postRef, {
-        id: postId,
-        title,
-        content,
-        category: category || 'Блог',
-        type: category || 'Блог',
-        imageUrl: coverUrl,
-        authorId: user.uid,
-        authorName: user.displayName,
-        authorAvatar: user.photoURL,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        likesCount: 0,
-        commentsCount: 0,
-        views: 0,
-        likedBy: [],
+      // Создаем пост через API
+      const response = await fetch('/api/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          content,
+          category,
+          coverImage: coverUrl,
+          authorId: user.uid,
+        }),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create post');
+      }
+
+      const { postId } = await response.json();
       
       toast({title: "Успех!", description: "Пост опубликован."});
+      
+      // Редирект на страницу поста
       router.push(`/posts/${postId}`);
     } catch (error) {
       console.error('Post creation error:', error);
-      toast({variant: 'destructive', title: 'Ошибка', description: 'Не удалось создать пост'});
+      toast({
+        variant: 'destructive', 
+        title: 'Ошибка', 
+        description: error instanceof Error ? error.message : 'Не удалось создать пост'
+      });
       setSubmitting(false);
     }
   };
