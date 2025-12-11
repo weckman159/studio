@@ -26,7 +26,7 @@ export default async function PostsPage() {
     .limit(30)
     .get()
 
-  const posts: Post[] = snap.docs.map((d) => ({
+  const posts: Post[] = snap.docs.map((d: any) => ({
     id: d.id,
     ...(d.data() as any),
   }))
