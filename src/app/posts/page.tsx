@@ -1,145 +1,173 @@
-// src/app/posts/page.tsx – Лента постов в стиле Medium
+// src/app/posts/page.tsx – Лента в стиле Хабр
 import Link from 'next/link'
 import { getAdminDb } from '@/lib/firebase-admin'
 import { Badge } from '@/components/ui/badge'
-import { Heart, MessageCircle } from 'lucide-react'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
+import { Heart, MessageCircle, Clock, Bookmark } from 'lucide-react'
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore'
 
-type Post = {
-  id: string
-  title: string
-  excerpt?: string
-  coverImage?: string
-  category?: string
-  likes?: number
-  commentsCount?: number
-  authorName?: string
-  createdAt?: FirebaseFirestore.Timestamp
-}
+export const dynamic = 'force-dynamic'
 
 export default async function PostsPage() {
   const db = getAdminDb()
-
-  // Берём реальные посты, последние сверху
-  const snap = await db
+  
+  const postsSnap = await db
     .collection('posts')
     .orderBy('createdAt', 'desc')
     .limit(30)
     .get()
 
-  const posts: Post[] = snap.docs.map((d: any) => ({
+  const posts = postsSnap.docs.map((d: QueryDocumentSnapshot) => ({
     id: d.id,
     ...(d.data() as any),
   }))
 
-  return (
-    <div className="min-h-screen bg-background py-10">
-      <div className="container mx-auto px-4 max-w-3xl">
-        {/* Заголовок + кнопка */}
-        <div className="flex items-center justify-between mb-10">
-          <div>
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
-              Публикации
-            </h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Истории, обзоры и мысли автолюбителей AutoSphere
-            </p>
-          </div>
-          <Link
-            href="/posts/create"
-            className="inline-flex items-center rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/30 hover:bg-primary/90 transition"
-          >
-            Новый пост
-          </Link>
-        </div>
+  const formatDate = (timestamp: any) => {
+    if (!timestamp) return ''
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
 
-        {/* Пустое состояние */}
-        {posts.length === 0 && (
-          <div className="border border-dashed border-white/10 rounded-2xl p-10 text-center text-muted-foreground bg-white/5">
-            Пока нет ни одного поста.
-            <br />
-            <Link
-              href="/posts/create"
-              className="text-primary hover:underline font-medium"
-            >
-              Станьте первым, кто что‑то опубликует.
+    if (diffMins < 1) return 'только что'
+    if (diffMins < 60) return `${diffMins} минут назад`
+    if (diffHours < 24) return `${diffHours} часов назад`
+    if (diffDays === 1) return 'вчера'
+    if (diffDays < 7) return `${diffDays} дней назад`
+    
+    return date.toLocaleDateString('ru-RU', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    })
+  }
+
+  const getExcerpt = (html: string) => {
+    return html
+      .replace(/<[^>]*>/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 300)
+  }
+
+  const getReadTime = (html: string) => {
+    const words = html.replace(/<[^>]*>/g, '').split(/\s+/).length
+    const minutes = Math.ceil(words / 200)
+    return `${minutes} мин`
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Хедер с кнопкой */}
+      <div className="border-b border-border sticky top-0 bg-background/95 backdrop-blur-sm z-10">
+        <div className="container mx-auto px-4 max-w-4xl py-4">
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl font-bold">Публикации</h1>
+            <Link href="/posts/create">
+              <Button size="sm">
+                Написать
+              </Button>
             </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Лента */}
+      <div className="container mx-auto px-4 max-w-4xl py-6">
+        {posts.length === 0 ? (
+          <div className="text-center py-20 text-muted-foreground">
+            Пока нет публикаций
+          </div>
+        ) : (
+          <div className="space-y-0">
+            {posts.map((post: any) => {
+              const likesCount = post.likesCount ?? post.likes ?? 0
+              const commentsCount = post.commentsCount ?? post.comments ?? 0
+              
+              return (
+                <article
+                  key={post.id}
+                  className="py-6 border-b border-border last:border-0 hover:bg-accent/30 transition-colors -mx-4 px-4 rounded-lg"
+                >
+                  {/* Автор + время */}
+                  <div className="flex items-center gap-3 mb-3">
+                    <Link 
+                      href={`/profile/${post.authorId}`}
+                      className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                    >
+                      <Avatar className="w-6 h-6">
+                        <AvatarImage src={post.authorAvatar} />
+                        <AvatarFallback className="text-xs">
+                          {post.authorName?.[0]?.toUpperCase() || 'A'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm text-muted-foreground">
+                        {post.authorName}
+                      </span>
+                    </Link>
+                    <span className="text-sm text-muted-foreground">•</span>
+                    <time className="text-sm text-muted-foreground">
+                      {formatDate(post.createdAt)}
+                    </time>
+                  </div>
+
+                  <Link href={`/posts/${post.id}`} className="block group">
+                    {/* Заголовок */}
+                    <h2 className="text-xl md:text-2xl font-bold mb-3 group-hover:text-primary transition-colors">
+                      {post.title}
+                    </h2>
+
+                    {/* Мета: сложность, время, категория */}
+                    <div className="flex flex-wrap items-center gap-3 mb-3 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-4 h-4" />
+                        {getReadTime(post.content)}
+                      </div>
+                      {post.category && (
+                        <>
+                          <span>•</span>
+                          <Badge variant="secondary" className="font-normal">
+                            {post.category}
+                          </Badge>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Краткое описание */}
+                    <p className="text-muted-foreground leading-relaxed mb-4 line-clamp-3">
+                      {getExcerpt(post.content)}
+                    </p>
+
+                    {/* Читать далее + статистика */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-primary font-medium group-hover:underline">
+                        Читать далее
+                      </span>
+                      
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Heart className="w-4 h-4" />
+                          <span>{likesCount}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Bookmark className="w-4 h-4" />
+                          <span>0</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <MessageCircle className="w-4 h-4" />
+                          <span>{commentsCount}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                </article>
+              )
+            })}
           </div>
         )}
-
-        {/* Лента в один столбец */}
-        <div className="space-y-8">
-          {posts.map((post) => (
-            <Link
-              key={post.id}
-              href={`/posts/${post.id}`}
-              className="block rounded-2xl border border-white/5 bg-white/5 hover:bg-white/[0.07] transition-shadow hover:shadow-2xl hover:shadow-black/40 overflow-hidden backdrop-blur group"
-            >
-              {/* Обложка */}
-              {post.coverImage && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={post.coverImage}
-                  alt={post.title}
-                  className="w-full aspect-[16/9] object-cover group-hover:scale-[1.02] transition-transform duration-500"
-                />
-              )}
-
-              <div className="px-5 md:px-6 py-5">
-                {/* Категория / мета */}
-                <div className="mb-3 flex items-center gap-3 text-xs text-muted-foreground">
-                  {post.category && (
-                    <Badge
-                      variant="outline"
-                      className="border-white/20 bg-black/30 text-[0.68rem] uppercase tracking-wide"
-                    >
-                      {post.category}
-                    </Badge>
-                  )}
-                  <span>
-                    {post.authorName ?? 'Автор'}
-                  </span>
-                  <span>•</span>
-                  <span>
-                    {post.createdAt?.toDate
-                      ? post.createdAt
-                          .toDate()
-                          .toLocaleDateString('ru-RU', {
-                            day: '2-digit',
-                            month: 'short',
-                          })
-                      : ''}
-                  </span>
-                </div>
-
-                {/* Заголовок */}
-                <h2 className="text-xl md:text-2xl font-semibold leading-snug group-hover:text-primary transition-colors mb-2">
-                  {post.title}
-                </h2>
-
-                {/* Краткое описание */}
-                {post.excerpt && (
-                  <p className="text-sm md:text-[0.95rem] text-muted-foreground line-clamp-3 mb-4">
-                    {post.excerpt}
-                  </p>
-                )}
-
-                {/* Низ карточки: реакции */}
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <div className="flex items-center gap-4">
-                    <span className="inline-flex items-center gap-1.5">
-                      <Heart className="h-4 w-4 group-hover:text-red-400 group-hover:fill-red-500 transition-colors" />
-                      <span>{post.likes ?? 0}</span>
-                    </span>
-                    <span className="inline-flex items-center gap-1.5">
-                      <MessageCircle className="h-4 w-4" />
-                      <span>{post.commentsCount ?? 0}</span>
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
       </div>
     </div>
   )
