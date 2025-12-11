@@ -1,3 +1,4 @@
+
 // src/app/posts/[id]/page.tsx
 import { getAdminDb } from '@/lib/firebase-admin';
 import { PostActions } from './_components/PostActions';
@@ -67,8 +68,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const coverImage = (post as any).coverImage || (post as any).imageUrl;
 
   return {
-    title: data.title ?? 'Пост',
-    description: data.excerpt ?? '',
+    title: `${post.title} | ${post.authorName}`,
+    description: cleanDescription,
     openGraph: {
       title: post.title,
       description: cleanDescription,
@@ -76,8 +77,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       type: 'article',
       siteName: 'AutoSphere',
     },
-  }
+  };
 }
+
 
 export default async function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id: postId } = await params;
@@ -87,7 +89,6 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
         notFound();
     }
 
-    // Поддержка как coverImage, так и imageUrl для обратной совместимости
     const coverImage = (post as any).coverImage || (post as any).imageUrl;
     
     return (
@@ -158,23 +159,5 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
             </article>
           </div>
         </div>
-      </div>
-
-      {/* Обложка */}
-      {post.coverImage && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={post.coverImage}
-          alt={post.title}
-          className="w-full max-h-[420px] object-cover rounded-2xl mb-8 shadow-xl"
-        />
-      )}
-
-      {/* Контент (HTML из Tiptap) */}
-      <article
-        className="prose prose-invert max-w-none prose-img:rounded-xl prose-img:shadow-lg prose-a:text-sky-400 prose-a:no-underline hover:prose-a:underline prose-code:bg-white/5 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-pre:bg-black/40 prose-pre:border prose-pre:border-white/10 prose-pre:rounded-xl"
-        dangerouslySetInnerHTML={{ __html: post.content ?? '' }}
-      />
-    </div>
-  )
+    );
 }
