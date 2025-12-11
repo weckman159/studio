@@ -1,46 +1,90 @@
-// src/app/profile/[id]/page.tsx - "use client" + NO FIREBASE
-'use client'
 
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { getAdminDb } from '@/lib/firebase-admin'
 
-export default function ProfilePage({ params }: { params: Promise<{ id: string }> }) {
-  const [id, setId] = useState<string>('')
-  const [loading, setLoading] = useState(true)
-  
-  useEffect(() => {
-    params.then(({ id }) => setId(id));
-    setLoading(false)
-  }, [params])
+type ProfilePageProps = {
+  params: { id: string }
+}
 
-  if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Загрузка...</div>
+export default async function ProfilePage({ params }: ProfilePageProps) {
+  const db = getAdminDb()
+
+  const userSnap = await db.collection('users').doc(params.id).get()
+  if (!userSnap.exists) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        Профиль не найден
+      </div>
+    )
   }
+
+  const user = userSnap.data() as any
+
+  const postsSnap = await db
+    .collection('posts')
+    .where('authorId', '==', params.id)
+    .orderBy('createdAt', 'desc')
+    .limit(20)
+    .get()
+
+  const posts = postsSnap.docs.map((d) => ({
+    id: d.id,
+    ...(d.data() as any),
+  }))
 
   return (
     <div className="container mx-auto px-4 py-12 max-w-4xl">
-      <h1 className="text-5xl font-bold mb-12">✅ ПРОФИЛЬ РАБОТАЕТ</h1>
-      <div className="text-center mb-12">
-        <div className="w-32 h-32 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mx-auto mb-8 animate-spin-slow"></div>
-        <h2 className="text-3xl font-bold mb-4">Вася Петров</h2>
-        <p className="text-xl text-muted-foreground mb-8">vasya@autosphere.ru</p>
-        <code className="bg-muted px-4 py-2 rounded-xl text-lg font-mono">{id}</code>
-      </div>
+      <h1 className="text-4xl font-bold mb-8">Профиль</h1>
 
-      <div className="grid md:grid-cols-3 gap-8 mb-12">
-        <Link href="/posts" className="group p-8 bg-gradient-to-br from-primary to-primary/80 rounded-2xl text-white hover:shadow-2xl transition-all h-32 flex flex-col items-center justify-center">
-          <div className="text-4xl mb-4 group-hover:scale-110">📝</div>
-          <div className="text-2xl font-bold mb-1">15 постов</div>
-        </Link>
-        <Link href="/garage" className="group p-8 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl text-white hover:shadow-2xl transition-all h-32 flex flex-col items-center justify-center">
-          <div className="text-4xl mb-4 group-hover:scale-110">🚗</div>
-          <div className="text-2xl font-bold mb-1">3 машины</div>
-        </Link>
-        <div className="group p-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl text-white hover:shadow-2xl transition-all h-32 flex flex-col items-center justify-center cursor-pointer">
-          <div className="text-4xl mb-4 group-hover:scale-110">👥</div>
-          <div className="text-2xl font-bold mb-1">247 подписчиков</div>
+      <div className="flex items-center gap-6 mb-10">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {user.photoURL && (
+          <img
+            src={user.photoURL}
+            alt={user.displayName ?? 'Пользователь'}
+            className="w-20 h-20 rounded-full object-cover"
+          />
+        )}
+        <div>
+          <div className="text-2xl font-semibold">
+            {user.displayName ?? 'Без имени'}
+          </div>
+          <div className="text-sm text-white/60">
+            {user.email}
+          </div>
         </div>
       </div>
+
+      <h2 className="text-2xl font-semibold mb-4">Посты</h2>
+
+      {posts.length === 0 ? (
+        <div className="text-white/60">
+          У этого пользователя пока нет постов.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {posts.map((post) => (
+            <Link
+              key={post.id}
+              href={`/posts/${post.id}`}
+              className="block bg-white/5 border border-white/10 rounded-xl px-4 py-3 hover:bg-white/10 transition"
+            >
+              <div className="flex justify-between gap-4">
+                <div>
+                  <div className="font-medium mb-1">
+                    {post.title}
+                  </div>
+                  <div className="text-xs text-white/60">
+                    {post.createdAt?.toDate
+                      ? post.createdAt.toDate().toLocaleString('ru-RU')
+                      : ''}
+                  </div>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
