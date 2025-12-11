@@ -49,6 +49,8 @@ export default function CreatePostPage() {
   const [coverImage, setCoverImage] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
+  // Темпорарный ID для загрузки файлов (будет заменен на реальный postId после создания)
+  const [tempPostId] = useState(() => `temp-${Date.now()}`);
 
   const editor = useEditor({
     extensions: [
@@ -96,7 +98,7 @@ export default function CreatePostPage() {
       if (!file || !editor) return;
 
       try {
-        const uploadResults = await uploadFiles([file], 'posts');
+        const uploadResults = await uploadFiles([file], 'posts', tempPostId);
         if (uploadResults.length > 0) {
           editor.chain().focus().setImage({ src: uploadResults[0].url }).run();
         } else {
@@ -125,7 +127,7 @@ export default function CreatePostPage() {
       // Загружаем обложку если есть
       let coverUrl = '';
       if (coverImage) {
-        const uploadResults = await uploadFiles([coverImage], 'posts');
+        const uploadResults = await uploadFiles([coverImage], 'posts', tempPostId);
         if(uploadResults.length > 0) coverUrl = uploadResults[0].url;
       }
       
