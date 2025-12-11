@@ -1,12 +1,7 @@
-
 import Link from 'next/link'
 import { getAdminDb } from '@/lib/firebase-admin'
 
-type ProfilePageProps = {
-  params: { id: string }
-}
-
-export default async function ProfilePage({ params }: ProfilePageProps) {
+export default async function ProfilePage({ params }: { params: { id: string } }) {
   const db = getAdminDb()
 
   const userSnap = await db.collection('users').doc(params.id).get()
