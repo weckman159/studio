@@ -1,72 +1,161 @@
+// src/app/posts/[id]/page.tsx
+import { getAdminDb } from '@/lib/firebase-admin';
+import { PostActions } from './_components/PostActions';
+import { PostComments } from './_components/PostComments';
+import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
+import Image from 'next/image';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Calendar, FileText } from 'lucide-react';
+import type { Post, Comment } from '@/lib/types';
+import { notFound } from 'next/navigation';
+import { Metadata } from 'next';
+import { serializeFirestoreData } from '@/lib/utils';
 
-import { notFound } from 'next/navigation'
-import { getAdminDb } from '@/lib/firebase-admin'
-import type { Metadata } from 'next'
+export const dynamic = 'force-dynamic';
 
-type PostPageProps = {
-  params: { id: string }
+async function getPostData(postId: string): Promise<{ post: Post | null, comments: Comment[] }> {
+    try {
+        const adminDb = getAdminDb();
+        if (!adminDb) {
+            console.error("Firebase Admin not initialized");
+            return { post: null, comments: [] };
+        }
+        const postDocRef = adminDb.collection('posts').doc(postId);
+        const postDocSnap = await postDocRef.get();
+
+        if (!postDocSnap.exists) {
+            return { post: null, comments: [] };
+        }
+
+        const post = serializeFirestoreData({ id: postDocSnap.id, ...postDocSnap.data() } as Post);
+
+        const commentsQuery = adminDb.collection('comments')
+            .where('postId', '==', postId)
+            .orderBy('createdAt', 'asc');
+        
+        const commentsSnapshot = await commentsQuery.get();
+        const comments = commentsSnapshot.docs.map((doc: any) => serializeFirestoreData({ id: doc.id, ...doc.data() } as Comment));
+
+        return { post, comments };
+    } catch (error) {
+        console.error("Error fetching post data on server:", error);
+        return { post: null, comments: [] };
+    }
 }
 
-export async function generateMetadata(
-  { params }: PostPageProps
-): Promise<Metadata> {
-  const db = getAdminDb()
-  const snap = await db.collection('posts').doc(params.id).get()
+const formatDate = (timestamp: any) => {
+    if (!timestamp) return '';
+    // Firestore Timestamps on the server are different from the client
+    const date = timestamp._seconds ? new Date(timestamp._seconds * 1000) : new Date(timestamp);
+    return new Intl.DateTimeFormat('ru-RU', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
+};
 
-  if (!snap.exists) {
-    return {
-      title: 'Пост не найден',
-    }
-  }
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const { post } = await getPostData(id);
 
-  const data = snap.data() as any
+  if (!post) return { title: 'Пост не найден' };
+
+  const cleanDescription = post.content?.replace(/<[^>]*>?/gm, '').slice(0, 150) || 'Смотрите подробнее на AutoSphere';
+  const coverImage = (post as any).coverImage || (post as any).imageUrl;
 
   return {
     title: data.title ?? 'Пост',
     description: data.excerpt ?? '',
     openGraph: {
-      title: data.title ?? 'Пост',
-      description: data.excerpt ?? '',
-      images: data.coverImage ? [{ url: data.coverImage }] : undefined,
+      title: post.title,
+      description: cleanDescription,
+      images: coverImage ? [coverImage] : [],
+      type: 'article',
+      siteName: 'AutoSphere',
     },
   }
 }
 
-export default async function PostPage({ params }: PostPageProps) {
-  const db = getAdminDb()
-  const doc = await db.collection('posts').doc(params.id).get()
+export default async function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id: postId } = await params;
+    const { post, comments } = await getPostData(postId);
 
-  if (!doc.exists) {
-    notFound()
-  }
+    if (!post) {
+        notFound();
+    }
 
-  const post = doc.data() as any
-
-  return (
-    <div className="container max-w-3xl mx-auto px-4 py-8">
-      {/* Заголовок */}
-      <h1 className="text-3xl md:text-4xl font-bold mb-4">
-        {post.title}
-      </h1>
-
-      {/* Автор + дата */}
-      <div className="flex items-center gap-3 text-sm text-white/60 mb-6">
-        {post.authorAvatar && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={post.authorAvatar}
-            alt={post.authorName ?? 'Автор'}
-            className="w-9 h-9 rounded-full object-cover"
-          />
-        )}
-        <div>
-          <div className="font-medium">
-            {post.authorName ?? 'Автор'}
-          </div>
-          <div>
-            {post.createdAt?.toDate
-              ? post.createdAt.toDate().toLocaleString('ru-RU')
-              : ''}
+    // Поддержка как coverImage, так и imageUrl для обратной совместимости
+    const coverImage = (post as any).coverImage || (post as any).imageUrl;
+    
+    return (
+        <div className="min-h-screen">
+          {coverImage ? (
+            <div className="w-full h-[400px] overflow-hidden bg-muted relative">
+              <Image
+                src={coverImage}
+                alt={post.title}
+                fill
+                className="object-cover"
+                priority
+              />
+            </div>
+          ) : (
+             <div className="w-full h-[400px] bg-muted flex items-center justify-center">
+                <FileText className="w-24 h-24 text-muted-foreground/50"/>
+             </div>
+          )}
+    
+          <div className="max-w-4xl mx-auto px-4 py-8">
+            <article>
+              {post.category && (
+                <div className="mb-4">
+                  <Badge>{post.category}</Badge>
+                </div>
+              )}
+    
+              <div className="flex items-start justify-between gap-4 mb-6">
+                <h1 className="text-4xl md:text-5xl font-bold leading-tight">
+                  {post.title}
+                </h1>
+              </div>
+    
+              <div className="flex flex-wrap items-center gap-6 mb-8 pb-6 border-b">
+                <Link href={`/profile/${post.authorId}`}>
+                  <div className="flex items-center gap-3 hover:opacity-80 cursor-pointer">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={post.authorAvatar} />
+                      <AvatarFallback>{post.authorName ? post.authorName[0] : 'A'}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-semibold">{post.authorName}</p>
+                      <p className="text-xs text-muted-foreground">Автор</p>
+                    </div>
+                  </div>
+                </Link>
+    
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Calendar className="h-4 w-4" />
+                  <span>{formatDate(post.createdAt)}</span>
+                </div>
+    
+                <PostActions post={post} />
+              </div>
+    
+              {/* Tiptap HTML контент с правильными стилями */}
+              <div 
+                className="prose prose-lg dark:prose-invert max-w-none mb-8
+                           prose-img:rounded-xl prose-img:shadow-lg
+                           prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline
+                           prose-code:bg-white/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded
+                           prose-pre:bg-white/5 prose-pre:border prose-pre:border-white/10"
+                dangerouslySetInnerHTML={{ __html: post.content }}
+              />
+    
+              <PostComments post={post} initialComments={comments} />
+            </article>
           </div>
         </div>
       </div>
