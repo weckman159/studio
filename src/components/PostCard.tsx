@@ -1,3 +1,4 @@
+
 'use client'
 
 import Link from 'next/link'
@@ -38,6 +39,7 @@ export function PostCard({ post, communityId }: PostCardProps) {
   }
 
   const getExcerpt = (html: string) => {
+    if (!html) return '';
     return html
       .replace(/<[^>]*>/g, '')
       .replace(/\s+/g, ' ')
@@ -57,7 +59,6 @@ export function PostCard({ post, communityId }: PostCardProps) {
     <Link href={postUrl}>
       <article className="group mb-6 rounded-3xl border border-border/40 bg-card overflow-hidden transition-all duration-300 hover:border-primary/40 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-1">
         <div className="flex flex-col md:flex-row">
-          {/* Изображение слева */}
           <div className="relative w-full md:w-2/5 h-56 md:h-auto bg-muted overflow-hidden">
             {coverImage ? (
               <Image
@@ -72,27 +73,21 @@ export function PostCard({ post, communityId }: PostCardProps) {
                 <ImageIcon className="w-16 h-16 text-muted-foreground/30" />
               </div>
             )}
-            {/* Градиентный оверлей */}
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-background/20 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
           </div>
 
-          {/* Контент справа */}
           <div className="flex-1 p-6 md:p-8 flex flex-col justify-between">
             <div>
-              {/* Заголовок */}
               <h2 className="text-2xl md:text-3xl font-bold leading-tight mb-4 transition-colors duration-300 group-hover:text-primary">
                 {post.title}
               </h2>
 
-              {/* Отрывок */}
               <p className="text-muted-foreground leading-relaxed mb-6 line-clamp-2">
                 {getExcerpt(post.content)}
               </p>
             </div>
 
-            {/* Футер */}
             <div className="space-y-4">
-              {/* Автор + дата */}
               <div className="flex items-center justify-between">
                 <div 
                   className="flex items-center gap-3"
@@ -118,13 +113,11 @@ export function PostCard({ post, communityId }: PostCardProps) {
                   </div>
                 </div>
 
-                {/* Стрелка */}
                 <div className="text-primary transition-transform duration-300 group-hover:translate-x-1">
                   <ChevronRight className="w-6 h-6" />
                 </div>
               </div>
 
-              {/* Статистика + категория */}
               <div className="flex items-center justify-between pt-4 border-t border-border/30">
                 <div className="flex items-center gap-6">
                   <div className="flex items-center gap-2 text-muted-foreground transition-colors duration-300 group-hover:text-red-500">
