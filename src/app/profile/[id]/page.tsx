@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { getAdminDb } from '@/lib/firebase-admin'
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore'
 
-// The props are now typed to expect params as a Promise, which is then awaited.
 export default async function ProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const db = getAdminDb()
@@ -24,7 +24,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
     .limit(20)
     .get()
 
-  const posts = postsSnap.docs.map((d) => ({
+  const posts = postsSnap.docs.map((d: QueryDocumentSnapshot) => ({
     id: d.id,
     ...(d.data() as any),
   }))
@@ -60,7 +60,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
         </div>
       ) : (
         <div className="space-y-4">
-          {posts.map((post) => (
+          {posts.map((post: any) => (
             <Link
               key={post.id}
               href={`/posts/${post.id}`}
