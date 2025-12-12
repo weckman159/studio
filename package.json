@@ -74,6 +74,7 @@
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
+    "autoprefixer": "latest",
     "eslint-config-next": "^15.5.7",
     "genkit-cli": "latest",
     "postcss": "latest",
