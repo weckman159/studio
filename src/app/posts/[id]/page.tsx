@@ -1,4 +1,3 @@
-
 // src/app/posts/[id]/page.tsx
 import { notFound } from 'next/navigation'
 import { getAdminDb } from '@/lib/firebase-admin'
@@ -6,15 +5,17 @@ import type { Metadata } from 'next'
 import { stripHtml } from '@/lib/utils'
 import Image from 'next/image'
 
+// Correct type for Next.js 15
 type PostPageProps = {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export async function generateMetadata(
   { params }: PostPageProps
 ): Promise<Metadata> {
+  const { id } = await params; // Await the promise
   const db = getAdminDb()
-  const snap = await db.collection('posts').doc(params.id).get()
+  const snap = await db.collection('posts').doc(id).get()
 
   if (!snap.exists) {
     return {
@@ -38,8 +39,9 @@ export async function generateMetadata(
 }
 
 export default async function PostPage({ params }: PostPageProps) {
+  const { id } = await params; // Await the promise
   const db = getAdminDb()
-  const doc = await db.collection('posts').doc(params.id).get()
+  const doc = await db.collection('posts').doc(id).get()
 
   if (!doc.exists) {
     notFound()

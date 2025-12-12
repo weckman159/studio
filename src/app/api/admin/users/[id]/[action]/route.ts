@@ -27,20 +27,23 @@ async function verifyAdmin(request: NextRequest): Promise<string | null> {
     }
 }
 
+
+// Correct type for Next.js 15
 type RouteContext = {
-  params: {
+  params: Promise<{
     id: string;
     action: string;
-  };
+  }>;
 };
 
-export async function POST(request: NextRequest, ctx: RouteContext) {
+export async function POST(request: NextRequest, context: RouteContext) {
+  // Await the params promise as required in Next.js 15
+  const { id: targetUserId, action } = await context.params;
+
   const adminUid = await verifyAdmin(request);
   if (!adminUid) {
     return NextResponse.json({ error: 'Unauthorized: Admin access required.' }, { status: 403 });
   }
-
-  const { id: targetUserId, action } = ctx.params;
 
   if (adminUid === targetUserId) {
     return NextResponse.json({ error: 'Admin cannot perform actions on themselves.' }, { status: 400 });
