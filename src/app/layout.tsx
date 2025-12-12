@@ -1,4 +1,3 @@
-
 'use client';
 
 import "./globals.css";
@@ -9,16 +8,13 @@ import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, S
 import { CarFront, Home, BookOpen, Users, ShoppingCart, Wrench, Calendar, Newspaper, BarChartHorizontal, Info, MessageSquare, Shield, Trophy } from 'lucide-react';
 import Link from "next/link";
 import { FirebaseClientProvider } from "@/firebase/client-provider";
-import { CarOfTheDay } from "@/components/CarOfTheDay";
 import { useActivePath } from "@/hooks/use-active-path";
 import { ThemeProvider } from "next-themes";
 import { useUser } from '@/firebase';
-import type { User as UserData } from '@/lib/types';
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { CookieConsent } from "@/components/CookieConsent";
 import { MobileNav } from "@/components/MobileNav";
 import { Analytics } from '@vercel/analytics/react';
-
 
 const navLinks = [
   { href: '/', label: 'Главная', icon: Home },
@@ -41,7 +37,6 @@ function AppSidebar() {
   const checkActivePath = useActivePath();
   const { user } = useUser();
   const { profile } = useUserProfile(user?.uid);
-
 
   return (
       <Sidebar>
@@ -110,11 +105,13 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
           rel="stylesheet"
         />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#111827" />
       </head>
-      <body className="font-body antialiased">
+      <body className="font-body antialiased bg-background">
         <ThemeProvider
             attribute="class"
-            defaultTheme="system"
+            defaultTheme="dark"
             enableSystem
             disableTransitionOnChange
         >

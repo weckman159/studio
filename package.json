@@ -54,7 +54,7 @@
     "firebase-admin": "latest",
     "genkit": "latest",
     "lucide-react": "latest",
-    "next": "^15.5.7",
+    "next": "15.5.9",
     "next-pwa": "latest",
     "next-themes": "latest",
     "react": "18.3.1",

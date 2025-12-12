@@ -1,91 +1,66 @@
+// src/app/profile/[id]/page.tsx
+import { getAdminDb } from '@/lib/firebase-admin';
+import type { User, Car, Post } from '@/lib/types';
+import { notFound } from 'next/navigation';
+import { ProfileClientPage } from '@/components/profile/ProfileClientPage';
+import { serializeFirestoreData } from '@/lib/utils';
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
-import Link from 'next/link'
-import { getAdminDb } from '@/lib/firebase-admin'
-import type { QueryDocumentSnapshot } from 'firebase-admin/firestore'
-import Image from 'next/image'
+export const dynamic = 'force-dynamic';
+export const revalidate = 0; // No caching
+
+async function getProfileData(userId: string) {
+    const adminDb = getAdminDb();
+    if (!adminDb) {
+        console.error("Firebase Admin not initialized");
+        return { profile: null, cars: [], posts: [], followers: [], following: [] };
+    }
+
+    try {
+        const userRef = adminDb.collection('users').doc(userId);
+        const [userSnap, carsSnap, postsSnap, followersSnap, followingSnap] = await Promise.all([
+            userRef.get(),
+            adminDb.collection('cars').where('userId', '==', userId).get(),
+            adminDb.collection('posts').where('authorId', '==', userId).orderBy('createdAt', 'desc').limit(20).get(),
+            userRef.collection('followers').get(),
+            userRef.collection('following').get()
+        ]);
+
+        if (!userSnap.exists) {
+            return { profile: null, cars: [], posts: [], followers: [], following: [] };
+        }
+
+        const profile = serializeFirestoreData({ id: userSnap.id, ...userSnap.data() }) as User;
+        const cars = carsSnap.docs.map((d: QueryDocumentSnapshot) => serializeFirestoreData({ id: d.id, ...d.data() }) as Car);
+        const posts = postsSnap.docs.map((d: QueryDocumentSnapshot) => serializeFirestoreData({ id: d.id, ...d.data() }) as Post);
+        const followers = followersSnap.docs.map(d => d.id);
+        const following = followingSnap.docs.map(d => d.id);
+
+        return { profile, cars, posts, followers, following };
+
+    } catch (error) {
+        console.error(`Error fetching profile for ${userId}:`, error);
+        return { profile: null, cars: [], posts: [], followers: [], following: [] };
+    }
+}
+
 
 export default async function ProfilePage({ params }: { params: { id: string } }) {
-  const { id } = params
-  const db = getAdminDb()
+    const { id } = params;
+    const { profile, cars, posts, followers, following } = await getProfileData(id);
 
-  const userSnap = await db.collection('users').doc(id).get()
-  if (!userSnap.exists) {
+    if (!profile) {
+        notFound();
+    }
+
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        Профиль не найден
-      </div>
-    )
-  }
-
-  const user = userSnap.data() as any
-
-  const postsSnap = await db
-    .collection('posts')
-    .where('authorId', '==', id)
-    .orderBy('createdAt', 'desc')
-    .limit(20)
-    .get()
-
-  const posts = postsSnap.docs.map((d: QueryDocumentSnapshot) => ({
-    id: d.id,
-    ...(d.data() as any),
-  }))
-
-  return (
-    <div className="container mx-auto px-4 py-12 max-w-4xl">
-      <h1 className="text-4xl font-bold mb-8">Профиль</h1>
-
-      <div className="flex items-center gap-6 mb-10">
-        {user.photoURL && (
-            <div className="relative w-20 h-20">
-                <Image
-                    src={user.photoURL}
-                    alt={user.displayName ?? 'Пользователь'}
-                    fill
-                    className="rounded-full object-cover"
-                />
-            </div>
-        )}
-        <div>
-          <div className="text-2xl font-semibold">
-            {user.displayName ?? 'Без имени'}
-          </div>
-          <div className="text-sm text-muted-foreground">
-            {user.email}
-          </div>
-        </div>
-      </div>
-
-      <h2 className="text-2xl font-semibold mb-4">Посты</h2>
-
-      {posts.length === 0 ? (
-        <div className="text-muted-foreground">
-          У этого пользователя пока нет постов.
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {posts.map((post) => (
-            <Link
-              key={post.id}
-              href={`/posts/${post.id}`}
-              className="block bg-card border border-border rounded-xl px-4 py-3 hover:bg-muted transition"
-            >
-              <div className="flex justify-between gap-4">
-                <div>
-                  <div className="font-medium mb-1">
-                    {post.title}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {post.createdAt?.toDate
-                      ? post.createdAt.toDate().toLocaleString('ru-RU')
-                      : ''}
-                  </div>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      )}
-    </div>
-  )
+        <ProfileClientPage
+            profileId={id}
+            initialProfile={profile}
+            initialCars={cars}
+            initialPosts={posts}
+            initialFollowers={followers}
+            initialFollowing={following}
+        />
+    );
 }
