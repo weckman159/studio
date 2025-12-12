@@ -30,7 +30,7 @@ async function verifyAdmin(request: NextRequest): Promise<string | null> {
 
 export async function POST(
   request: NextRequest,
-  context: { params: { id: string; action: string; } }
+  context: { params: { id: string; action: string } }
 ) {
     const adminUid = await verifyAdmin(request);
     if (!adminUid) {
@@ -51,7 +51,8 @@ export async function POST(
         let message = '';
         let payload: any = {};
 
-        if (action === 'set-role') {
+        // Only attempt to parse body if it exists and is needed
+        if (request.body && action === 'set-role') {
           try {
             payload = await request.json();
           } catch (e) {
