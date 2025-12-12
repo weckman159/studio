@@ -33,8 +33,8 @@ async function getProfileData(userId: string) {
         const profile = serializeFirestoreData({ id: userSnap.id, ...userSnap.data() }) as User;
         const cars = carsSnap.docs.map((d: QueryDocumentSnapshot) => serializeFirestoreData({ id: d.id, ...d.data() }) as Car);
         const posts = postsSnap.docs.map((d: QueryDocumentSnapshot) => serializeFirestoreData({ id: d.id, ...d.data() }) as Post);
-        const followers = followersSnap.docs.map(d => d.id);
-        const following = followingSnap.docs.map(d => d.id);
+        const followers = followersSnap.docs.map((d: QueryDocumentSnapshot) => d.id);
+        const following = followingSnap.docs.map((d: QueryDocumentSnapshot) => d.id);
 
         return { profile, cars, posts, followers, following };
 
