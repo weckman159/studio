@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -94,7 +95,9 @@ service cloud.firestore {
     // Notifications: Readable only by the recipient.
     match /notifications/{notificationId} {
       allow get, update: if isSignedIn() && resource.data.recipientId == request.auth.uid;
-      allow list: if isSignedIn() && request.query.get("where")[0][2] == request.auth.uid; // Ensure querying only for self
+      // This rule ensures that any query to list notifications MUST filter by the current user's ID.
+      // This is a more robust way to secure list operations.
+      allow list: if isSignedIn() && request.query.where[0][0] == 'recipientId' && request.query.where[0][2] == request.auth.uid;
       allow create, delete: if false; // Managed by Cloud Functions
     }
 
