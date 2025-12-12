@@ -7,7 +7,7 @@ export interface User {
   age?: number;
   displayName: string; // from firebase auth
   role?: 'user' | 'moderator' | 'admin';
-  status?: 'active' | 'banned'; // Добавлено поле статуса
+  status?: 'active' | 'banned';
   email?: string;
   photoURL?: string;
   coverUrl?: string; // profile cover
@@ -152,26 +152,17 @@ export interface Post {
   authorName: string;
   authorAvatar?: string;
   carId?: string;
-  carBrand?: string;
-  carModel?: string;
   title: string;
-  excerpt?: string;
-  content: string;
-  coverImage?: string;
-  imageUrl?: string;
-  imageUrls?: string[];
+  content: string; // Main HTML content
+  imageUrl?: string; // The primary image for the post
   tags?: string[];
-  category: string; // 'Все', 'Тюнинг', 'Путешествия', etc.
-  type: string; // 'Блог', 'Фотоотчет', 'Вопрос' etc.
+  category: string;
+  status: 'published' | 'hidden' | 'draft';
   likesCount: number;
   commentsCount: number;
   views: number;
-  bookmarks: number;
-  createdAt: any;
-  isLiked?: boolean;
-  isBookmarked?: boolean;
-  likedBy?: string[];
-  updatedAt?: string;
+  createdAt: any; // Can be server or client timestamp
+  updatedAt?: any;
   communityId?: string;
 }
 
