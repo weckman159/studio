@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import {
   Popover,
@@ -11,23 +11,15 @@ import {
 import { Button } from '@/components/ui/button';
 import { Bell, Loader2 } from 'lucide-react';
 import {
-  collection,
-  query,
-  where,
-  orderBy,
-  limit,
-  onSnapshot,
-  updateDoc,
   doc,
-  FirestoreError,
+  updateDoc,
+  writeBatch
 } from 'firebase/firestore';
-import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
 import type { Notification } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { ScrollArea } from './ui/scroll-area';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 
 function NotificationItem({
   notification,
@@ -59,7 +51,7 @@ function NotificationItem({
         <p className="font-semibold">{notification.senderData?.displayName || notification.title}</p>
         <p className="text-sm text-muted-foreground">{notification.message}</p>
         <p className="text-xs text-muted-foreground mt-1">
-          {notification.createdAt?.toDate().toLocaleString('ru-RU')}
+          {notification.createdAt ? new Date(notification.createdAt).toLocaleString('ru-RU') : ''}
         </p>
       </div>
     </div>
@@ -79,100 +71,78 @@ export function Notifications() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // Memoize the query to prevent re-renders and conform to security rules
-  const notificationsQuery = useMemoFirebase(() => {
-    if (!user || !firestore) return null;
-    // This query now includes the 'where' clause required by security rules
-    return query(
-        collection(firestore, 'notifications'),
-        where('recipientId', '==', user.uid),
-        orderBy('createdAt', 'desc'),
-        limit(20)
-    );
-  }, [user, firestore]);
+  const fetchNotifications = useCallback(async () => {
+    if (!user) {
+        setLoading(false);
+        return;
+    };
+    
+    setLoading(true);
+    try {
+        const token = await user.getIdToken();
+        const response = await fetch('/api/notifications', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to fetch notifications');
+        }
+
+        const data: Notification[] = await response.json();
+        setNotifications(data);
+        setUnreadCount(data.filter(n => !n.read).length);
+
+    } catch (error) {
+        console.error("Error fetching notifications via API:", error);
+    } finally {
+        setLoading(false);
+    }
+  }, [user]);
 
   useEffect(() => {
-    if (!notificationsQuery) {
-      setLoading(false);
-      setNotifications([]);
-      setUnreadCount(0);
-      return;
-    }
-
-    setLoading(true);
-
-    const unsubscribe = onSnapshot(
-      notificationsQuery,
-      (snapshot) => {
-        const notifs = snapshot.docs.map(
-          (doc) => ({ id: doc.id, ...doc.data() } as Notification)
-        );
-        setNotifications(notifs);
-        setUnreadCount(notifs.filter((n) => !n.read).length);
-        setLoading(false);
-      },
-      (error: FirestoreError) => {
-        if (error.code === 'permission-denied') {
-            const contextualError = new FirestorePermissionError({
-                operation: 'list',
-                path: `notifications`
-            });
-            errorEmitter.emit('permission-error', contextualError);
-        } else if (error.code === 'failed-precondition') {
-             console.warn(
-              'Firestore query for notifications failed. This is likely because a composite index is still building. ' +
-              'This warning is expected after changing security rules and should resolve itself in a few minutes. ' +
-              'Original error: ', error
-            );
-        } else {
-           console.error("Error fetching notifications:", error);
-        }
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [notificationsQuery]);
+    fetchNotifications();
+    // Optional: set up polling if real-time is not strictly needed but updates are desired
+    const interval = setInterval(fetchNotifications, 60000); // Poll every 60 seconds
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
+  
 
   const handleMarkAsRead = (notificationId: string) => {
     if (!firestore) return;
     const notifRef = doc(firestore, 'notifications', notificationId);
-    updateDoc(notifRef, { read: true }).catch(error => {
-      const contextualError = new FirestorePermissionError({
-        operation: 'update',
-        path: notifRef.path,
-        requestResourceData: { read: true }
-      });
-      errorEmitter.emit('permission-error', contextualError);
-    });
+    updateDoc(notifRef, { read: true }).then(() => {
+        // Optimistically update UI
+        setNotifications(prev => prev.map(n => n.id === notificationId ? {...n, read: true} : n));
+        setUnreadCount(prev => Math.max(0, prev - 1));
+    }).catch(console.error);
   };
   
   const handleMarkAllAsRead = async () => {
       if (!firestore || !user) return;
       
       const unreadNotifications = notifications.filter(n => !n.read);
-      
-      const promises = unreadNotifications.map(n => {
+      if (unreadNotifications.length === 0) return;
+
+      const batch = writeBatch(firestore);
+      unreadNotifications.forEach(n => {
           const notifRef = doc(firestore, 'notifications', n.id);
-          return updateDoc(notifRef, { read: true }).catch(error => {
-            const contextualError = new FirestorePermissionError({
-              operation: 'update',
-              path: notifRef.path,
-              requestResourceData: { read: true }
-            });
-            errorEmitter.emit('permission-error', contextualError);
-          });
+          batch.update(notifRef, { read: true });
       });
 
       try {
-          await Promise.all(promises);
+          await batch.commit();
+          // Optimistically update UI
+          setNotifications(prev => prev.map(n => ({...n, read: true})));
+          setUnreadCount(0);
       } catch (error) {
-          // Errors are already being emitted inside the catch blocks above
+          console.error("Error marking all as read:", error);
       }
   }
 
   return (
-    <Popover>
+    <Popover onOpenChange={(open) => open && fetchNotifications()}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />

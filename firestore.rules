@@ -92,13 +92,11 @@ service cloud.firestore {
       allow delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isModOrAdmin());
     }
 
-    // Notifications: Readable only by the recipient.
+    // Notifications: Can no longer be listed from the client. GET and UPDATE are still allowed.
     match /notifications/{notificationId} {
-      allow get, update: if isSignedIn() && resource.data.recipientId == request.auth.uid;
-      // This rule ensures that any query to list notifications MUST filter by the current user's ID.
-      // This is a more robust way to secure list operations.
-      allow list: if isSignedIn() && request.query.where[0][0] == 'recipientId' && request.query.where[0][2] == request.auth.uid;
-      allow create, delete: if false; // Managed by Cloud Functions
+      allow get: if isSignedIn() && resource.data.recipientId == request.auth.uid;
+      allow update: if isSignedIn() && resource.data.recipientId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow list, create, delete: if false; // Deny list, create, delete from client
     }
 
     // Admin-only collections
