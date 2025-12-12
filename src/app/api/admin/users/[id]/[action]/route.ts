@@ -1,4 +1,3 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb, getAdminAuth } from '@/lib/firebase-admin';
 import { revalidatePath } from 'next/cache';
@@ -30,7 +29,7 @@ async function verifyAdmin(request: NextRequest): Promise<string | null> {
 
 export async function POST(
   request: NextRequest,
-  context: { params: { id: string; action: string } }
+  context: { params: { id: string; action: string; } }
 ) {
     const adminUid = await verifyAdmin(request);
     if (!adminUid) {
@@ -50,19 +49,12 @@ export async function POST(
         const userRef = db.collection('users').doc(targetUserId);
         let message = '';
         let payload: any = {};
-
-        // Only attempt to parse body if it exists and is needed
-        if (request.body && action === 'set-role') {
-          try {
-            payload = await request.json();
-          } catch (e) {
-            // Ignore if body is not JSON or empty
-          }
-        }
         
         switch (action) {
             case 'set-role':
-                const { role } = payload;
+                const body = await request.json();
+                const { role } = body;
+                payload = { role };
                 if (!role || !['user', 'moderator', 'admin'].includes(role)) {
                     return NextResponse.json({ error: 'Invalid role specified.' }, { status: 400 });
                 }
