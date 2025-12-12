@@ -1,39 +1,38 @@
-
+import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb, getAdminAuth } from '@/lib/firebase-admin';
 import { revalidatePath } from 'next/cache';
 import { Timestamp } from 'firebase-admin/firestore';
 
 /**
- * WARNING: This is a temporary way to get the admin user for the MVP.
- * In a real-world production application, you MUST verify a JWT sent from the client
- * via the Authorization header (e.g., `await auth().verifyIdToken(token)`).
- * Relying on a simple header like 'x-user-id' is insecure and can be easily spoofed.
+ * Securely verifies if the request comes from an authenticated user with an 'admin' role.
+ * It uses the Firebase ID token from the Authorization header.
  */
 async function getAdminUserFromRequest(request: NextRequest): Promise<{ uid: string; role: string } | null> {
-    const userId = request.headers.get('x-user-id');
-    if (!userId) {
-        console.warn("API request missing 'x-user-id' header.");
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+        console.warn("API request missing 'Authorization' Bearer token.");
         return null;
     }
 
+    const idToken = authHeader.slice(7);
     try {
+        const auth = getAdminAuth();
+        const decodedToken = await auth.verifyIdToken(idToken);
+        const uid = decodedToken.uid;
+
+        // Additionally check the user's role in Firestore
         const db = getAdminDb();
-        const userDoc = await db.collection('users').doc(userId).get();
-        if (!userDoc.exists) {
-            console.warn(`Admin action attempted by non-existent user: ${userId}`);
+        const userDoc = await db.collection('users').doc(uid).get();
+        
+        if (!userDoc.exists() || userDoc.data()?.role !== 'admin') {
+            console.warn(`Admin action attempted by user ${uid} who is not an admin.`);
             return null;
         }
 
-        const userData = userDoc.data();
-        if (userData.role !== 'admin') {
-            console.warn(`Admin action attempted by non-admin user: ${userId}`);
-            return null;
-        }
-
-        return { uid: userId, role: userData.role };
+        return { uid: uid, role: userDoc.data()?.role };
     } catch (error) {
-        console.error("Error verifying admin user:", error);
+        console.error("Auth token verification failed:", error);
         return null;
     }
 }
@@ -57,7 +56,7 @@ export async function POST(request: NextRequest) {
     const userRef = db.collection('users').doc(targetUserId);
 
     try {
-        let updateData = {};
+        let updateData: { [key: string]: any } = {};
         let message = '';
 
         switch (action) {
