@@ -1,17 +1,13 @@
 
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb, getAdminAuth } from '@/lib/firebase-admin';
 import { revalidatePath } from 'next/cache';
 import { Timestamp } from 'firebase-admin/firestore';
 
-/**
- * Verifies if the request is from an authenticated admin user.
- * This is a simplified auth check for the MVP. In a real-world scenario,
- * you would verify a JWT passed in the Authorization header.
- * @param request - The incoming NextRequest.
- * @returns The admin user's UID if authorized, otherwise null.
- */
 async function verifyAdmin(request: NextRequest): Promise<string | null> {
+    // WARNING: This is a temporary auth check for the MVP.
+    // In production, you must verify a JWT from the Authorization header.
     const adminUid = request.headers.get('x-user-id');
     if (!adminUid) {
         console.warn("API request missing 'x-user-id' header.");
@@ -33,7 +29,6 @@ async function verifyAdmin(request: NextRequest): Promise<string | null> {
     }
 }
 
-// Corrected function signature
 export async function POST(
   request: NextRequest,
   context: { params: { id: string; action: string; } }
@@ -57,7 +52,7 @@ export async function POST(
         let message = '';
         let payload: any = {};
 
-        if (request.body) {
+        if (request.body && action === 'set-role') {
           try {
             payload = await request.json();
           } catch (e) {
@@ -91,7 +86,6 @@ export async function POST(
                 return NextResponse.json({ error: 'Invalid action.' }, { status: 400 });
         }
         
-        // Log the action
         await db.collection('moderationActions').add({
             adminId: adminUid,
             action: action,
@@ -109,3 +103,5 @@ export async function POST(
         return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
     }
 }
+
+    
