@@ -1,5 +1,4 @@
 
-
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb, getAdminAuth } from '@/lib/firebase-admin';
 import { revalidatePath } from 'next/cache';
@@ -52,7 +51,7 @@ export async function POST(
         let message = '';
         let payload: any = {};
 
-        if (request.body && action === 'set-role') {
+        if (action === 'set-role') {
           try {
             payload = await request.json();
           } catch (e) {
@@ -95,6 +94,7 @@ export async function POST(
         });
         
         revalidatePath('/admin/users');
+        revalidatePath(`/profile/${targetUserId}`);
         
         return NextResponse.json({ success: true, message });
 
@@ -103,5 +103,3 @@ export async function POST(
         return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
     }
 }
-
-    
