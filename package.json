@@ -70,13 +70,14 @@
     "zod": "latest"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "latest",
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "eslint-config-next": "^15.5.7",
     "genkit-cli": "latest",
     "postcss": "latest",
-    "tailwindcss": "latest",
+    "tailwindcss": "^4.1.18",
     "typescript": "latest"
   }
 }

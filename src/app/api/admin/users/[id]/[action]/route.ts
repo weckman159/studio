@@ -27,72 +27,84 @@ async function verifyAdmin(request: NextRequest): Promise<string | null> {
     }
 }
 
-export async function POST(
-  request: NextRequest,
-  context: { params: { id: string; action: string; } }
-) {
-    const adminUid = await verifyAdmin(request);
-    if (!adminUid) {
-        return NextResponse.json({ error: 'Unauthorized: Admin access required.' }, { status: 403 });
-    }
+type RouteContext = {
+  params: {
+    id: string;
+    action: string;
+  };
+};
 
-    const { id: targetUserId, action } = context.params;
-    
-    if (adminUid === targetUserId) {
-        return NextResponse.json({ error: 'Admin cannot perform actions on themselves.' }, { status: 400 });
-    }
+export async function POST(request: NextRequest, ctx: RouteContext) {
+  const adminUid = await verifyAdmin(request);
+  if (!adminUid) {
+    return NextResponse.json({ error: 'Unauthorized: Admin access required.' }, { status: 403 });
+  }
 
-    const db = getAdminDb();
-    const auth = getAdminAuth();
+  const { id: targetUserId, action } = ctx.params;
 
-    try {
-        const userRef = db.collection('users').doc(targetUserId);
-        let message = '';
-        let payload: any = {};
-        
-        switch (action) {
-            case 'set-role':
-                const body = await request.json();
-                const { role } = body;
-                payload = { role };
-                if (!role || !['user', 'moderator', 'admin'].includes(role)) {
-                    return NextResponse.json({ error: 'Invalid role specified.' }, { status: 400 });
-                }
-                await userRef.update({ role });
-                message = `User role updated to ${role}.`;
-                break;
+  if (adminUid === targetUserId) {
+    return NextResponse.json({ error: 'Admin cannot perform actions on themselves.' }, { status: 400 });
+  }
 
-            case 'ban':
-                await userRef.update({ status: 'banned' });
-                await auth.updateUser(targetUserId, { disabled: true });
-                message = 'User has been banned.';
-                break;
+  const db = getAdminDb();
+  const auth = getAdminAuth();
 
-            case 'unban':
-                await userRef.update({ status: 'active' });
-                await auth.updateUser(targetUserId, { disabled: false });
-                message = 'User has been unbanned.';
-                break;
+  try {
+    const userRef = db.collection('users').doc(targetUserId);
 
-            default:
-                return NextResponse.json({ error: 'Invalid action.' }, { status: 400 });
+    let message = '';
+    let payload: any = {};
+
+    switch (action) {
+      case 'set-role': {
+        const body = await request.json();
+        const { role } = body;
+        payload = { role };
+
+        if (!role || !['user', 'moderator', 'admin'].includes(role)) {
+          return NextResponse.json({ error: 'Invalid role specified.' }, { status: 400 });
         }
-        
-        await db.collection('moderationActions').add({
-            adminId: adminUid,
-            action: action,
-            targetUserId: targetUserId,
-            payload: payload || null,
-            createdAt: Timestamp.now(),
-        });
-        
-        revalidatePath('/admin/users');
-        revalidatePath(`/profile/${targetUserId}`);
-        
-        return NextResponse.json({ success: true, message });
 
-    } catch (error: any) {
-        console.error(`Admin action '${action}' on user '${targetUserId}' failed:`, error);
-        return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
+        await userRef.update({ role });
+        message = `User role updated to ${role}.`;
+        break;
+      }
+
+      case 'ban': {
+        await userRef.update({ status: 'banned' });
+        await auth.updateUser(targetUserId, { disabled: true });
+        message = 'User has been banned.';
+        break;
+      }
+
+      case 'unban': {
+        await userRef.update({ status: 'active' });
+        await auth.updateUser(targetUserId, { disabled: false });
+        message = 'User has been unbanned.';
+        break;
+      }
+
+      default:
+        return NextResponse.json({ error: 'Invalid action.' }, { status: 400 });
     }
+
+    await db.collection('moderationActions').add({
+      adminId: adminUid,
+      action,
+      targetUserId,
+      payload: payload || null,
+      createdAt: Timestamp.now(),
+    });
+
+    revalidatePath('/admin/users');
+    revalidatePath(`/profile/${targetUserId}`);
+
+    return NextResponse.json({ success: true, message });
+  } catch (error: any) {
+    console.error(`Admin action '${action}' on user '${targetUserId}' failed:`, error);
+    return NextResponse.json(
+      { error: 'Internal Server Error', details: error.message },
+      { status: 500 }
+    );
+  }
 }
