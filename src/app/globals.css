@@ -4,8 +4,8 @@
 
 @layer base {
   /* 
-    THEME: Carbon Gray 90 (Studio Hangar) - Default
-    Студийный, прохладный темно-серый фон.
+    THEME: Glass & Carbon (Red Accent)
+    Глубокая графитовая тема с эффектом стекла и спортивным красным акцентом.
   */
   :root {
     --background: 240 2% 11%;
@@ -14,13 +14,13 @@
     --card-foreground: 0 0% 96%;
     --popover: 240 2% 11%;
     --popover-foreground: 0 0% 96%;
-    --primary: 217 91% 60%;
+    --primary: 0 70% 55%;
     --primary-foreground: 0 0% 100%;
     --secondary: 240 4% 25%;
     --secondary-foreground: 0 0% 96%;
     --muted: 240 2% 21%;
     --muted-foreground: 0 0% 64%;
-    --accent: 240 2% 21%;
+    --accent: 217 91% 60%;
     --accent-foreground: 0 0% 96%;
     --destructive: 0 70% 35%;
     --destructive-foreground: 0 0% 96%;
@@ -30,29 +30,25 @@
     --radius: 0.75rem;
   }
 
-  /* 
-    THEME: Carbon Gray 100 (Night Garage) - Deeper Dark
-    Глубокий, почти черный графитовый фон.
-  */
   .dark {
-    --background: 0 0% 7%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 10%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 7%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 217 91% 60%;
+    --background: 240 2% 11%;
+    --foreground: 0 0% 96%;
+    --card: 240 2% 16%;
+    --card-foreground: 0 0% 96%;
+    --popover: 240 2% 11%;
+    --popover-foreground: 0 0% 96%;
+    --primary: 0 70% 55%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 22%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 15%;
+    --secondary: 240 4% 25%;
+    --secondary-foreground: 0 0% 96%;
+    --muted: 240 2% 21%;
     --muted-foreground: 0 0% 64%;
-    --accent: 0 0% 15%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 217 91% 60%;
+    --accent-foreground: 0 0% 96%;
     --destructive: 0 70% 35%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 15%;
-    --input: 0 0% 15%;
+    --destructive-foreground: 0 0% 96%;
+    --border: 240 1% 21%;
+    --input: 240 1% 21%;
     --ring: 217 91% 60%;
   }
 }
@@ -60,6 +56,7 @@
 @layer base {
   body {
     @apply bg-background text-foreground antialiased selection:bg-primary/30 selection:text-primary;
+    background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.03' fill-rule='evenodd'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E");
   }
   
   ::-webkit-scrollbar {
