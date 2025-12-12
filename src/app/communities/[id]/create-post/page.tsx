@@ -1,4 +1,3 @@
-
 // src/app/communities/[id]/create-post/page.tsx
 import { PostForm } from '@/components/PostForm';
 import { getAdminDb } from '@/lib/firebase-admin';
@@ -36,5 +35,3 @@ export default async function CreateCommunityPostPage({ params }: { params: Prom
 
     return <PostForm communityId={id} communityName={community.name} />;
 }
-
-    

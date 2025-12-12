@@ -36,7 +36,6 @@
     "@radix-ui/react-tabs": "latest",
     "@radix-ui/react-toast": "latest",
     "@radix-ui/react-tooltip": "latest",
-    "@tailwindcss/typography": "latest",
     "@tiptap/extension-image": "^2.10.3",
     "@tiptap/extension-link": "^2.10.3",
     "@tiptap/extension-placeholder": "^2.10.3",
@@ -70,15 +69,15 @@
     "zod": "latest"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "latest",
+    "@tailwindcss/typography": "latest",
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
-    "autoprefixer": "latest",
+    "autoprefixer": "10.4.19",
     "eslint-config-next": "^15.5.7",
     "genkit-cli": "latest",
-    "postcss": "latest",
-    "tailwindcss": "^4.1.18",
+    "postcss": "8.4.38",
+    "tailwindcss": "3.4.4",
     "typescript": "latest"
   }
 }
