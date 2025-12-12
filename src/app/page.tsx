@@ -1,7 +1,7 @@
-// src/app/page.tsx - Redirect to client version
+// src/app/page.tsx - Redirect to /posts
 import { redirect } from 'next/navigation';
 
 export default function HomePage() {
-  // Redirect to client version for full interactivity
-  redirect('/home-client');
+  // The main feed is now at /posts.
+  redirect('/posts');
 }
