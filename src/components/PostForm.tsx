@@ -22,6 +22,7 @@ import { Loader2, X, MapPin, ImagePlus, ArrowLeft, Trash } from 'lucide-react';
 import Link from 'next/link';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { trackEvent } from '@/lib/analytics';
 
 const postTypes = [
   'Блог', 'Фотоотчет', 'Вопрос', 'Мой опыт', 'Обзор', 'Ремонт', 'Тюнинг', 'Путешествия'
@@ -135,6 +136,7 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
         postData.likedBy = [];
         postData.commentsCount = 0;
         postData.views = 0;
+        postData.status = 'published';
         if (communityId) postData.communityId = communityId;
       }
 
@@ -142,6 +144,13 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
 
       toast({ title: 'Успешно!', description: 'Ваш пост опубликован.' });
       
+      // Track the event
+      trackEvent(isEditMode ? 'post_edited' : 'post_created', {
+          category: category,
+          hasCover: !!finalCoverUrl,
+          communityId: communityId || 'none',
+      });
+
       const redirectUrl = communityId 
         ? `/communities/${communityId}/posts/${postId}`
         : `/posts/${postId}`;
