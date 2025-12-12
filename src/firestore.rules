@@ -1,69 +1,113 @@
-
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    function isAuthenticated() {
+
+    // --- Helper Functions ---
+    function isSignedIn() {
       return request.auth != null;
     }
 
-    // Разрешаем клиенту писать уведомления (например, при лайке)
-    match /notifications/{notificationId} {
-      allow read: if isAuthenticated() && resource.data.recipientId == request.auth.uid;
-      allow create: if isAuthenticated(); 
-      allow update: if isAuthenticated() && resource.data.recipientId == request.auth.uid;
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Разрешаем клиенту создавать "Авто дня", если его еще нет
-    match /featuredCars/{dateId} {
-      allow read: if true;
-      allow create: if isAuthenticated(); 
+    function isDocumentOwner() {
+        return request.auth.uid == resource.data.userId || request.auth.uid == resource.data.authorId || request.auth.uid == resource.data.sellerId;
     }
     
-    // Разрешаем обновлять счетчики в постах
+    function requestingUserIs(role) {
+        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    }
+
+    // --- User Profile & Settings ---
+    match /users/{userId} {
+      allow read: if true;
+      allow create: if isOwner(userId); // Только пользователь может создать свой документ
+      allow update: if isOwner(userId); // Только пользователь может обновить свой профиль
+      allow delete: if requestingUserIs('admin'); // Только админ может удалять пользователей
+    }
+    
+    match /userSettings/{userId} {
+        allow read, write: if isOwner(userId); // Настройки приватны
+    }
+
+    // --- Content (Posts, Comments, Likes) ---
     match /posts/{postId} {
       allow read: if true;
-      allow create: if isAuthenticated();
-      // Разрешаем обновление (счетчиков) любому авторизованному
-      // В продакшене лучше использовать Cloud Functions, но для бесплатного тарифа это компромисс
-      allow update: if isAuthenticated(); 
-      allow delete: if isAuthenticated() && resource.data.authorId == request.auth.uid;
+      allow create: if isSignedIn();
+      allow update: if isDocumentOwner();
+      allow delete: if isDocumentOwner() || requestingUserIs('admin');
 
-      match /likes/{userId} {
+      match /comments/{commentId} {
         allow read: if true;
-        allow write: if isAuthenticated() && request.auth.uid == userId;
+        allow create: if isSignedIn();
+        allow update: if isDocumentOwner();
+        allow delete: if isDocumentOwner() || requestingUserIs('admin');
+      }
+      match /likes/{likeId} {
+        allow read: if true;
+        allow create, delete: if isOwner(likeId);
       }
     }
 
-    // Остальные правила (упрощенно, для MVP)
-    // В проде нужно детализировать каждое
+    // --- Garage ---
     match /cars/{carId} {
-      allow read, write: if isAuthenticated();
-    }
-    match /comments/{commentId} {
-        allow read, write: if isAuthenticated();
-    }
-    match /users/{userId} {
       allow read: if true;
-      allow write: if isAuthenticated() && request.auth.uid == userId;
+      allow create: if isSignedIn();
+      allow update: if isDocumentOwner();
+      allow delete: if isDocumentOwner() || requestingUserIs('admin');
+
+       match /expenses/{expenseId} {
+        allow read, list, write: if isDocumentOwner();
+      }
+       match /timeline/{entryId} {
+        allow read, list, write: if isDocumentOwner();
+      }
     }
-    match /communities/{communityId} {
-       allow read, write: if isAuthenticated();
+
+    // --- Marketplace ---
+    match /marketplace/{itemId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update: if isDocumentOwner();
+      allow delete: if isDocumentOwner() || requestingUserIs('admin');
     }
-     match /events/{eventId} {
-       allow read, write: if isAuthenticated();
+
+    // --- Admin & Moderation (Strict Access) ---
+    match /reports/{reportId} {
+      allow create: if isSignedIn(); // Любой пользователь может создать жалобу
+      allow read, update, delete: if requestingUserIs('admin') || requestingUserIs('moderator');
     }
-     match /marketplace/{itemId} {
-       allow read, write: if isAuthenticated();
+    
+    match /moderationActions/{actionId} {
+        allow create: if requestingUserIs('admin') || requestingUserIs('moderator');
+        allow read: if requestingUserIs('admin');
+        allow update, delete: if false; // Действия неизменяемы
     }
-    match /votings/{votingId} {
-        allow read, write: if isAuthenticated();
+
+    // --- Other Collections ---
+    match /featuredCars/{date} { allow read: if true; allow write: if false; } // Только бэкенд
+    match /votings/{voteId} { 
+      allow read: if true; 
+      allow update: if isSignedIn() && !(request.auth.uid in resource.data.votedUserIds); // Голосовать можно 1 раз
+      allow create: if isSignedIn(); 
+      allow delete: if false; 
     }
-     match /workshops/{workshopId} {
-        allow read, write: if isAuthenticated();
+    match /workshops/{wsId} { allow read: if true; allow create: if isSignedIn(); allow update, delete: if false; }
+    match /workshopReviews/{reviewId} { allow read: if true; allow create: if isSignedIn(); allow update, delete: if isDocumentOwner(); }
+    match /dialogs/{dialogId} { allow read, write: if isSignedIn() && request.auth.uid in resource.data.participantIds; }
+    match /messages/{messageId} { allow read, create: if isSignedIn(); allow update, delete: if false; }
+    match /feedback/{fbId} { allow create: if true; allow read, write, delete: if false; }
+    match /autoNews/{newsId} { allow read: if true; allow write: if false; }
+    match /communities/{commId} { allow read: if true; allow create, update, delete: if isSignedIn(); }
+    match /events/{eventId} { allow read: if true; allow create, update, delete: if isSignedIn(); }
+     match /notifications/{notificationId} {
+      allow get: if isSignedIn() && resource.data.recipientId == request.auth.uid;
+      allow list: if isSignedIn() && request.query.where[0][0] == 'recipientId' && request.query.where[0][2] == request.auth.uid;
+      allow update: if isSignedIn() && resource.data.recipientId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow create, delete: if false; // Управляется Cloud Functions
     }
-    match /workshopReviews/{reviewId} {
-        allow read, write: if isAuthenticated();
-    }
+
   }
 }
