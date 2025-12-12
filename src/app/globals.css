@@ -3,61 +3,65 @@
 @tailwind utilities;
 
 @layer base {
+  /* 
+    THEME: Carbon Gray 90 (Studio Hangar) - Default
+    Студийный, прохладный темно-серый фон.
+  */
   :root {
-    /* Обновленная темная тема по умолчанию */
-    --background: 0 0% 17%; /* #2b2b2b */
-    --foreground: 210 40% 98%;
-    --card: 0 0% 22%; /* Немного светлее фона для контраста */
-    --card-foreground: 210 40% 98%;
-    --popover: 0 0% 17%;
-    --popover-foreground: 210 40% 98%;
+    --background: 240 2% 11%;
+    --foreground: 0 0% 96%;
+    --card: 240 2% 16%;
+    --card-foreground: 0 0% 96%;
+    --popover: 240 2% 11%;
+    --popover-foreground: 0 0% 96%;
     --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 11%;
-    --secondary: 217 19% 27%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217 19% 22%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 217 19% 22%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 0 0% 27%; /* Немного светлее карточек */
-    --input: 0 0% 27%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 4% 25%;
+    --secondary-foreground: 0 0% 96%;
+    --muted: 240 2% 21%;
+    --muted-foreground: 0 0% 64%;
+    --accent: 240 2% 21%;
+    --accent-foreground: 0 0% 96%;
+    --destructive: 0 70% 35%;
+    --destructive-foreground: 0 0% 96%;
+    --border: 240 1% 21%;
+    --input: 240 1% 21%;
     --ring: 217 91% 60%;
     --radius: 0.75rem;
   }
 
+  /* 
+    THEME: Carbon Gray 100 (Night Garage) - Deeper Dark
+    Глубокий, почти черный графитовый фон.
+  */
   .dark {
-    /* Синхронизируем темную тему с основной */
-    --background: 0 0% 17%; /* #2b2b2b */
-    --foreground: 210 40% 98%;
-    --card: 0 0% 22%;
-    --card-foreground: 210 40% 98%;
-    --popover: 0 0% 17%;
-    --popover-foreground: 210 40% 98%;
+    --background: 0 0% 7%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 7%;
+    --popover-foreground: 0 0% 98%;
     --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 11%;
-    --secondary: 217 19% 27%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217 19% 22%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 217 19% 22%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 0 0% 27%;
-    --input: 0 0% 27%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 22%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 64%;
+    --accent: 0 0% 15%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 70% 35%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
     --ring: 217 91% 60%;
   }
 }
 
-/* Добавляем глобальные стили для скроллбара и текста */
 @layer base {
   body {
     @apply bg-background text-foreground antialiased selection:bg-primary/30 selection:text-primary;
   }
   
-  /* Улучшенный скроллбар */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -70,7 +74,6 @@
   }
 }
 
-/* Утилиты для Glassmorphism */
 @layer utilities {
   .glass {
     @apply bg-background/60 backdrop-blur-md border border-white/10 dark:border-white/5 shadow-sm;
