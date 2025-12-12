@@ -6,7 +6,8 @@ export interface User {
   name: string;
   age?: number;
   displayName: string; // from firebase auth
-  role?: 'admin' | 'user';
+  role?: 'user' | 'moderator' | 'admin';
+  status?: 'active' | 'banned'; // Добавлено поле статуса
   email?: string;
   photoURL?: string;
   coverUrl?: string; // profile cover
