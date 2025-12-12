@@ -1,3 +1,4 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb, getAdminAuth } from '@/lib/firebase-admin';
 import { revalidatePath } from 'next/cache';
@@ -32,14 +33,11 @@ async function verifyAdmin(request: NextRequest): Promise<string | null> {
     }
 }
 
-type RouteContext = {
-  params: {
-    id: string;
-    action: string;
-  };
-};
-
-export async function POST(request: NextRequest, context: RouteContext) {
+// Corrected function signature
+export async function POST(
+  request: NextRequest,
+  context: { params: { id: string; action: string; } }
+) {
     const adminUid = await verifyAdmin(request);
     if (!adminUid) {
         return NextResponse.json({ error: 'Unauthorized: Admin access required.' }, { status: 403 });
@@ -57,10 +55,19 @@ export async function POST(request: NextRequest, context: RouteContext) {
     try {
         const userRef = db.collection('users').doc(targetUserId);
         let message = '';
+        let payload: any = {};
 
+        if (request.body) {
+          try {
+            payload = await request.json();
+          } catch (e) {
+            // Ignore if body is not JSON or empty
+          }
+        }
+        
         switch (action) {
             case 'set-role':
-                const { role } = await request.json();
+                const { role } = payload;
                 if (!role || !['user', 'moderator', 'admin'].includes(role)) {
                     return NextResponse.json({ error: 'Invalid role specified.' }, { status: 400 });
                 }
@@ -89,6 +96,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
             adminId: adminUid,
             action: action,
             targetUserId: targetUserId,
+            payload: payload || null,
             createdAt: Timestamp.now(),
         });
         
