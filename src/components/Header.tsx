@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -12,12 +11,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Settings, User, LogOut, CarFront, Menu, Shield } from 'lucide-react';
+import { Settings, User, LogOut, CarFront, Menu, Shield, PlusSquare } from 'lucide-react';
 import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { useSidebar } from './ui/sidebar';
 import { useToast } from '@/hooks/use-toast';
-import GlobalSearch from './GlobalSearch';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { ThemeToggle } from './ThemeToggle';
 import { Notifications } from './Notifications';
@@ -30,7 +28,6 @@ export function Header() {
   const { toast } = useToast();
   const { toggleSidebar } = useSidebar();
   
-  // Use the centralized hook to get the profile of the currently authenticated user
   const { profile, isLoading: isProfileLoading } = useUserProfile(authUser?.uid);
 
   const isLoading = isUserLoading || isProfileLoading;
@@ -47,33 +44,52 @@ export function Header() {
       });
     }
   };
+  
+  const navLinks = [
+    { href: '/', label: 'Лента' },
+    { href: '/garage', label: 'Гаражи' },
+    { href: '/communities', label: 'Сообщества' },
+    { href: '/marketplace', label: 'Маркет' },
+    { href: '/events', label: 'События' },
+  ];
 
   return (
-    <header className="sticky top-0 z-30 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center">
-        <div className="flex items-center space-x-2 md:hidden">
-            <Button variant="ghost" size="icon" onClick={toggleSidebar}>
-              <Menu className="h-6 w-6" />
-              <span className="sr-only">Toggle Sidebar</span>
-            </Button>
-        </div>
-        <div className="hidden md:flex items-center space-x-2">
-            <Button variant="ghost" size="icon" onClick={toggleSidebar}>
-                <Menu className="h-6 w-6" />
-                <span className="sr-only">Toggle Sidebar</span>
-            </Button>
-        </div>
-        <div className="flex-1 px-4">
-            <GlobalSearch />
-        </div>
+    <header className="sticky top-0 z-30 w-full h-18 border-b border-white/10 bg-black/20 backdrop-blur-lg">
+      <div className="container flex items-center max-w-7xl mx-auto px-4">
+        {/* Mobile Menu Trigger */}
+        <Button variant="ghost" size="icon" onClick={toggleSidebar} className="md:hidden mr-2">
+            <Menu className="h-6 w-6" />
+            <span className="sr-only">Toggle Sidebar</span>
+        </Button>
+        
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-2 mr-6">
+            <CarFront className="h-6 w-6 text-primary" />
+            <span className="font-bold text-xl hidden sm:inline-block">AutoSphere</span>
+        </Link>
+        
+        {/* Desktop Navigation */}
+        <nav className="hidden md:flex items-center gap-6">
+            {navLinks.map(link => (
+                <Link key={link.label} href={link.href} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                    {link.label}
+                </Link>
+            ))}
+        </nav>
+
+        <div className="flex-1" />
+
+        {/* Right side actions */}
         <div className="flex items-center justify-end space-x-2">
           <ThemeToggle />
           {isLoading ? (
-             <div className="flex items-center gap-2">
-                <Skeleton className="h-8 w-8 rounded-full" />
-             </div>
+             <Skeleton className="h-10 w-24" />
           ) : authUser ? (
             <>
+              <Button className="hidden sm:flex bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20">
+                <PlusSquare className="h-4 w-4 mr-2"/>
+                Создать пост
+              </Button>
               <Notifications />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
