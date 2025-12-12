@@ -4,49 +4,49 @@
 
 @layer base {
   :root {
-    /* Светлая тема (теперь темная по умолчанию) */
-    --background: 0 0% 15%; /* #262626 - близко к #333, но чуть темнее для глубины */
+    /* Обновленная темная тема по умолчанию */
+    --background: 0 0% 17%; /* #2b2b2b */
     --foreground: 210 40% 98%;
-    --card: 0 0% 20%; /* #333333 */
+    --card: 0 0% 22%; /* Немного светлее фона для контраста */
     --card-foreground: 210 40% 98%;
-    --popover: 0 0% 15%;
+    --popover: 0 0% 17%;
     --popover-foreground: 210 40% 98%;
-    --primary: 217 91% 60%; /* Светящийся синий */
+    --primary: 217 91% 60%;
     --primary-foreground: 222 47% 11%;
     --secondary: 217 19% 27%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 217 19% 18%;
+    --muted: 217 19% 22%;
     --muted-foreground: 215 20% 65%;
-    --accent: 217 19% 18%;
+    --accent: 217 19% 22%;
     --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 0 0% 25%; /* Чуть светлее фона */
-    --input: 0 0% 25%;
+    --border: 0 0% 27%; /* Немного светлее карточек */
+    --input: 0 0% 27%;
     --ring: 217 91% 60%;
-    --radius: 0.75rem; /* Более мягкие углы */
+    --radius: 0.75rem;
   }
 
   .dark {
-    /* Темная тема (Deep Carbon) */
-    --background: 0 0% 15%; /* #262626 */
+    /* Синхронизируем темную тему с основной */
+    --background: 0 0% 17%; /* #2b2b2b */
     --foreground: 210 40% 98%;
-    --card: 0 0% 20%; /* #333333 */
+    --card: 0 0% 22%;
     --card-foreground: 210 40% 98%;
-    --popover: 0 0% 15%;
+    --popover: 0 0% 17%;
     --popover-foreground: 210 40% 98%;
-    --primary: 217 91% 60%; /* Светящийся синий */
+    --primary: 217 91% 60%;
     --primary-foreground: 222 47% 11%;
     --secondary: 217 19% 27%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 217 19% 18%;
+    --muted: 217 19% 22%;
     --muted-foreground: 215 20% 65%;
-    --accent: 217 19% 18%;
+    --accent: 217 19% 22%;
     --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 0 0% 25%;
-    --input: 0 0% 25%;
+    --border: 0 0% 27%;
+    --input: 0 0% 27%;
     --ring: 217 91% 60%;
   }
 }
