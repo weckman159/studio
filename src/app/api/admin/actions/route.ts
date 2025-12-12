@@ -25,7 +25,7 @@ async function getAdminUserFromRequest(request: NextRequest): Promise<{ uid: str
         const db = getAdminDb();
         const userDoc = await db.collection('users').doc(uid).get();
         
-        if (!userDoc.exists() || userDoc.data()?.role !== 'admin') {
+        if (!userDoc.exists || userDoc.data()?.role !== 'admin') {
             console.warn(`Admin action attempted by user ${uid} who is not an admin.`);
             return null;
         }

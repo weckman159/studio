@@ -1,34 +1,45 @@
+import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb, getAdminAuth } from '@/lib/firebase-admin';
 import { revalidatePath } from 'next/cache';
 import { Timestamp } from 'firebase-admin/firestore';
 
+// Secure admin verification using Firebase ID Token
 async function verifyAdmin(request: NextRequest): Promise<string | null> {
-    // WARNING: This is a temporary auth check for the MVP.
-    // In production, you must verify a JWT from the Authorization header.
-    const adminUid = request.headers.get('x-user-id');
-    if (!adminUid) {
-        console.warn("API request missing 'x-user-id' header.");
-        return null;
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    console.warn("API request missing 'Authorization' Bearer token.");
+    return null;
+  }
+
+  const idToken = authHeader.slice(7);
+  try {
+    const auth = getAdminAuth();
+    const decodedToken = await auth.verifyIdToken(idToken);
+    const uid = decodedToken.uid;
+
+    // Additionally check the user's role in Firestore
+    const db = getAdminDb();
+    const userDoc = await db.collection('users').doc(uid).get();
+
+    if (!userDoc.exists) {
+      console.warn(`Admin action attempted by non-existent user: ${uid}`);
+      return null;
     }
 
-    try {
-        const db = getAdminDb();
-        const adminUserDoc = await db.collection('users').doc(adminUid).get();
-
-        if (!adminUserDoc.exists || adminUserDoc.data()?.role !== 'admin') {
-            console.warn(`Admin action attempted by non-admin or non-existent user: ${adminUid}`);
-            return null;
-        }
-        return adminUid;
-    } catch (error) {
-        console.error("Admin verification failed:", error);
-        return null;
+    const role = userDoc.data()?.role;
+    if (role !== 'admin' && role !== 'moderator') {
+      console.warn(`Admin action attempted by user ${uid} with role '${role}'.`);
+      return null;
     }
+    return uid;
+  } catch (error) {
+    console.error('Auth token verification failed:', error);
+    return null;
+  }
 }
 
 
-// Correct type for Next.js 15
 type RouteContext = {
   params: Promise<{
     id: string;
@@ -37,12 +48,11 @@ type RouteContext = {
 };
 
 export async function POST(request: NextRequest, context: RouteContext) {
-  // Await the params promise as required in Next.js 15
   const { id: targetUserId, action } = await context.params;
 
   const adminUid = await verifyAdmin(request);
   if (!adminUid) {
-    return NextResponse.json({ error: 'Unauthorized: Admin access required.' }, { status: 403 });
+    return NextResponse.json({ error: 'Unauthorized: Admin or moderator access required.' }, { status: 403 });
   }
 
   if (adminUid === targetUserId) {
