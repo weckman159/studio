@@ -4,29 +4,30 @@
 
 @layer base {
   :root {
-    --background: 213 24% 6%; /* #0D1117 */
-    --foreground: 210 20% 98%; /* #F8FAFC */
-    --card: 216 30% 10%; /* #111729 */
+    --background: 213 24% 6%; /* #0D1117 - Deep Graphite */
+    --foreground: 210 20% 98%; /* #F8FAFC - Off-white */
+    --card: 216 30% 10%; /* #111729 - Slightly lighter for card backgrounds */
     --card-foreground: 210 20% 98%;
     --popover: 216 30% 10%;
     --popover-foreground: 210 20% 98%;
-    --primary: 0 100% 59%; /* #FF2D2D */
+    --primary: 0 100% 59%; /* #FF2D2D - Sporty Red */
     --primary-foreground: 210 20% 98%;
     --secondary: 215 14% 34%;
     --secondary-foreground: 210 20% 98%;
     --muted: 213 24% 15%; /* #1F242E */
     --muted-foreground: 215 20% 65%; /* #9AA1AD */
-    --accent: 0 100% 59%;
+    --accent: 0 100% 59%; /* Same as primary for shadcn components */
     --accent-foreground: 210 20% 98%;
     --destructive: 0 63% 31%;
     --destructive-foreground: 210 20% 98%;
-    --border: 215 20% 15%; /* #1F242E */
+    --border: 215 20% 15%; /* #1F242E - Subtle */
     --input: 215 20% 15%;
-    --ring: 0 100% 59%;
+    --ring: 217 91% 60%; /* #5E97FF - Link blue for focus ring */
     --radius: 0.75rem;
   }
 
   .dark {
+    /* The values are the same as :root for a dark-by-default theme */
     --background: 213 24% 6%;
     --foreground: 210 20% 98%;
     --card: 216 30% 10%;
@@ -45,7 +46,7 @@
     --destructive-foreground: 210 20% 98%;
     --border: 215 20% 15%;
     --input: 215 20% 15%;
-    --ring: 0 100% 59%;
+    --ring: 217 91% 60%;
   }
 }
 
@@ -54,6 +55,7 @@
     @apply bg-background text-foreground antialiased;
   }
 
+  /* Carbon fiber texture for the body */
   .carbon-bg {
     background-color: hsl(var(--background));
     background-image:
