@@ -5,46 +5,46 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%; /* #FFFFFF - White */
-    --foreground: 222.2 47.4% 11.2%; /* #111827 - Slate 900 */
+    --background: 0 0% 100%;
+    --foreground: 222.2 47.4% 11.2%;
     --card: 0 0% 100%;
     --card-foreground: 222.2 47.4% 11.2%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 47.4% 11.2%;
-    --primary: 0 100% 59%; /* #FF2D2D - Sporty Red */
-    --primary-foreground: 210 40% 98%; /* Off-white */
-    --secondary: 210 40% 96.1%; /* #F1F5F9 - Slate 100 */
+    --primary: 0 100% 59%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
     --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%; /* #64748B - Slate 500 */
+    --muted-foreground: 215.4 16.3% 46.9%;
     --accent: 210 40% 96.1%;
     --accent-foreground: 222.2 47.4% 11.2%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%; /* #E2E8F0 - Slate 200 */
+    --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 217 91% 60%; /* #5E97FF - Link blue for focus ring */
+    --ring: 217 91% 60%;
     --radius: 0.75rem;
   }
 
   .dark {
-    --background: 213 24% 6%; /* #0D1117 - Deep Graphite */
-    --foreground: 210 20% 98%; /* #F8FAFC - Off-white */
-    --card: 216 30% 10%; /* #111729 - Slightly lighter for card backgrounds */
+    --background: 213 24% 6%;
+    --foreground: 210 20% 98%;
+    --card: 216 30% 10%;
     --card-foreground: 210 20% 98%;
     --popover: 216 30% 10%;
     --popover-foreground: 210 20% 98%;
-    --primary: 0 100% 59%; /* #FF2D2D - Sporty Red */
+    --primary: 0 100% 59%;
     --primary-foreground: 210 20% 98%;
     --secondary: 215 14% 34%;
     --secondary-foreground: 210 20% 98%;
-    --muted: 213 24% 15%; /* #1F242E */
-    --muted-foreground: 215 20% 65%; /* #9AA1AD */
+    --muted: 213 24% 15%;
+    --muted-foreground: 215 20% 65%;
     --accent: 0 100% 59%;
     --accent-foreground: 210 20% 98%;
     --destructive: 0 63% 31%;
     --destructive-foreground: 210 20% 98%;
-    --border: 215 20% 15%; /* #1F242E - Subtle */
+    --border: 215 20% 15%;
     --input: 215 20% 15%;
     --ring: 217 91% 60%;
   }
