@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -6,7 +7,7 @@ import { GarageCard } from "@/components/GarageCard";
 import { Button } from "@/components/ui/button";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, doc, deleteDoc, where } from 'firebase/firestore';
-import type { Car, User as UserType } from '@/lib/types'; // Import generic UserType
+import type { Car, User as UserType } from '@/lib/types';
 import { Plus, Car as CarIcon } from "lucide-react";
 import { AddCarForm } from '@/components/AddCarForm';
 import { useToast } from "@/hooks/use-toast";
@@ -85,7 +86,6 @@ export default function GaragePage() {
     );
   }
 
-  // ИСПРАВЛЕНИЕ: Конвертация пользователя Firebase Auth в тип приложения
   const userForCard: UserType = {
       id: user.uid,
       displayName: user.displayName || 'Пользователь',
@@ -145,7 +145,7 @@ export default function GaragePage() {
                         {garageStats.totalCars}
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        {garageStats.totalCars === 1 ? 'Автомобиль' : 'Автомобилей'}
+                        {garageStats.totalCars === 1 ? 'Автомобиль' : (garageStats.totalCars > 1 && garageStats.totalCars < 5 ? 'Автомобиля' : 'Автомобилей')}
                       </p>
                     </div>
                     <div className="text-center p-4 bg-muted/50 rounded-lg">

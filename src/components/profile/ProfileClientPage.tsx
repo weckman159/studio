@@ -1,3 +1,4 @@
+
 // src/components/profile/ProfileClientPage.tsx
 'use client';
 
@@ -24,6 +25,16 @@ interface ProfileClientPageProps {
   initialPosts: Post[];
   initialFollowers: string[];
   initialFollowing: string[];
+}
+
+function ComingSoonPlaceholder({ title, icon: Icon }: { title: string, icon: React.ElementType }) {
+    return (
+        <div className="text-center py-16 text-muted-foreground border-2 border-dashed rounded-xl flex flex-col items-center justify-center h-64">
+            <Icon className="h-12 w-12 mb-4 opacity-50" />
+            <h3 className="text-xl font-semibold mb-2">{title}</h3>
+            <p>Этот раздел скоро появится.</p>
+        </div>
+    );
 }
 
 export function ProfileClientPage({ 
@@ -101,7 +112,7 @@ export function ProfileClientPage({
       coverImage: profile.coverUrl || 'https://images.unsplash.com/photo-1553440569-bcc63803a83d?q=80&w=2025&auto=format&fit=crop',
       bio: profile.bio || 'Этот пользователь пока ничего не рассказал о себе.',
       status: profile.role === 'admin' ? 'Администратор' : 'Участник',
-      badges: ['Легенда клуба', 'Фотограф'],
+      badges: profile.achievements?.map(a => a.title) || ['Новичок'],
       tier: 'gold' as const,
       stats: { 
         followers: followers.length, 
@@ -147,7 +158,7 @@ export function ProfileClientPage({
         <div className="container mx-auto px-4 py-8">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             <div className="hidden lg:block lg:col-span-1">
-              <ProfileSidebar profile={heroProfile} />
+              <ProfileSidebar profile={profile} />
             </div>
             
             <div className="lg:col-span-3">
@@ -208,9 +219,7 @@ export function ProfileClientPage({
                 </TabsContent>
                 
                 <TabsContent value="shop" className="mt-8">
-                  <div className="text-center py-12 text-muted-foreground">
-                    Товары не найдены.
-                  </div>
+                  <ComingSoonPlaceholder title="Объявления пользователя" icon={ShoppingBag} />
                 </TabsContent>
               </Tabs>
             </div>
