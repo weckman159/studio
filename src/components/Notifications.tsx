@@ -21,6 +21,20 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { ScrollArea } from './ui/scroll-area';
 
+function formatDate(timestamp: any): string {
+    if (!timestamp) return '';
+    // Handle client-side Timestamp object with .toDate() method
+    if (typeof timestamp.toDate === 'function') {
+      return timestamp.toDate().toLocaleString('ru-RU');
+    }
+    // Handle ISO string or other date string from API
+    const date = new Date(timestamp);
+    if (isNaN(date.getTime())) {
+      return ''; // Invalid date string
+    }
+    return date.toLocaleString('ru-RU');
+}
+
 function NotificationItem({
   notification,
   onRead,
@@ -51,7 +65,7 @@ function NotificationItem({
         <p className="font-semibold">{notification.senderData?.displayName || notification.title}</p>
         <p className="text-sm text-muted-foreground">{notification.message}</p>
         <p className="text-xs text-muted-foreground mt-1">
-          {notification.createdAt ? new Date(notification.createdAt).toLocaleString('ru-RU') : ''}
+          {formatDate(notification.createdAt)}
         </p>
       </div>
     </div>
@@ -102,15 +116,20 @@ export function Notifications() {
   }, [user]);
 
   useEffect(() => {
-    fetchNotifications();
-    // Optional: set up polling if real-time is not strictly needed but updates are desired
-    const interval = setInterval(fetchNotifications, 60000); // Poll every 60 seconds
-    return () => clearInterval(interval);
-  }, [fetchNotifications]);
+    if (user) {
+        fetchNotifications();
+        const interval = setInterval(fetchNotifications, 60000); // Poll every 60 seconds
+        return () => clearInterval(interval);
+    } else {
+        setLoading(false);
+        setNotifications([]);
+        setUnreadCount(0);
+    }
+  }, [user, fetchNotifications]);
   
 
   const handleMarkAsRead = (notificationId: string) => {
-    if (!firestore) return;
+    if (!firestore || !user) return;
     const notifRef = doc(firestore, 'notifications', notificationId);
     updateDoc(notifRef, { read: true }).then(() => {
         // Optimistically update UI
