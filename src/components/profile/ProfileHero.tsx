@@ -1,4 +1,3 @@
-
 'use client'
 import { useState } from 'react'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
@@ -20,6 +19,7 @@ import { useRouter } from 'next/navigation'
 import { useUser, useFirestore } from '@/firebase'
 import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore'
 import type { User } from '@/lib/types'
+import images from '@/app/lib/placeholder-images.json';
 
 interface ProfileHeroProps {
   profile: User;
@@ -113,7 +113,8 @@ export function ProfileHero({
       ) : ( */}
         <div 
           className="absolute inset-0 w-full h-full bg-cover bg-center"
-          style={{ backgroundImage: `url(${profile.coverUrl || '/default-cover.jpg'})` }}
+          style={{ backgroundImage: `url(${profile.coverUrl || images.defaultCover.src})` }}
+          data-ai-hint={images.defaultCover.hint}
         />
       {/* )} */}
       

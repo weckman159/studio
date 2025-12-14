@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { MapPin, Phone, Globe, Star, Clock, Navigation, Send } from 'lucide-react';
 import { Workshop, Review } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import images from '@/app/lib/placeholder-images.json';
 
 export default function WorkshopDetailClient({ initialWorkshop }: { initialWorkshop: Workshop }) {
   const { user } = useUser();
@@ -66,15 +67,19 @@ export default function WorkshopDetailClient({ initialWorkshop }: { initialWorks
       }
   };
 
+  const workshopImage = images.workshopDefault;
+  const mapImage = images.workshopDefault;
+
   return (
     <div className="min-h-screen pb-10">
         {/* Header Image */}
         <div className="relative h-[300px] md:h-[400px] w-full bg-muted">
             <Image 
-                src={initialWorkshop.imageUrl || '/workshop-placeholder.jpg'} 
+                src={initialWorkshop.imageUrl || workshopImage.src} 
                 alt={initialWorkshop.name} 
                 fill 
                 className="object-cover"
+                data-ai-hint={workshopImage.hint}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
             
@@ -203,10 +208,11 @@ export default function WorkshopDetailClient({ initialWorkshop }: { initialWorks
                 {/* Fake Map */}
                 <div className="w-full h-64 bg-muted rounded-xl flex items-center justify-center text-muted-foreground relative overflow-hidden group cursor-pointer">
                     <Image 
-                        src="https://placehold.co/600x400/png?text=Map+Placeholder" 
+                        src={mapImage.src} 
                         alt="Map" 
                         fill 
                         className="object-cover opacity-50 group-hover:opacity-40 transition-opacity" 
+                        data-ai-hint="city map"
                     />
                     <span className="relative z-10 font-semibold flex items-center gap-2">
                         <MapPin className="h-5 w-5" /> Показать на карте

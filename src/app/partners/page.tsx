@@ -1,6 +1,7 @@
 // src/app/partners/page.tsx
 // SSG: Партнеры, собирается при билде или по расписанию через ISR
 import Image from 'next/image';
+import images from '@/app/lib/placeholder-images.json';
 
 export const revalidate = 86400; // ISR: 1 раз в сутки подгружает новые
 
@@ -8,6 +9,7 @@ interface Partner {
   id: string;
   name: string;
   logo: string; // url path от public (например, "/partners/bmw.png")
+  logoHint: string;
   url: string;
   description: string;
   region: string;
@@ -17,7 +19,8 @@ const partners: Partner[] = [
   {
     id: 'bmw',
     name: 'BMW Russia',
-    logo: 'https://picsum.photos/seed/bmwlogo/64/64',
+    logo: images.partnerBmw.src,
+    logoHint: images.partnerBmw.hint,
     url: 'https://bmw.ru/',
     description: 'Официальный сервис и клуб BMW Россия',
     region: 'Москва, регионы',
@@ -25,7 +28,8 @@ const partners: Partner[] = [
   {
     id: 'avtotop',
     name: 'AvtoTop',
-    logo: 'https://picsum.photos/seed/avtotoplogo/64/64',
+    logo: images.partnerAvtotop.src,
+    logoHint: images.partnerAvtotop.hint,
     url: 'https://avtotop.ru/',
     description: 'Сеть сервисных станций для всех марок',
     region: 'Вся Россия',
@@ -33,7 +37,8 @@ const partners: Partner[] = [
   {
     id: 'garagesale',
     name: 'Garage Sale',
-    logo: 'https://picsum.photos/seed/garagesalelogo/64/64',
+    logo: images.partnerGaragesale.src,
+    logoHint: images.partnerGaragesale.hint,
     url: '#',
     description: 'Крупнейший маркетплейс тюнинг-запчастей',
     region: 'Онлайн',
@@ -41,7 +46,8 @@ const partners: Partner[] = [
   {
     id: 'driveclub',
     name: 'Drive Club',
-    logo: 'https://picsum.photos/seed/driveclublogo/64/64',
+    logo: images.partnerDriveclub.src,
+    logoHint: images.partnerDriveclub.hint,
     url: '#',
     description: 'Организация гоночных уикендов и трек-дней',
     region: 'Москва, Санкт-Петербург, Сочи',
@@ -65,7 +71,14 @@ export default function PartnersPage() {
             className="block bg-card rounded-lg shadow-sm hover:shadow-lg p-4 transition border"
           >
             <div className="flex items-center gap-4 mb-2">
-              <Image src={partner.logo} alt={partner.name} width={64} height={64} className="object-contain rounded bg-white" />
+              <Image 
+                src={partner.logo} 
+                alt={partner.name} 
+                width={64} 
+                height={64} 
+                className="object-contain rounded bg-white"
+                data-ai-hint={partner.logoHint}
+              />
               <div>
                 <div className="text-lg font-bold">{partner.name}</div>
                 <div className="text-xs text-muted-foreground">{partner.region}</div>

@@ -1,4 +1,3 @@
-
 'use client'
 import { useState } from 'react'
 import Image from 'next/image'
@@ -6,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Play, Eye, Heart, MessageCircle, Share2 } from 'lucide-react'
 import type { Car } from '@/lib/types/car'
+import images from '@/app/lib/placeholder-images.json';
 
 export function CarHero({ car }: { car: Car }) {
   const [liked, setLiked] = useState(false)
@@ -17,6 +17,8 @@ export function CarHero({ car }: { car: Car }) {
     'legendary': { icon: '👑', label: 'Легенда', gradient: 'from-purple-500 to-pink-500' },
   }
   
+  const carHeroImage = images.carHeroDefault;
+
   return (
     <div className="relative h-[500px] md:h-[600px] rounded-3xl overflow-hidden shadow-2xl group">
       {/* Фон */}
@@ -32,10 +34,11 @@ export function CarHero({ car }: { car: Car }) {
         </video>
       ) : (
         <Image 
-          src={car.coverImage || car.photoUrl || car.photos?.[0] || 'https://placehold.co/1200x600'}
+          src={car.coverImage || car.photoUrl || car.photos?.[0] || carHeroImage.src}
           alt={`${car.brand} ${car.model}`}
           fill
           className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          data-ai-hint={carHeroImage.hint}
         />
       )}
       

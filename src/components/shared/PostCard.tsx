@@ -12,6 +12,7 @@ interface PostCardProps {
     author: string;
     avatarUrl: string;
     imageUrl: string;
+    imageHint?: string;
     excerpt: string;
     likes: number;
     comments: number;
@@ -29,7 +30,7 @@ export function PostCard({ post }: PostCardProps) {
           alt={post.title}
           fill
           className="object-cover group-hover:scale-105 transition-transform duration-500"
-          data-ai-hint="car detail engine"
+          data-ai-hint={post.imageHint}
         />
       </div>
 

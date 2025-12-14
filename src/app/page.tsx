@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PostCard } from '@/components/shared/PostCard';
 import { Heart, Zap, MessageCircle, Users, BarChart2, Rss } from 'lucide-react';
+import images from '@/app/lib/placeholder-images.json';
 
 function GlassCard({ children, className }: { children: React.ReactNode, className?: string }) {
   return (
@@ -21,6 +22,13 @@ function PrimaryButton({ children, className }: { children: React.ReactNode, cla
 }
 
 export default function HomePage() {
+  const carOfTheDayImage = images.carOfTheDay;
+  const postImage1 = images.postImage1;
+  const postImage2 = images.postImage2;
+  const postImage3 = images.postImage3;
+  const userAvatar1 = images.userAvatar;
+  const userAvatar2 = images.userAvatar;
+
   return (
     <div className="w-full max-w-7xl mx-auto px-4 py-8">
       {/* Hero Section */}
@@ -45,7 +53,7 @@ export default function HomePage() {
           </CardHeader>
           <CardContent>
             <div className="relative aspect-video rounded-xl overflow-hidden mb-4">
-              <Image src="https://picsum.photos/seed/caroftheday/600/400" alt="Car of the day" fill className="object-cover" data-ai-hint="sportscar side" />
+              <Image src={carOfTheDayImage.src} alt="Car of the day" fill className="object-cover" data-ai-hint={carOfTheDayImage.hint} />
             </div>
             <h3 className="text-xl font-bold">Project "Shadow"</h3>
             <p className="text-sm text-muted-foreground">Владелец: @max_rtr</p>
@@ -68,8 +76,9 @@ export default function HomePage() {
               id: '1',
               title: 'Переход на Stage 2: Первые впечатления',
               author: 'DriftKing',
-              avatarUrl: 'https://i.pravatar.cc/40?u=a042581f4e29026704d',
-              imageUrl: 'https://picsum.photos/seed/stage2/800/450',
+              avatarUrl: `${userAvatar1.src}?u=a042581f4e29026704d`,
+              imageUrl: postImage1.src,
+              imageHint: postImage1.hint,
               excerpt: 'После долгих месяцев подготовки и выбора компонентов, наконец-то свершилось. Машина получила новый впуск, выпуск и кастомную прошивку...',
               likes: 256,
               comments: 42,
@@ -81,8 +90,9 @@ export default function HomePage() {
               id: '2',
               title: 'Фотосет в закатных лучах на Воробьевых горах',
               author: 'PhotoCar',
-              avatarUrl: 'https://i.pravatar.cc/40?u=a042581f4e29026705d',
-              imageUrl: 'https://picsum.photos/seed/sunsetcar/800/450',
+              avatarUrl: `${userAvatar1.src}?u=a042581f4e29026705d`,
+              imageUrl: postImage2.src,
+              imageHint: postImage2.hint,
               excerpt: 'Поймал идеальный свет в прошедшую субботу. Делюсь лучшими кадрами своей ласточки. Как вам ракурсы? Критика приветствуется!',
               likes: 512,
               comments: 88,
@@ -94,8 +104,9 @@ export default function HomePage() {
               id: '3',
               title: 'Большое ТО: Замена масла, фильтров и свечей',
               author: 'ServiceMan',
-              avatarUrl: 'https://i.pravatar.cc/40?u=a042581f4e29026706d',
-              imageUrl: 'https://picsum.photos/seed/carparts/800/450',
+              avatarUrl: `${userAvatar1.src}?u=a042581f4e29026706d`,
+              imageUrl: postImage3.src,
+              imageHint: postImage3.hint,
               excerpt: 'Подошло время планового обслуживания. Рассказываю, какие расходники выбрал и почему. Полный список с артикулами внутри.',
               likes: 128,
               comments: 15,
@@ -123,7 +134,7 @@ export default function HomePage() {
             <CardContent className="space-y-4">
                {/* User Item */}
                <div className="flex items-center gap-3">
-                  <Image src="https://i.pravatar.cc/40?u=a042581f4e29026704d" alt="author" width={40} height={40} className="rounded-full" />
+                  <Image src={`${userAvatar2.src}?u=a042581f4e29026704d`} alt="author" width={40} height={40} className="rounded-full" />
                   <div className="flex-1">
                       <p className="font-semibold text-sm">DriftKing</p>
                       <p className="text-xs text-muted-foreground">15 постов</p>
@@ -132,7 +143,7 @@ export default function HomePage() {
                </div>
                {/* User Item */}
                <div className="flex items-center gap-3">
-                  <Image src="https://i.pravatar.cc/40?u=a042581f4e29026705d" alt="author" width={40} height={40} className="rounded-full" />
+                  <Image src={`${userAvatar2.src}?u=a042581f4e29026705d`} alt="author" width={40} height={40} className="rounded-full" />
                   <div className="flex-1">
                       <p className="font-semibold text-sm">PhotoCar</p>
                       <p className="text-xs text-muted-foreground">8 постов</p>

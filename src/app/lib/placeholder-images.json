@@ -1,0 +1,74 @@
+{
+  "carOfTheDay": {
+    "src": "https://picsum.photos/seed/caroftheday/600/400",
+    "width": 600,
+    "height": 400,
+    "hint": "sportscar side"
+  },
+  "postImage1": {
+    "src": "https://picsum.photos/seed/stage2/800/450",
+    "width": 800,
+    "height": 450,
+    "hint": "car engine"
+  },
+  "postImage2": {
+    "src": "https://picsum.photos/seed/sunsetcar/800/450",
+    "width": 800,
+    "height": 450,
+    "hint": "sunset sportscar"
+  },
+  "postImage3": {
+    "src": "https://picsum.photos/seed/carparts/800/450",
+    "width": 800,
+    "height": 450,
+    "hint": "car parts"
+  },
+  "carHeroDefault": {
+    "src": "https://picsum.photos/seed/carhero/1200/600",
+    "width": 1200,
+    "height": 600,
+    "hint": "racing car"
+  },
+  "workshopDefault": {
+    "src": "https://picsum.photos/seed/workshop/600/400",
+    "width": 600,
+    "height": 400,
+    "hint": "car garage"
+  },
+  "partnerBmw": {
+    "src": "https://picsum.photos/seed/bmwlogo/64/64",
+    "width": 64,
+    "height": 64,
+    "hint": "car logo"
+  },
+  "partnerAvtotop": {
+    "src": "https://picsum.photos/seed/avtotoplogo/64/64",
+    "width": 64,
+    "height": 64,
+    "hint": "car service"
+  },
+  "partnerGaragesale": {
+    "src": "https://picsum.photos/seed/garagesalelogo/64/64",
+    "width": 64,
+    "height": 64,
+    "hint": "car parts"
+  },
+  "partnerDriveclub": {
+    "src": "https://picsum.photos/seed/driveclublogo/64/64",
+    "width": 64,
+    "height": 64,
+    "hint": "race track"
+  },
+  "defaultCover": {
+    "src": "https://picsum.photos/seed/defaultcover/1600/400",
+    "width": 1600,
+    "height": 400,
+    "hint": "car dashboard"
+  },
+  "userAvatar": {
+    "src": "https://i.pravatar.cc/40",
+    "width": 40,
+    "height": 40,
+    "hint": "person"
+  }
+}
