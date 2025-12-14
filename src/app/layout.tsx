@@ -23,13 +23,17 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;700&family=Space+Grotesk:wght@500;700&display=swap"
           rel="stylesheet"
         />
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#0D1117" />
+        <meta name="theme-color" content="#1a0f10" />
       </head>
-      <body className="font-sans antialiased carbon-bg">
+      <body className="font-body">
+        {/* Background Effects */}
+        <div className="fixed inset-0 z-[-1] bg-carbon-pattern opacity-30"></div>
+        <div className="fixed inset-0 z-[-1] bg-gradient-to-b from-[#221011]/80 to-[#110808]"></div>
+
         <ThemeProvider
             attribute="class"
             defaultTheme="dark"
