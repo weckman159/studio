@@ -1,6 +1,13 @@
 
 import type { Timestamp } from 'firebase/firestore';
 
+export interface Achievement {
+  id: string;
+  icon: string;
+  title: string;
+  description: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -18,6 +25,7 @@ export interface User {
   updatedAt?: any;
   profileVisibility?: 'public' | 'private';
   currentCarIds?: string[];
+  achievements?: Achievement[];
   stats?: {
     postsCount?: number;
     likes?: number;
