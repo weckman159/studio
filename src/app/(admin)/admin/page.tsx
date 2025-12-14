@@ -15,7 +15,9 @@ import { User as UserData, Workshop, Feedback, Post } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { serializeFirestoreData } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Wrench, MessageSquare, FileText, Loader2 } from 'lucide-react';
+import { Users, Wrench, MessageSquare, FileText, Loader2, Shield } from 'lucide-react';
+import Link from 'next/link';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 function StatCard({ title, value, icon: Icon, description }: { title: string, value: string | number, icon: any, description: string }) {
   return (
@@ -37,6 +39,7 @@ export default function AdminDashboardPage() {
     const { toast } = useToast();
 
     const [stats, setStats] = useState({ users: 0, posts: 0, workshops: 0, feedback: 0 });
+    const [recentPosts, setRecentPosts] = useState<Post[]>([]);
     const [isLoadingData, setIsLoadingData] = useState(true);
 
     useEffect(() => {
@@ -63,6 +66,11 @@ export default function AdminDashboardPage() {
                     workshops: workshopsCount.data().count,
                     feedback: feedbackCount.data().count
                 });
+
+                // Fetch recent posts
+                const postsQuery = query(collection(firestore, 'posts'), orderBy('createdAt', 'desc'), limit(5));
+                const postsSnap = await getDocs(postsQuery);
+                setRecentPosts(postsSnap.docs.map(d => serializeFirestoreData({id: d.id, ...d.data()} as Post)));
 
             } catch (error) {
                 console.error("Admin stats load error:", error);
@@ -97,22 +105,36 @@ export default function AdminDashboardPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Недавняя активность</CardTitle>
+                        <CardTitle>Недавние публикации</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        <p className="text-muted-foreground">Здесь будет график активности...</p>
+                    <CardContent className="space-y-3">
+                        {recentPosts.length > 0 ? recentPosts.map(post => (
+                            <Link key={post.id} href={`/posts/${post.id}`} className="block">
+                                <div className="flex items-center gap-3 hover:bg-muted p-2 rounded-lg -m-2">
+                                    <Avatar>
+                                        <AvatarImage src={post.authorAvatar} />
+                                        <AvatarFallback>{post.authorName?.[0]}</AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex-1 overflow-hidden">
+                                        <p className="font-semibold text-sm truncate">{post.title}</p>
+                                        <p className="text-xs text-muted-foreground">Автор: {post.authorName}</p>
+                                    </div>
+                                </div>
+                            </Link>
+                        )) : <p className="text-muted-foreground text-sm py-8 text-center">Публикаций пока нет.</p>}
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader>
                         <CardTitle>Жалобы</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        <p className="text-muted-foreground">Здесь будет список последних жалоб...</p>
+                    <CardContent className="flex flex-col items-center justify-center h-full min-h-[200px] text-center">
+                         <Shield className="h-10 w-10 text-muted-foreground mb-3" />
+                        <p className="text-muted-foreground">Нет активных жалоб.</p>
+                        <p className="text-xs text-muted-foreground mt-1">(Функционал в разработке)</p>
                     </CardContent>
                 </Card>
             </div>
         </div>
     );
 }
-
