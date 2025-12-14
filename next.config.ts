@@ -9,6 +9,9 @@ const withPWA = require('next-pwa')({
 
 const nextConfig: NextConfig = {
   /* config options here */
+    experimental: {
+    optimizePackageImports: ['@radix-ui/react-icons', 'lucide-react'],
+  },
   images: {
     remotePatterns: [
       {
