@@ -117,17 +117,19 @@ export function EditProfileModal({ isOpen, setIsOpen, user: userProp, onSave }: 
         updatedAt: new Date().toISOString(),
       };
       
-      // Update Firestore
-      const userRef = doc(firestore, 'users', user.uid);
-      await setDoc(userRef, { 
+      const firestoreData = {
         displayName: updatedUserData.name,
         name: updatedUserData.name,
-        nickname: updatedUserData.nickname,
-        bio: updatedUserData.bio,
-        location: updatedUserData.location,
+        nickname: updatedUserData.nickname || null,
+        bio: updatedUserData.bio || null,
+        location: updatedUserData.location || null,
         photoURL: newAvatarUrl,
         updatedAt: serverTimestamp(),
-       }, { merge: true });
+      };
+
+      // Update Firestore
+      const userRef = doc(firestore, 'users', user.uid);
+      await setDoc(userRef, firestoreData, { merge: true });
 
       // Update Firebase Auth profile
       if (auth.currentUser) {

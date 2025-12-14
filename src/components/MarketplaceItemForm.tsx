@@ -1,3 +1,4 @@
+
 // src/components/MarketplaceItemForm.tsx
 'use client';
 
@@ -34,7 +35,7 @@ const formSchema = z.object({
   category: z.string().min(1, 'Выберите категорию'),
   condition: z.string().min(1, 'Выберите состояние'),
   location: z.string().min(2, 'Укажите город').max(60, 'Город не длиннее 60 символов'),
-  sellerPhone: z.string().min(5, 'Укажите корректный номер').max(20, 'Номер не длиннее 20 символов').optional(),
+  sellerPhone: z.string().max(20, 'Номер не длиннее 20 символов').optional(),
   sellerEmail: z.string().email('Некорректный email').max(70, 'Email не длиннее 70 символов').optional(),
 });
 
@@ -117,8 +118,16 @@ export function MarketplaceItemForm({ itemToEdit }: MarketplaceItemFormProps) {
       const mainImageUrl = finalImageUrls[0] || '';
       const galleryUrls = finalImageUrls.slice(1);
 
+      const { fullDescription, sellerPhone, sellerEmail, ...restOfData } = data;
+      const sanitizedData = {
+        ...restOfData,
+        fullDescription: fullDescription || '',
+        sellerPhone: sellerPhone || '',
+        sellerEmail: sellerEmail || '',
+      };
+
       const itemData = {
-        ...data,
+        ...sanitizedData,
         imageUrl: mainImageUrl,
         gallery: galleryUrls,
         updatedAt: serverTimestamp(),

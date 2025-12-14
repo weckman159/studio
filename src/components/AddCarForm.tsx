@@ -124,10 +124,16 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
       const existingImageUrls = imageUrls.filter(url => !url.startsWith('blob:'));
       const finalImageUrls = [...existingImageUrls, ...newImageUrls];
 
+      const { description, ...restOfData } = data;
+      const sanitizedData = {
+        ...restOfData,
+        description: description || '',
+      };
+
       if (carToEdit) {
         // 3a. Update existing car
         await updateDoc(carRef, {
-            ...data,
+            ...sanitizedData,
             photos: finalImageUrls,
             photoUrl: finalImageUrls[0] || carToEdit.photoUrl || '', // Keep old main photo if no new ones
             updatedAt: serverTimestamp(),
@@ -135,7 +141,7 @@ export function AddCarForm({ isOpen, setIsOpen, carToEdit }: AddCarFormProps) {
       } else {
         // 3b. Create new car
         const carData = {
-          ...data,
+          ...sanitizedData,
           id: carId,
           userId: user.uid,
           photos: finalImageUrls,
