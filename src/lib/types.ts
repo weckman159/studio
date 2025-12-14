@@ -6,6 +6,7 @@ export interface Achievement {
   icon: string;
   title: string;
   description: string;
+  unlocked: boolean;
 }
 
 export interface User {
@@ -26,6 +27,7 @@ export interface User {
   profileVisibility?: 'public' | 'private';
   currentCarIds?: string[];
   achievements?: Achievement[];
+  skills?: string[];
   stats?: {
     postsCount?: number;
     likes?: number;
