@@ -102,25 +102,16 @@ export function ProfileClientPage({
     return <ProfilePageSkeleton />;
   }
   
-  const isOwner = !!authUser && (authUser.uid === profile.id || profile.role === 'admin');
+  const isOwner = !!authUser && (authUser.uid === profile.id);
 
-  const heroProfile = {
-      id: profile.id,
-      displayName: profile.name || profile.displayName || 'No Name',
-      username: profile.nickname || profile.email?.split('@')[0] || 'username',
-      avatar: profile.photoURL || 'https://placehold.co/128x128',
-      coverImage: profile.coverUrl || 'https://images.unsplash.com/photo-1553440569-bcc63803a83d?q=80&w=2025&auto=format&fit=crop',
-      bio: profile.bio || 'Этот пользователь пока ничего не рассказал о себе.',
-      status: profile.role === 'admin' ? 'Администратор' : 'Участник',
-      badges: profile.achievements?.map(a => a.title) || ['Новичок'],
-      tier: 'gold' as const,
-      stats: { 
-        followers: followers.length, 
-        following: following.length, 
-        cars: cars.length 
-      },
-      socials: profile.socials || {},
+  // Update profile stats for Hero component
+  profile.stats = {
+      ...profile.stats,
+      followersCount: followers.length,
+      followingCount: following.length,
+      carsCount: cars.length,
   };
+
 
   return (
     <>
@@ -144,7 +135,7 @@ export function ProfileClientPage({
       />
       <div className="min-h-screen -m-8">
         <ProfileHero 
-            profile={heroProfile} 
+            profile={profile} 
             isOwner={isOwner} 
             isFollowing={isFollowing}
             onFollow={handleFollow}

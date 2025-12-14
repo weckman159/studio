@@ -1,3 +1,4 @@
+
 'use client'
 import { useState } from 'react'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
@@ -18,33 +19,10 @@ import { Skeleton } from '../ui/skeleton'
 import { useRouter } from 'next/navigation'
 import { useUser, useFirestore } from '@/firebase'
 import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore'
-
-
-interface UserProfile {
-  id: string
-  displayName: string
-  username: string
-  avatar: string
-  coverImage?: string
-  coverVideo?: string
-  bio: string
-  status: string
-  badges: string[]
-  stats: {
-    followers: number
-    following: number
-    cars: number
-  }
-  tier: 'bronze' | 'silver' | 'gold' | 'platinum'
-  socials: {
-    instagram?: string
-    youtube?: string
-    telegram?: string
-  }
-}
+import type { User } from '@/lib/types'
 
 interface ProfileHeroProps {
-  profile: UserProfile;
+  profile: User;
   isOwner?: boolean;
   isFollowing?: boolean;
   onFollow: () => void;
@@ -107,6 +85,7 @@ export function ProfileHero({
     }
   };
 
+  const tier = 'gold'; // This can be calculated based on stats in the future
   const tierColors = {
     bronze: 'from-orange-600 to-orange-400',
     silver: 'from-gray-400 to-gray-200',
@@ -121,7 +100,7 @@ export function ProfileHero({
   return (
     <div className="relative h-[400px] md:h-[500px] overflow-hidden">
       {/* Фон: видео или фото */}
-      {profile.coverVideo ? (
+      {/* {profile.coverVideo ? (
         <video 
           autoPlay 
           loop 
@@ -131,12 +110,12 @@ export function ProfileHero({
         >
           <source src={profile.coverVideo} type="video/mp4" />
         </video>
-      ) : (
+      ) : ( */}
         <div 
           className="absolute inset-0 w-full h-full bg-cover bg-center"
-          style={{ backgroundImage: `url(${profile.coverImage || '/default-cover.jpg'})` }}
+          style={{ backgroundImage: `url(${profile.coverUrl || '/default-cover.jpg'})` }}
         />
-      )}
+      {/* )} */}
       
       {/* Градиент затемнения */}
       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
@@ -159,10 +138,10 @@ export function ProfileHero({
           <div className="profile-card-glass p-6 md:p-8 rounded-3xl">
             <div className="flex flex-col md:flex-row items-start gap-6">
               {/* Аватар */}
-              <Avatar className={`h-28 w-28 md:h-32 md:w-32 rounded-3xl ring-4 ring-offset-4 ring-offset-background bg-gradient-to-br ${tierColors[profile.tier]} p-1 shadow-2xl`}>
-                <AvatarImage src={profile.avatar} className="rounded-3xl" />
+              <Avatar className={`h-28 w-28 md:h-32 md:w-32 rounded-3xl ring-4 ring-offset-4 ring-offset-background bg-gradient-to-br ${tierColors[tier]} p-1 shadow-2xl`}>
+                <AvatarImage src={profile.photoURL} className="rounded-3xl" />
                 <AvatarFallback className="rounded-3xl text-2xl font-bold bg-gradient-to-br from-blue-500 to-purple-500 text-white">
-                  {profile.displayName[0]}
+                  {profile.displayName?.[0]}
                 </AvatarFallback>
               </Avatar>
               
@@ -172,17 +151,17 @@ export function ProfileHero({
                   <h1 className="text-3xl md:text-4xl font-bold text-white mb-1">
                     {profile.displayName}
                   </h1>
-                  <p className="text-white/70 text-lg">@{profile.username}</p>
+                  <p className="text-white/70 text-lg">@{profile.nickname || profile.email?.split('@')[0]}</p>
                 </div>
                 
                 {/* Бейджи статуса */}
                 <div className="flex flex-wrap gap-2 mb-4">
                   <Badge className="bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0 text-sm px-3 py-1">
-                    {profile.status}
+                    {profile.role === 'admin' ? 'Администратор' : 'Участник'}
                   </Badge>
-                  {profile.badges.map(badge => (
-                    <Badge key={badge} variant="secondary" className="text-sm px-3 py-1">
-                      {badge}
+                  {(profile.achievements || []).slice(0, 2).map(badge => (
+                    <Badge key={badge.id} variant="secondary" className="text-sm px-3 py-1">
+                      {badge.icon} {badge.title}
                     </Badge>
                   ))}
                 </div>
@@ -190,15 +169,15 @@ export function ProfileHero({
                 {/* Статистика */}
                 <div className="flex flex-wrap gap-6 text-white mb-4">
                   <button onClick={onFollowersClick}>
-                    <span className="font-bold text-xl">{profile.stats.followers > 1000 ? `${(profile.stats.followers / 1000).toFixed(1)}k` : profile.stats.followers}</span>
+                    <span className="font-bold text-xl">{profile.stats?.followersCount ?? 0}</span>
                     <span className="text-white/70 text-sm ml-2">Подписчиков</span>
                   </button>
                    <button onClick={onFollowingClick}>
-                    <span className="font-bold text-xl">{profile.stats.following > 1000 ? `${(profile.stats.following / 1000).toFixed(0)}k` : profile.stats.following}</span>
+                    <span className="font-bold text-xl">{profile.stats?.followingCount ?? 0}</span>
                     <span className="text-white/70 text-sm ml-2">Подписок</span>
                   </button>
                   <div>
-                    <span className="font-bold text-xl">{profile.stats.cars}</span>
+                    <span className="font-bold text-xl">{profile.stats?.carsCount ?? 0}</span>
                     <span className="text-white/70 text-sm ml-2">Машин</span>
                   </div>
                 </div>
