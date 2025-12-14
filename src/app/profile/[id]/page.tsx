@@ -1,3 +1,4 @@
+
 // src/app/profile/[id]/page.tsx
 import { getAdminDb } from '@/lib/firebase-admin';
 import type { User, Car, Post } from '@/lib/types';

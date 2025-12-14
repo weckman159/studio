@@ -1,8 +1,10 @@
+
 // src/app/communities/[id]/page.tsx
 import { getAdminDb } from '@/lib/firebase-admin';
 import { notFound } from 'next/navigation';
 import type { Community, Post, User } from '@/lib/types';
 import CommunityDetailClient from './_components/CommunityDetailClient';
+import { serializeFirestoreData } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,12 +23,12 @@ async function getCommunityData(communityId: string): Promise<{ community: Commu
             return { community: null, posts: [], members: [] };
         }
 
-        const community = { id: communityDocSnap.id, ...communityDocSnap.data() } as Community;
+        const community = serializeFirestoreData({ id: communityDocSnap.id, ...communityDocSnap.data() } as Community);
 
         // Fetch posts
         const postsQuery = adminDb.collection('posts').where('communityId', '==', communityId).orderBy('createdAt', 'desc').limit(20);
         const postsSnapshot = await postsQuery.get();
-        const posts = postsSnapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as Post));
+        const posts = postsSnapshot.docs.map((doc: any) => serializeFirestoreData({ id: doc.id, ...doc.data() } as Post));
 
         // Fetch members (limit to 50 for performance)
         const members: User[] = [];
@@ -44,7 +46,7 @@ async function getCommunityData(communityId: string): Promise<{ community: Commu
                     const usersQuery = adminDb.collection('users').where('__name__', 'in', chunk);
                     const usersSnapshot = await usersQuery.get();
                     usersSnapshot.forEach((doc: any) => {
-                        members.push({ id: doc.id, ...doc.data() } as User);
+                        members.push(serializeFirestoreData({ id: doc.id, ...doc.data() } as User));
                     });
                 }
             }

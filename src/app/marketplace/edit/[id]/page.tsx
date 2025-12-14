@@ -1,3 +1,4 @@
+
 // src/app/marketplace/edit/[id]/page.tsx
 'use client';
 
@@ -8,9 +9,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import type { MarketplaceItem } from '@/lib/types';
+import { useEffect, useState } from 'react';
 
 
-async function EditMarketplaceItemClient({ itemId }: { itemId: string }) {
+function EditMarketplaceItemClient({ itemId }: { itemId: string }) {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 

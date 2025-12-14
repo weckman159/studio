@@ -1,8 +1,10 @@
+
 // src/app/marketplace/[id]/page.tsx
 import { getAdminDb } from '@/lib/firebase-admin';
 import { notFound } from 'next/navigation';
 import type { MarketplaceItem } from '@/lib/types';
 import MarketplaceItemClient from './_components/MarketplaceItemClient';
+import { serializeFirestoreData } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,7 +21,7 @@ async function getItemData(itemId: string): Promise<MarketplaceItem | null> {
         if (!itemSnap.exists) {
             return null;
         }
-        return { id: itemSnap.id, ...itemSnap.data() } as MarketplaceItem;
+        return serializeFirestoreData({ id: itemSnap.id, ...itemSnap.data() } as MarketplaceItem);
     } catch (error) {
         console.error("Error fetching marketplace item:", error);
         return null;

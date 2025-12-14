@@ -92,4 +92,3 @@ export default function CreateCommunityPostPage() {
     // Is a member, show the form
     return <PostForm communityId={communityId} communityName={community?.name} />;
 }
-

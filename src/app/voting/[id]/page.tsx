@@ -1,3 +1,4 @@
+
 // src/app/voting/[id]/page.tsx
 'use client';
 
@@ -26,7 +27,7 @@ function VotingDetailClient({ votingId }: { votingId: string }) {
     }, [firestore, votingId]);
 
     const handleVote = async (index: number) => {
-        if(!user || !voting) return;
+        if(!user || !voting || !firestore) return;
         setSubmitting(true);
         try {
             // Ensure votes is an array for voting options
@@ -92,12 +93,7 @@ function VotingDetailClient({ votingId }: { votingId: string }) {
     );
 }
 
-export default function VotingDetailPage({ params }: { params: Promise<{ id: string }> }) {
-    const [votingId, setVotingId] = useState<string>('');
-
-    useEffect(() => {
-        params.then(({ id }) => setVotingId(id));
-    }, [params]);
-
-    return <VotingDetailClient votingId={votingId} />
+export default async function VotingDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
+    return <VotingDetailClient votingId={id} />
 }

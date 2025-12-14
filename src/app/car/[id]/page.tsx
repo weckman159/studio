@@ -1,9 +1,11 @@
+
 // src/app/car/[id]/page.tsx
 import type { Car, TimelineEntry } from '@/lib/types';
 import CarDetailClient from './_components/CarDetailClient';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { getAdminDb } from '@/lib/firebase-admin';
+import { serializeFirestoreData } from '@/lib/utils';
 
 // Критически важно для динамического рендеринга
 export const dynamic = 'force-dynamic';
@@ -23,32 +25,16 @@ async function getCarData(carId: string): Promise<{ car: Car | null, timeline: T
 
     const car = { id: carSnap.id, ...carSnap.data() } as Car;
 
-    // Firebase Admin Timestamps отличаются от клиентских, их нужно конвертировать
-    const convertTimestamp = (ts: any) => {
-        if (ts && ts._seconds) {
-            return new Date(ts._seconds * 1000);
-        }
-        return ts;
-    };
-
     const timelineRef = carRef.collection('timeline');
     const timelineQuery = timelineRef.orderBy('date', 'desc');
     const timelineSnap = await timelineQuery.get();
-    const timeline = timelineSnap.docs.map((doc: any) => {
-      const data = doc.data();
-      return { 
-        id: doc.id,
-        ...data,
-        date: convertTimestamp(data.date), // Конвертируем Timestamp
-      } as TimelineEntry
-    });
+    
+    const timeline = timelineSnap.docs.map((doc: any) => 
+        serializeFirestoreData({ id: doc.id, ...doc.data() }) as TimelineEntry
+    );
 
     return { 
-        car: {
-            ...car,
-            createdAt: convertTimestamp(car.createdAt),
-            updatedAt: car.updatedAt ? convertTimestamp(car.updatedAt) : undefined,
-        }, 
+        car: serializeFirestoreData(car), 
         timeline 
     };
   } catch (error) {

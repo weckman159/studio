@@ -1,3 +1,4 @@
+
 // src/app/communities/[id]/posts/[postId]/page.tsx
 
 import { getAdminDb } from '@/lib/firebase-admin';
@@ -44,19 +45,6 @@ async function getPostData(postId: string): Promise<{ post: Post | null, comment
         return { post: null, comments: [] };
     }
 }
-
-const formatDate = (timestamp: any) => {
-    if (!timestamp) return '';
-    // Firestore Timestamps on the server are different from the client
-    const date = timestamp._seconds ? new Date(timestamp._seconds * 1000) : new Date(timestamp);
-    return new Intl.DateTimeFormat('ru-RU', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date);
-};
 
 export async function generateMetadata({ params }: { params: Promise<{ postId: string }> }): Promise<Metadata> {
   const { postId } = await params;
@@ -136,7 +124,7 @@ export default async function CommunityPostPage({ params }: { params: Promise<{ 
     
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Calendar className="h-4 w-4" />
-                  <span>{formatDate(post.createdAt)}</span>
+                  <span>{post.createdAt ? new Date(post.createdAt).toLocaleString('ru-RU') : ''}</span>
                 </div>
     
                 <PostActions post={post} />

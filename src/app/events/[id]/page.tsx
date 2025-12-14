@@ -1,8 +1,10 @@
+
 // src/app/events/[id]/page.tsx
 import { getAdminDb } from '@/lib/firebase-admin';
 import type { Event, User } from '@/lib/types';
 import { notFound } from 'next/navigation';
 import EventDetailClient from './_components/EventDetailClient';
+import { serializeFirestoreData } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +22,7 @@ async function getEventData(eventId: string): Promise<{ event: Event | null, par
             return { event: null, participants: [] };
         }
 
-        const event = { id: eventDocSnap.id, ...eventDocSnap.data() } as Event;
+        const event = serializeFirestoreData({ id: eventDocSnap.id, ...eventDocSnap.data() } as Event);
 
         const participants: User[] = [];
         if (event.participantIds && event.participantIds.length > 0) {
@@ -34,7 +36,7 @@ async function getEventData(eventId: string): Promise<{ event: Event | null, par
                     const usersQuery = adminDb.collection('users').where('__name__', 'in', chunk);
                     const usersSnapshot = await usersQuery.get();
                     usersSnapshot.forEach((doc: any) => {
-                        participants.push({ id: doc.id, ...doc.data() } as User);
+                        participants.push(serializeFirestoreData({ id: doc.id, ...doc.data() } as User));
                     });
                 }
             }

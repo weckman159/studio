@@ -1,8 +1,10 @@
+
 // src/app/workshops/[id]/page.tsx
 import { getAdminDb } from '@/lib/firebase-admin';
 import type { Workshop, Review } from '@/lib/types';
 import { notFound } from 'next/navigation';
 import WorkshopDetailClient from './_components/WorkshopDetailClient';
+import { serializeFirestoreData } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,14 +23,14 @@ async function getWorkshopData(workshopId: string): Promise<{ workshop: Workshop
             return { workshop: null, reviews: [] };
         }
 
-        const workshop = { id: workshopDocSnap.id, ...workshopDocSnap.data() } as Workshop;
+        const workshop = serializeFirestoreData({ id: workshopDocSnap.id, ...workshopDocSnap.data() } as Workshop);
 
         const reviewsQuery = adminDb.collection('workshopReviews')
             .where('workshopId', '==', workshopId)
             .orderBy('createdAt', 'desc');
 
         const reviewsSnapshot = await reviewsQuery.get();
-        const reviews = reviewsSnapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as Review));
+        const reviews = reviewsSnapshot.docs.map((doc: any) => serializeFirestoreData({ id: doc.id, ...doc.data() } as Review));
         
         return { workshop, reviews };
     } catch (error) {
@@ -40,7 +42,7 @@ async function getWorkshopData(workshopId: string): Promise<{ workshop: Workshop
 
 export default async function WorkshopPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
-    const { workshop, reviews } = await getWorkshopData(id);
+    const { workshop } = await getWorkshopData(id);
 
     if (!workshop) {
         notFound();

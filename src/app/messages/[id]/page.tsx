@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -52,7 +53,7 @@ export default function DialogClient({ params }: { params: Promise<{ id: string 
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || !user) return;
+    if (!input.trim() || !user || !firestore) return;
     const text = input;
     setInput('');
     
@@ -100,7 +101,7 @@ export default function DialogClient({ params }: { params: Promise<{ id: string 
                       }`}>
                           {msg.text}
                           <div className={`text-[10px] mt-1 text-right opacity-70 ${isMe ? 'text-primary-foreground' : 'text-muted-foreground'}`}>
-                              {msg.createdAt?.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                              {msg.createdAt?.toDate ? msg.createdAt?.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}
                           </div>
                       </div>
                   </div>

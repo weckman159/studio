@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -55,12 +56,7 @@ function EditPostClient({ postId }: { postId: string }) {
 }
 
 
-export default function EditPostPage({ params }: { params: Promise<{ id: string }> }) {
-    const [postId, setPostId] = useState<string>('');
-
-    useEffect(() => {
-        params.then(({ id }) => setPostId(id));
-    }, [params]);
-
-    return <EditPostClient postId={postId} />
+export default async function EditPostPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
+    return <EditPostClient postId={id} />
 }
