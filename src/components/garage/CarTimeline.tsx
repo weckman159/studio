@@ -1,10 +1,9 @@
-
 'use client'
 
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import Image from 'next/image'
-import type { TimelineEntry } from '@/lib/types/car'
+import type { TimelineEntry } from '@/lib/types'
 import { Badge } from '@/components/ui/badge'
 
 export function CarTimeline({ entries }: { entries: TimelineEntry[] }) {

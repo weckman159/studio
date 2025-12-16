@@ -1,9 +1,8 @@
-
 'use client'
 
 import { Badge } from '@/components/ui/badge'
 import { TrendingUp, Zap, Gauge, Route } from 'lucide-react'
-import type { Car } from '@/lib/types/car'
+import type { Car } from '@/lib/types'
 
 export function SpecBar({ specs }: { specs: Car['specs'] }) {
   if (!specs) return null;

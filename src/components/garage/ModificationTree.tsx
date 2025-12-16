@@ -1,10 +1,9 @@
-
 'use client'
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { ExternalLink, Heart } from 'lucide-react'
-import type { Car } from '@/lib/types/car'
+import type { Car } from '@/lib/types'
 
 export function ModificationTree({ mods }: { mods: Car['modifications'] }) {
   if (!mods) {

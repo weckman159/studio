@@ -4,7 +4,7 @@ import Image from 'next/image'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Play, Eye, Heart, MessageCircle, Share2 } from 'lucide-react'
-import type { Car } from '@/lib/types/car'
+import type { Car } from '@/lib/types'
 import images from '@/app/lib/placeholder-images.json';
 
 export function CarHero({ car }: { car: Car }) {
@@ -34,7 +34,7 @@ export function CarHero({ car }: { car: Car }) {
         </video>
       ) : (
         <Image 
-          src={car.coverImage || car.photoUrl || car.photos?.[0] || carHeroImage.src}
+          src={car.coverImage || car.photoUrl || (car.photos && car.photos.length > 0 ? car.photos[0] : carHeroImage.src)}
           alt={`${car.brand} ${car.model}`}
           fill
           className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
