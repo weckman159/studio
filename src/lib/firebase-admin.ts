@@ -14,9 +14,11 @@ let adminAuth: Auth | undefined;
  * Uses service account credentials from environment variable
  */
 function initializeAdmin() {
-  if (getApps().find(app => app.name === 'firebase-admin-app')) {
+  const existingApp = getApps().find(app => app.name === 'firebase-admin-app');
+  
+  if (existingApp) {
     if (!adminApp) {
-        adminApp = getApps().find(app => app.name === 'firebase-admin-app');
+        adminApp = existingApp;
         adminDb = getFirestore(adminApp);
         adminAuth = getAuth(adminApp);
     }
