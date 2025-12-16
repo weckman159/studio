@@ -177,6 +177,12 @@ export interface Post {
   communityId?: string;
 }
 
+export interface FeaturedCar {
+  date: string;
+  carId: string;
+  userId: string;
+}
+
 export interface Comment {
     id: string;
     postId: string;
