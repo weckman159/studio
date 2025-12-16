@@ -2,7 +2,7 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebase-admin';
-import { serverTimestamp } from 'firebase-admin/firestore';
+import { FieldValue } from 'firebase-admin/firestore';
 import { revalidatePath } from 'next/cache';
 
 // Handler for creating a new post
@@ -28,8 +28,8 @@ export async function POST(request: NextRequest) {
       likesCount: 0,
       commentsCount: 0,
       views: 0,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
       ...(communityId && { communityId }),
     };
 
