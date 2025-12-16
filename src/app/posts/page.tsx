@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { FeedLayout } from '@/components/posts/FeedLayout';
 import type { Post } from '@/lib/types';

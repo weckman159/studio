@@ -13,6 +13,7 @@ import type { Post, Comment } from '@/lib/types';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { serializeFirestoreData } from '@/lib/utils';
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,7 +38,7 @@ async function getPostData(postId: string): Promise<{ post: Post | null, comment
             .orderBy('createdAt', 'asc');
         
         const commentsSnapshot = await commentsQuery.get();
-        const comments = commentsSnapshot.docs.map((doc: any) => serializeFirestoreData({ id: doc.id, ...doc.data() } as Comment));
+        const comments = commentsSnapshot.docs.map((doc: QueryDocumentSnapshot) => serializeFirestoreData({ id: doc.id, ...doc.data() } as Comment));
 
         return { post, comments };
     } catch (error) {

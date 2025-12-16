@@ -25,9 +25,9 @@ service cloud.firestore {
 
     // --- Collections ---
 
-    // Users: Readable by anyone, but only owners can update their own non-critical data.
+    // Users: Readable by signed-in users, but only owners can update their own non-critical data.
     match /users/{userId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow create: if isOwner(userId);
       // Prevent self-promotion, role/status changes by non-admins
       allow update: if isOwner(userId) && !request.resource.data.keys().hasAny(['role', 'status', 'createdAt']);
