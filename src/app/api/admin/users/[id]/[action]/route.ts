@@ -42,9 +42,9 @@ async function verifyAdmin(request: NextRequest): Promise<string | null> {
 
 export async function POST(
   request: NextRequest,
-  context: { params: Promise<{ id: string; action: string }> }
+  context: { params: { id: string; action: string } }
 ) {
-  const { id: targetUserId, action } = await context.params;
+  const { id: targetUserId, action } = context.params;
 
   const adminUid = await verifyAdmin(request);
   if (!adminUid) {
