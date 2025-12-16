@@ -41,10 +41,17 @@ async function getWorkshopData(workshopId: string): Promise<{ workshop: Workshop
 }
 
 
-export default async function WorkshopPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function WorkshopPage({
+    params,
+  }: {
+    params: Promise<{ id: string }>;
+  }) {
     const { id } = await params;
-    const { workshop } = await getWorkshopData(id);
+    const { workshop, reviews } = await getWorkshopData(id);
 
-    return <WorkshopDetailClient initialWorkshop={workshop!} />
-}
+    if (!workshop) {
+        notFound();
+      }
 
+    return <WorkshopDetailClient initialWorkshop={workshop} />
+}  
