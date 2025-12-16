@@ -1,3 +1,4 @@
+
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -26,14 +27,14 @@ async function getHomepageData() {
     const todayStr = new Date().toISOString().split('T')[0];
     const featuredCarSnap = await db.collection('featuredCars').doc(todayStr).get();
     let carOfTheDay: { car: Car; user: User } | null = null;
-    if (featuredCarSnap.exists()) {
+    if (featuredCarSnap.exists) {
       const featuredData = featuredCarSnap.data() as FeaturedCar;
       if (featuredData.carId && featuredData.userId) {
         const [carSnap, userSnap] = await Promise.all([
           db.collection('cars').doc(featuredData.carId).get(),
           db.collection('users').doc(featuredData.userId).get(),
         ]);
-        if (carSnap.exists() && userSnap.exists()) {
+        if (carSnap.exists && userSnap.exists) {
           carOfTheDay = {
             car: serializeFirestoreData({id: carSnap.id, ...carSnap.data()}) as Car,
             user: serializeFirestoreData({id: userSnap.id, ...userSnap.data()}) as User
