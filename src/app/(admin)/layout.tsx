@@ -59,13 +59,13 @@ export default function AdminLayout({
 
   useEffect(() => {
     if (!isLoading) {
-      if (!user || profile?.role !== 'admin') {
+      if (!user || !profile?.roles?.isAdmin) {
         router.replace('/');
       }
     }
   }, [isLoading, user, profile, router]);
 
-  if (isLoading || !profile || profile.role !== 'admin') {
+  if (isLoading || !profile || !profile.roles?.isAdmin) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
