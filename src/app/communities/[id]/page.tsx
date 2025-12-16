@@ -6,7 +6,7 @@ import type { Community, Post, User } from '@/lib/types';
 import CommunityDetailClient from './_components/CommunityDetailClient';
 import { serializeFirestoreData } from '@/lib/utils';
 
-export const dynamic = 'force_dynamic';
+export const dynamic = 'force-dynamic';
 
 
 async function getCommunityData(communityId: string): Promise<{ community: Community | null; posts: Post[]; members: User[] }> {
@@ -14,7 +14,7 @@ async function getCommunityData(communityId: string): Promise<{ community: Commu
         const adminDb = getAdminDb();
         if (!adminDb) {
             console.error("Firebase Admin not initialized");
-            return { community: null, posts: [], members: [] };
+            notFound();
         }
         const communityDocRef = adminDb.collection('communities').doc(communityId);
         const communityDocSnap = await communityDocRef.get();
@@ -56,7 +56,7 @@ async function getCommunityData(communityId: string): Promise<{ community: Commu
 
     } catch (error) {
         console.error("Error fetching community data:", error);
-        return { community: null, posts: [], members: [] };
+        notFound();
     }
 }
 
