@@ -1,33 +1,35 @@
 
 import type { Timestamp } from 'firebase/firestore';
 
-export interface Achievement {
-  id: string;
-  icon: string;
-  title: string;
-  description: string;
-  unlocked: boolean;
+// --- NEW TYPES FROM ARCHITECTURE DOC ---
+
+// From lib/types/user.ts
+export interface UserRoles {
+  isPremium: boolean;
+  isFirm: boolean;
+  isModerator: boolean;
+  isAdmin: boolean;
 }
 
+// MERGED User type
 export interface User {
-  id: string;
-  name: string;
-  age?: number;
-  displayName: string; // from firebase auth
-  role?: 'user' | 'moderator' | 'admin';
-  status?: 'active' | 'banned';
+  id: string; // from old type
+  uid: string; // from new type
+  displayName: string;
   email?: string;
+  roles: UserRoles; // from new type
+  status?: 'active' | 'banned'; // from old type
+  
   photoURL?: string;
-  coverUrl?: string; // profile cover
+  coverUrl?: string;
   bio?: string;
   nickname?: string;
   location?: string;
-  createdAt?: any;
-  updatedAt?: any;
-  profileVisibility?: 'public' | 'private';
-  currentCarIds?: string[];
-  achievements?: Achievement[];
-  skills?: string[];
+
+  createdAt: any; // Date or Timestamp
+  updatedAt: any; // Date or Timestamp
+
+  // Keeping old stats structure for now
   stats?: {
     postsCount?: number;
     likes?: number;
@@ -45,117 +47,150 @@ export interface User {
   }
 }
 
-// =====================================================================
-//  CAR TYPES (from garage 2.0)
-// =====================================================================
 
-export type CarStatus = 'owned' | 'sold' | 'project' | 'dream' | 'parted'
-export type FitmentStatus = 'flush' | 'tucked' | 'poke'
-export type TimelineType = 'purchase' | 'maintenance' | 'tuning' | 'accident' | 'sale'
-export type ModCategory = 'engine' | 'suspension' | 'exterior' | 'interior' | 'audio'
+// From lib/types/profile.ts
+export interface ProfileLocation {
+  city: string;
+  region: string;
+  country: string;
+}
 
+export interface MarketplaceStats {
+  activeCount: number;
+  soldCount: number;
+  soldSumEUR: number;
+  listedSumEUR: number;
+  avgPriceEUR: number;
+}
+
+export interface PrivacySettings {
+  showSoldPublicly: boolean;
+}
+
+export interface Profile {
+  uid: string;
+  bio: string;
+  location: ProfileLocation;
+  avatarBlobUrl: string;
+  marketplaceStats: MarketplaceStats;
+  privacy: PrivacySettings;
+  favoritesLimit: number; // 20 base, -1 premium
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// From lib/types/garage.ts
+export interface TUVStatus {
+  date: Date;
+  daysRemaining: number;
+  status: 'valid' | 'warning' | 'expired'; // 🟢🟡🔴
+  reportPdfUrl?: string; // Premium only
+  reportPhotos?: string[]; // Premium only
+}
+
+export interface TUVHistory {
+  date: Date;
+  status: string;
+  reportUrl?: string;
+}
+
+export interface CarExpense {
+  id: string;
+  date: Date;
+  category: 'fuel' | 'maintenance' | 'insurance' | 'tuning' | 'other';
+  amountEUR: number;
+  description: string;
+  receiptUrl?: string;
+}
+
+// REPLACED Car type
 export interface Car {
-  id: string
-  userId: string
-  status: CarStatus
-  
-  // Основные данные
-  brand: string
-  model: string
-  generation: string
-  year: number
-  engine: string;
-  nickname?: string
-  vin?: string
-  
-  // Hero-блок
-  coverImage?: string
-  coverVideo?: string
-  photos: string[]
-  photoUrl?: string; // main photo
-  badges?: string[] // ['car-of-the-day', 'top-10-region', 'stage-2']
-  
-  // Спеки
-  specs: {
-    stockHP: number
-    currentHP: number
-    acceleration: number
-    clearance: number
-    mileage: number
-    lastMileageUpdate: Timestamp
-  }
-  
-  // Фитмент
-  fitment?: {
-    front: WheelSetup
-    rear: WheelSetup
-    status: FitmentStatus
-  }
-
+  id: string;
+  uid: string; // owner id
+  vin: string;
+  make: string; // brand
+  model: string;
+  year: number;
+  photos: string[];
+  tuv: TUVStatus;
+  tuvHistory?: TUVHistory[]; // Premium only
+  expenses: CarExpense[];
+  totalExpensesEUR: number;
+  createdAt: Date;
+  updatedAt: Date;
+  // For compatibility with old components temporarily
+  brand: string;
+  userId: string;
+  photoUrl?: string;
+  engine?: string;
   description?: string;
-  
-  // Модификации
-  modifications: Record<ModCategory, Modification[]>
-  
-  // Статистика
-  views: number
-  likes: number
-  comments: number
-  
-  // Метаданные
-  createdAt: Timestamp
-  updatedAt: Timestamp
 }
 
-export interface WheelSetup {
-  et: number
-  width: number
-  tire: string
-  spacers?: number
+// From lib/types/marketplace.ts
+export interface Listing {
+  id: string;
+  uid: string;
+  carId: string;
+  title: string;
+  description: string;
+  priceEUR: number;
+  photos: string[];
+  status: 'active' | 'sold' | 'expired';
+  createdAt: Date;
+  expiresAt: Date; // 30 days from creation
+  updatedAt: Date;
+  viewCount?: number; // Premium only
+  priceHistory?: PriceChange[]; // Premium only
+  soldAt?: Date;
+  soldPriceEUR?: number;
 }
 
-export interface Modification {
-  id: string
-  part: string
-  brand: string
-  model: string
-  price?: number
-  installedAt?: Timestamp
-  postId?: string
-  affiliateLink?: string
+export interface PriceChange {
+  date: Date;
+  oldPriceEUR: number;
+  newPriceEUR: number;
 }
 
-export interface TimelineEntry {
-  id: string
-  carId: string
-  date: any // Can be Timestamp or Date object
-  type: TimelineType
-  title: string
-  description: string
-  mileage: number
-  cost?: number
-  photos: string[]
-  documents: string[]
-  isPublic: boolean
+export interface Favorite {
+  id: string;
+  uid: string;
+  listingId: string;
+  createdAt: Date;
+  notifyOnPriceChange: boolean;
+  notifyOnSold: boolean;
 }
 
-export interface InventoryItem {
-  id: string
-  carId: string
-  name: string
-  category: string
-  quantity: number
-  photo?: string
-  purchasePrice?: number
-  forSale: boolean
-  salePrice?: number
+// From lib/types/notifications.ts
+export type NotificationType =
+  | 'garage_tuv_expiring'
+  | 'marketplace_listing_expiring'
+  | 'marketplace_listing_sold'
+  | 'marketplace_price_dropped'
+  | 'favorite_price_changed'
+  | 'favorite_sold'
+  | 'event_reminder'
+  | 'event_new_attendee'
+  | 'community_new_post'
+  | 'community_post_reply'
+  | 'community_mention'
+  | 'voting_new_poll'
+  | 'voting_poll_ended';
+
+// Renamed to avoid conflict with existing Notification type
+export interface DashboardNotification {
+  id: string;
+  uid: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  read: boolean;
+  actionUrl?: string;
+  metadata?: Record<string, any>;
+  createdAt: Date;
 }
 
 
-// =====================================================================
-//  OTHER TYPES
-// =====================================================================
-
+// --- OLD TYPES TO PRESERVE FUNCTIONALITY ---
 
 export interface Post {
   id: string;
@@ -335,3 +370,55 @@ export interface AutoNews {
   publishedAt: any;
   fetchedAt?: any;
 }
+
+// Keep old Garage 2.0 types for now, might be needed for migration
+export type CarStatus = 'owned' | 'sold' | 'project' | 'dream' | 'parted'
+export type FitmentStatus = 'flush' | 'tucked' | 'poke'
+export type TimelineType = 'purchase' | 'maintenance' | 'tuning' | 'accident' | 'sale'
+export type ModCategory = 'engine' | 'suspension' | 'exterior' | 'interior' | 'audio'
+
+export interface WheelSetup {
+  et: number
+  width: number
+  tire: string
+  spacers?: number
+}
+
+export interface Modification {
+  id: string
+  part: string
+  brand: string
+  model: string
+  price?: number
+  installedAt?: Timestamp
+  postId?: string
+  affiliateLink?: string
+}
+
+export interface TimelineEntry {
+  id: string
+  carId: string
+  date: any // Can be Timestamp or Date object
+  type: TimelineType
+  title: string
+  description: string
+  mileage: number
+  cost?: number
+  photos: string[]
+  documents: string[]
+  isPublic: boolean
+}
+
+export interface InventoryItem {
+  id: string
+  carId: string
+  name: string
+  category: string
+  quantity: number
+  photo?: string
+  purchasePrice?: number
+  forSale: boolean
+  salePrice?: number
+}
+
+    
