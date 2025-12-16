@@ -46,8 +46,8 @@ async function getPostData(postId: string): Promise<{ post: Post | null, comment
     }
 }
 
-export async function generateMetadata({ params }: { params: { postId: string } }): Promise<Metadata> {
-  const { postId } = params;
+export async function generateMetadata({ params }: { params: Promise<{ postId: string }> }): Promise<Metadata> {
+  const { postId } = await params;
   const { post } = await getPostData(postId);
 
   if (!post) return { title: 'Пост не найден' };
@@ -68,8 +68,8 @@ export async function generateMetadata({ params }: { params: { postId: string } 
 }
 
 
-export default async function CommunityPostPage({ params }: { params: { id: string, postId: string } }) {
-    const { postId } = params;
+export default async function CommunityPostPage({ params }: { params: Promise<{ id: string, postId: string }> }) {
+    const { postId } = await params;
     const { post, comments } = await getPostData(postId);
 
     if (!post) {
