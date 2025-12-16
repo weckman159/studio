@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -27,8 +29,17 @@ export function Header() {
   const auth = useAuth();
   const { toast } = useToast();
   const { toggleSidebar } = useSidebar();
-  
+  const [isScrolled, setIsScrolled] = useState(false);
+
   const { profile, isLoading: isProfileLoading } = useUserProfile(authUser?.uid);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const isLoading = isUserLoading || isProfileLoading;
 
@@ -54,7 +65,10 @@ export function Header() {
   ];
 
   return (
-    <header className="sticky top-0 z-30 w-full h-18 border-b border-white/10 bg-black/20 backdrop-blur-lg">
+    <header className={cn(
+      "sticky top-0 z-30 w-full h-18 border-b transition-colors duration-300",
+      isScrolled ? "border-white/10 bg-black/20 backdrop-blur-lg" : "border-transparent"
+    )}>
       <div className="container flex items-center max-w-7xl mx-auto px-4">
         {/* Mobile Menu Trigger */}
         <Button variant="ghost" size="icon" onClick={toggleSidebar} className="md:hidden mr-2">
@@ -86,9 +100,11 @@ export function Header() {
              <Skeleton className="h-10 w-24" />
           ) : authUser ? (
             <>
-              <Button className="hidden sm:flex bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20">
-                <PlusSquare className="h-4 w-4 mr-2"/>
-                Создать пост
+              <Button asChild className="hidden sm:flex bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20">
+                <Link href="/posts/create">
+                  <PlusSquare className="h-4 w-4 mr-2"/>
+                  Создать пост
+                </Link>
               </Button>
               <Notifications />
               <DropdownMenu>

@@ -1,4 +1,3 @@
-
 'use client'
 
 import Link from 'next/link'
@@ -6,28 +5,9 @@ import Image from 'next/image'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Heart, MessageCircle, ChevronRight, Image as ImageIcon } from 'lucide-react'
+import type { Post } from '@/lib/types'
 
-interface PostCardProps {
-  post: {
-    id: string
-    title: string
-    content: string
-    category?: string
-    coverImage?: string
-    imageUrl?: string
-    authorId: string
-    authorName?: string
-    authorAvatar?: string
-    createdAt: any
-    likesCount?: number
-    likes?: number
-    commentsCount?: number
-    comments?: number
-  }
-  communityId?: string
-}
-
-export function PostCard({ post, communityId }: PostCardProps) {
+export function PostCard({ post, communityId }: { post: Post, communityId?: string }) {
   const formatDate = (timestamp: any) => {
     if (!timestamp) return ''
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp)
@@ -47,9 +27,9 @@ export function PostCard({ post, communityId }: PostCardProps) {
       .slice(0, 180)
   }
 
-  const likesCount = post.likesCount ?? post.likes ?? 0
-  const commentsCount = post.commentsCount ?? post.comments ?? 0
-  const coverImage = post.coverImage || post.imageUrl
+  const likesCount = post.likesCount ?? 0
+  const commentsCount = post.commentsCount ?? 0
+  const coverImage = post.imageUrl
 
   const postUrl = communityId 
     ? `/communities/${communityId}/posts/${post.id}`
@@ -57,7 +37,7 @@ export function PostCard({ post, communityId }: PostCardProps) {
 
   return (
     <Link href={postUrl}>
-      <article className="group mb-6 rounded-3xl border border-border/40 bg-card overflow-hidden transition-all duration-300 hover:border-primary/40 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-1">
+      <article className="group mb-6 rounded-3xl border border-border/40 bg-card/80 backdrop-blur-lg overflow-hidden transition-all duration-300 hover:border-primary/40 hover:shadow-[0_0_40px_-10px_rgba(237,38,48,0.3)] hover:-translate-y-1">
         <div className="flex flex-col md:flex-row">
           <div className="relative w-full md:w-2/5 h-56 md:h-auto bg-muted overflow-hidden">
             {coverImage ? (

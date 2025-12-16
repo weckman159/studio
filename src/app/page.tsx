@@ -10,12 +10,12 @@ import type { Post, Car, FeaturedCar, User } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 async function getHomepageData() {
   try {
     const db = getAdminDb();
     
-    // Get 3 recent posts
     const postsSnap = await db.collection('posts')
       .where('status', '==', 'published')
       .orderBy('createdAt', 'desc')
@@ -23,7 +23,6 @@ async function getHomepageData() {
       .get();
     const posts = postsSnap.docs.map(doc => serializeFirestoreData({id: doc.id, ...doc.data()}) as Post);
 
-    // Get Car of the Day
     const todayStr = new Date().toISOString().split('T')[0];
     const featuredCarSnap = await db.collection('featuredCars').doc(todayStr).get();
     let carOfTheDay: { car: Car; user: User } | null = null;
@@ -43,11 +42,9 @@ async function getHomepageData() {
       }
     }
 
-    // Get Top Authors
     const topAuthorsSnap = await db.collection('users').orderBy('stats.postsCount', 'desc').limit(2).get();
     const topAuthors = topAuthorsSnap.docs.map(doc => serializeFirestoreData({id: doc.id, ...doc.data()}) as User);
 
-    // Get Trends from recent post categories
     const trendsSnap = await db.collection('posts')
       .where('status', '==', 'published')
       .orderBy('createdAt', 'desc')
@@ -85,7 +82,7 @@ function GlassCard({ children, className }: { children: React.ReactNode, classNa
 
 function PrimaryButton({ children, className }: { children: React.ReactNode, className?: string }) {
   return (
-    <Button asChild className={`bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 ${className}`}>
+    <Button asChild className={cn("bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 transition-transform duration-300 hover:-translate-y-0.5", className)}>
       <Link href="/posts/create">
         {children}
       </Link>
