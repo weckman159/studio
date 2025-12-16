@@ -19,17 +19,16 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import type { Car, User } from '@/lib/types';
+import type { Car } from '@/lib/types';
 import { MoreVertical, Edit, Trash2 } from 'lucide-react';
 
 interface GarageCardProps {
   car: Car;
-  user: User;
   onEdit: (car: Car) => void;
   onDelete: (car: Car) => void;
 }
 
-export function GarageCard({ car, user, onEdit, onDelete }: GarageCardProps) {
+export function GarageCard({ car, onEdit, onDelete }: GarageCardProps) {
   const carImage = car.photoUrl;
 
   return (

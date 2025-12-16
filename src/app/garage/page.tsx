@@ -7,7 +7,7 @@ import { GarageCard } from "@/components/GarageCard";
 import { Button } from "@/components/ui/button";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, doc, deleteDoc, where } from 'firebase/firestore';
-import type { Car, User as UserType } from '@/lib/types';
+import type { Car } from '@/lib/types';
 import { Plus, Car as CarIcon } from "lucide-react";
 import { AddCarForm } from '@/components/AddCarForm';
 import { useToast } from "@/hooks/use-toast";
@@ -86,14 +86,6 @@ export default function GaragePage() {
     );
   }
 
-  const userForCard: UserType = {
-      id: user.uid,
-      displayName: user.displayName || 'Пользователь',
-      name: user.displayName || 'Пользователь',
-      email: user.email || '',
-      photoURL: user.photoURL || undefined,
-  };
-
   const garageStats = {
     totalCars: userCars?.length || 0,
     averageYear: userCars && userCars.length > 0
@@ -131,7 +123,7 @@ export default function GaragePage() {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {userCars.map(car => (
-                <GarageCard key={car.id} car={car} user={userForCard} onEdit={handleEdit} onDelete={() => handleDelete(car)}/>
+                <GarageCard key={car.id} car={car} onEdit={handleEdit} onDelete={() => handleDelete(car)}/>
               ))}
             </div>
              <Card className="mt-8">
