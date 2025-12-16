@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
+import { trackEvent } from '@/lib/analytics'
 
 export function CookieConsent() {
   const [showBanner, setShowBanner] = useState(false)
@@ -40,7 +41,7 @@ export function CookieConsent() {
     }
     localStorage.setItem('cookie-consent', JSON.stringify(allAccepted))
     setShowBanner(false)
-    // TODO: Инициализировать аналитику, рекламу и т.д.
+    trackEvent('cookie_consent_accepted', { type: 'all' });
   }
 
   const acceptNecessary = () => {
@@ -52,13 +53,14 @@ export function CookieConsent() {
     }
     localStorage.setItem('cookie-consent', JSON.stringify(necessary))
     setShowBanner(false)
+    trackEvent('cookie_consent_accepted', { type: 'necessary' });
   }
 
   const savePreferences = () => {
     localStorage.setItem('cookie-consent', JSON.stringify(preferences))
     setShowBanner(false)
     setShowSettings(false)
-    // TODO: Применить настройки
+    trackEvent('cookie_consent_saved', preferences);
   }
 
   if (!showBanner) return null
