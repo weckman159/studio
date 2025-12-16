@@ -1,44 +1,48 @@
-# To learn more about how to use Nix to configure your environment
-# see: https://firebase.google.com/docs/studio/customize-workspace
-{pkgs}: {
-  # Which nixpkgs channel to use.
-  channel = "stable-24.11"; # or "unstable"
-  # Use https://search.nixos.org/packages to find packages
+{ pkgs, ... }: {
+  # Канал Nix для стабильности зависимостей
+  channel = "stable-23.11";
+
+  # Системные пакеты, доступные в вашем воркспейсе
   packages = [
-    pkgs.nodejs_20
-    pkgs.zulu
+    pkgs.nodejs_20      # Node.js v20 для вашего Next.js проекта
+    pkgs.firebase-tools # Firebase CLI для управления проектом
+    pkgs.imagemagick    # Утилита для обработки изображений
   ];
-  # Sets environment variables in the workspace
-  env = {};
-  # This adds a file watcher to startup the firebase emulators. The emulators will only start if
-  # a firebase.json file is written into the user's directory
-  services.firebase.emulators = {
-    # Disabling because we are using prod backends right now
-    detect = false;
-    projectId = "demo-app";
-    services = ["auth" "firestore"];
-  };
-  idx = {
-    # Search for the extensions you want on https://open-vsx.org/ and use "publisher.id"
-    extensions = [
-      # "vscodevim.vim"
-    ];
-    workspace = {
-      onCreate = {
-        default.openFiles = [
-          "src/app/page.tsx"
-        ];
-      };
+
+  # Рекомендуемые расширения VS Code для вашего стека
+  extensions = [
+    "dbaeumer.vscode-eslint"    # Подсветка ошибок ESLint
+    "esbenp.prettier-vscode"    # Автоформатирование кода
+    "firebase.firebase-vscode"  # Официальная интеграция Firebase
+    "bradlc.vscode-tailwindcss" # Автодополнение для Tailwind CSS
+  ];
+
+  # Настройки рабочего пространства
+  workspace = {
+    # Команда для установки зависимостей при создании воркспейса
+    onCreate = {
+      install-deps = "npm install";
     };
-    # Enable previews and customize configuration
-    previews = {
-      enable = true;
-      previews = {
-        web = {
-          command = ["npm" "run" "dev" "--" "--port" "$PORT" "--hostname" "0.0.0.0"];
-          manager = "web";
-        };
-      };
+
+    # Команда для запуска сервера разработки при старте воркспейса
+    onStart = {
+      dev = "npm run dev";
     };
   };
+
+  # Настройка превью
+  previews = [
+    {
+      # Автоматически открывает превью веб-приложения на порту 9002
+      port = 9002;
+      name = "Web App";
+      description = "Превью вашего Next.js приложения";
+    },
+    {
+      # Добавляет опцию для запуска эмулятора Android
+      name = "Android Emulator";
+      manager = "android";
+      description = "Эмулятор Android для мобильного тестирования";
+    }
+  ];
 }
