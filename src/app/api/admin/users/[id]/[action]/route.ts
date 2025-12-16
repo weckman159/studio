@@ -40,16 +40,11 @@ async function verifyAdmin(request: NextRequest): Promise<string | null> {
   }
 }
 
-
-type RouteContext = {
-  params: {
-    id: string;
-    action: string;
-  };
-};
-
-export async function POST(request: NextRequest, context: { params: RouteContext['params'] }) {
-  const { id: targetUserId, action } = context.params;
+export async function POST(
+  request: NextRequest,
+  context: { params: Promise<{ id: string; action: string }> }
+) {
+  const { id: targetUserId, action } = await context.params;
 
   const adminUid = await verifyAdmin(request);
   if (!adminUid) {
