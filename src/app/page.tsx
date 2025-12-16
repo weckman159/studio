@@ -2,13 +2,14 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PostCard } from '@/components/shared/PostCard';
+import { PostCard } from '@/components/PostCard';
 import { Heart, Zap, MessageCircle, Users, BarChart2 } from 'lucide-react';
 import { getAdminDb } from '@/lib/firebase-admin';
 import { serializeFirestoreData } from '@/lib/utils';
 import type { Post, Car, FeaturedCar, User } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 
 async function getHomepageData() {
   try {
@@ -46,10 +47,30 @@ async function getHomepageData() {
     const topAuthorsSnap = await db.collection('users').orderBy('stats.postsCount', 'desc').limit(2).get();
     const topAuthors = topAuthorsSnap.docs.map(doc => serializeFirestoreData({id: doc.id, ...doc.data()}) as User);
 
-    return { posts, carOfTheDay, topAuthors };
+    // Get Trends from recent post categories
+    const trendsSnap = await db.collection('posts')
+      .where('status', '==', 'published')
+      .orderBy('createdAt', 'desc')
+      .limit(50)
+      .get();
+      
+    const categoryCounts: Record<string, number> = {};
+    trendsSnap.docs.forEach(doc => {
+      const category = doc.data().category;
+      if (category) {
+        categoryCounts[category] = (categoryCounts[category] || 0) + 1;
+      }
+    });
+
+    const trends = Object.entries(categoryCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 4)
+      .map(([name]) => name);
+
+    return { posts, carOfTheDay, topAuthors, trends };
   } catch (error) {
     console.error("Error fetching homepage data:", error);
-    return { posts: [], carOfTheDay: null, topAuthors: [] };
+    return { posts: [], carOfTheDay: null, topAuthors: [], trends: [] };
   }
 }
 
@@ -74,7 +95,7 @@ function PrimaryButton({ children, className }: { children: React.ReactNode, cla
 
 
 export default async function HomePage() {
-  const { posts, carOfTheDay, topAuthors } = await getHomepageData();
+  const { posts, carOfTheDay, topAuthors, trends } = await getHomepageData();
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 py-8">
@@ -149,10 +170,16 @@ export default async function HomePage() {
             <CardHeader>
               <CardTitle className="flex items-center"><BarChart2 className="mr-2 h-5 w-5" /> Тренды недели</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-sm text-muted-foreground hover:text-foreground cursor-pointer">#jdm (в разработке)</p>
-              <p className="text-sm text-muted-foreground hover:text-foreground cursor-pointer">#stanced (в разработке)</p>
-              <p className="text-sm text-muted-foreground hover:text-foreground cursor-pointer">#гонки (в разработке)</p>
+            <CardContent className="flex flex-wrap gap-2">
+              {trends.length > 0 ? trends.map(trend => (
+                <Link key={trend} href={`/posts?category=${encodeURIComponent(trend)}`}>
+                  <Badge variant="secondary" className="hover:bg-primary/20 cursor-pointer text-sm">
+                    #{trend}
+                  </Badge>
+                </Link>
+              )) : (
+                <p className="text-sm text-muted-foreground">Трендов пока нет.</p>
+              )}
             </CardContent>
           </GlassCard>
           <GlassCard>
