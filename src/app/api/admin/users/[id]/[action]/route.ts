@@ -1,4 +1,3 @@
-
 import 'server-only';
 import { NextResponse, type NextRequest } from 'next/server';
 import { getAdminDb, getAdminAuth } from '@/lib/firebase-admin';
@@ -42,9 +41,9 @@ async function verifyAdmin(request: NextRequest): Promise<string | null> {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string; action: string } }
+  { params }: { params: Promise<{ id: string; action: string }> }
 ) {
-  const { id: targetUserId, action } = params;
+  const { id: targetUserId, action } = await params;
 
   const adminUid = await verifyAdmin(request);
   if (!adminUid) {
