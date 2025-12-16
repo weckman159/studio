@@ -1,0 +1,48 @@
+{ pkgs, ... }: {
+  # Канал Nix для стабильности зависимостей
+  channel = "stable-23.11";
+
+  # Системные пакеты, доступные в вашем воркспейсе
+  packages = [
+    pkgs.nodejs_20      # Node.js v20 для вашего Next.js проекта
+    pkgs.firebase-tools # Firebase CLI для управления проектом
+    pkgs.imagemagick    # Утилита для обработки изображений
+  ];
+
+  # Рекомендуемые расширения VS Code для вашего стека
+  extensions = [
+    "dbaeumer.vscode-eslint"    # Подсветка ошибок ESLint
+    "esbenp.prettier-vscode"    # Автоформатирование кода
+    "firebase.firebase-vscode"  # Официальная интеграция Firebase
+    "bradlc.vscode-tailwindcss" # Автодополнение для Tailwind CSS
+  ];
+
+  # Настройки рабочего пространства
+  workspace = {
+    # Команда для установки зависимостей при создании воркспейса
+    onCreate = {
+      install-deps = "npm install";
+    };
+
+    # Команда для запуска сервера разработки при старте воркспейса
+    onStart = {
+      dev = "npm run dev";
+    };
+  };
+
+  # Настройка превью
+  previews = [
+    {
+      # Автоматически открывает превью веб-приложения на порту 9002
+      port = 9002;
+      name = "Web App";
+      description = "Превью вашего Next.js приложения";
+    }
+    {
+      # Добавляет опцию для запуска эмулятора Android
+      name = "Android Emulator";
+      manager = "android";
+      description = "Эмулятор Android для мобильного тестирования";
+    }
+  ];
+}
