@@ -28,8 +28,8 @@ async function getItemData(itemId: string): Promise<MarketplaceItem | null> {
     }
 }
 
-export default async function MarketplaceItemPage({ params }: { params: { id: string } }) {
-    const { id } = params;
+export default async function MarketplaceItemPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
     const item = await getItemData(id);
     
     return <MarketplaceItemClient item={item!} />
