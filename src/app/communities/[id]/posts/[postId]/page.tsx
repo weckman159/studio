@@ -14,7 +14,7 @@ import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { serializeFirestoreData } from '@/lib/utils';
 
-export const dynamic = 'force_dynamic';
+export const dynamic = 'force-dynamic';
 
 async function getPostData(postId: string): Promise<{ post: Post | null, comments: Comment[] }> {
     try {
@@ -71,6 +71,10 @@ export async function generateMetadata({ params }: { params: { postId: string } 
 export default async function CommunityPostPage({ params }: { params: { id: string, postId: string } }) {
     const { postId } = params;
     const { post, comments } = await getPostData(postId);
+
+    if (!post) {
+        notFound();
+    }
     
     return (
         <div className="min-h-screen">
