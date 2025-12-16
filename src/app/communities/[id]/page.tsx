@@ -61,9 +61,11 @@ async function getCommunityData(communityId: string): Promise<{ community: Commu
 }
 
 
-export default async function CommunityDetailPage({ params }: { params: { id: string } }) {
-    const { id } = params;
+export default async function CommunityDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
     const { community, posts, members } = await getCommunityData(id);
 
     return <CommunityDetailClient initialCommunity={community!} initialPosts={posts} initialMembers={members} />
 }
+
+    
