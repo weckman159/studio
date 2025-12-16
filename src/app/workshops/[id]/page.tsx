@@ -5,6 +5,7 @@ import type { Workshop, Review } from '@/lib/types';
 import { notFound } from 'next/navigation';
 import WorkshopDetailClient from './_components/WorkshopDetailClient';
 import { serializeFirestoreData } from '@/lib/utils';
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,7 +31,7 @@ async function getWorkshopData(workshopId: string): Promise<{ workshop: Workshop
             .orderBy('createdAt', 'desc');
 
         const reviewsSnapshot = await reviewsQuery.get();
-        const reviews = reviewsSnapshot.docs.map((doc: any) => serializeFirestoreData({ id: doc.id, ...doc.data() } as Review));
+        const reviews = reviewsSnapshot.docs.map((doc: QueryDocumentSnapshot) => serializeFirestoreData({ id: doc.id, ...doc.data() } as Review));
         
         return { workshop, reviews };
     } catch (error) {
@@ -40,9 +41,10 @@ async function getWorkshopData(workshopId: string): Promise<{ workshop: Workshop
 }
 
 
-export default async function WorkshopPage({ params }: { params: { id: string } }) {
-    const { id } = params;
+export default async function WorkshopPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
     const { workshop } = await getWorkshopData(id);
 
     return <WorkshopDetailClient initialWorkshop={workshop!} />
 }
+
