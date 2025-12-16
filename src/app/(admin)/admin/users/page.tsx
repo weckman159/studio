@@ -4,7 +4,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { collection, query, orderBy, getDocs, onSnapshot } from 'firebase/firestore';
 import { useFirestore, useUser } from '@/firebase';
-import { User } from '@/lib/types';
+import { User, UserRoles } from '@/lib/types';
 import { serializeFirestoreData } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -18,6 +18,13 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Search, Loader2, MoreHorizontal, Shield, UserX, UserCheck } from 'lucide-react';
 import Link from 'next/link';
+
+// Helper to determine the display role string
+const getUserDisplayRole = (roles?: UserRoles): string => {
+    if (roles?.isAdmin) return 'admin';
+    if (roles?.isModerator) return 'moderator';
+    return 'user';
+}
 
 export default function AdminUsersPage() {
     const { user: adminUser } = useUser();
@@ -51,11 +58,12 @@ export default function AdminUsersPage() {
         if (!adminUser) return;
         
         try {
+            const token = await adminUser.getIdToken();
             const response = await fetch(`/api/admin/actions`, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'x-user-id': adminUser.uid, // WARNING: Insecure for production. Use proper session tokens.
+                    'Authorization': `Bearer ${token}`,
                 },
                 body: JSON.stringify({ action, targetUserId, payload }),
             });
@@ -129,7 +137,9 @@ export default function AdminUsersPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredUsers.map((user) => (
+                            {filteredUsers.map((user) => {
+                                const displayRole = getUserDisplayRole(user.roles);
+                                return (
                                 <TableRow key={user.id}>
                                     <TableCell>
                                         <Link href={`/profile/${user.id}`} className="flex items-center gap-3 group">
@@ -144,8 +154,8 @@ export default function AdminUsersPage() {
                                         </Link>
                                     </TableCell>
                                     <TableCell>
-                                        <Badge variant={user.role === 'admin' ? 'default' : 'outline'} className={user.role === 'admin' ? 'bg-purple-600' : ''}>
-                                            {user.role || 'user'}
+                                        <Badge variant={user.roles?.isAdmin ? 'default' : 'outline'} className={user.roles?.isAdmin ? 'bg-purple-600' : ''}>
+                                            {displayRole}
                                         </Badge>
                                     </TableCell>
                                     <TableCell>{statusBadge(user)}</TableCell>
@@ -160,10 +170,10 @@ export default function AdminUsersPage() {
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuLabel>Действия</DropdownMenuLabel>
                                                 <DropdownMenuSeparator />
-                                                <DropdownMenuItem onClick={() => openConfirmation(`Сделать ${user.displayName} админом?`, 'Это даст ему полные права.', () => performAction(user.id, 'setRole', { role: 'admin' }))} disabled={user.role === 'admin'}>
+                                                <DropdownMenuItem onClick={() => openConfirmation(`Сделать ${user.displayName} админом?`, 'Это даст ему полные права.', () => performAction(user.id, 'setRole', { role: 'admin' }))} disabled={user.roles?.isAdmin}>
                                                     <Shield className="mr-2 h-4 w-4" />Сделать админом
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => openConfirmation(`Снять права админа с ${user.displayName}?`, 'Пользователь станет обычным юзером.', () => performAction(user.id, 'setRole', { role: 'user' }))} disabled={user.role !== 'admin'}>
+                                                <DropdownMenuItem onClick={() => openConfirmation(`Снять права админа с ${user.displayName}?`, 'Пользователь станет обычным юзером.', () => performAction(user.id, 'setRole', { role: 'user' }))} disabled={!user.roles?.isAdmin}>
                                                     <UserCheck className="mr-2 h-4 w-4" />Сделать юзером
                                                 </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
@@ -180,7 +190,7 @@ export default function AdminUsersPage() {
                                         </DropdownMenu>
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                            )})}
                         </TableBody>
                     </Table>
                 </CardContent>

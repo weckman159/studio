@@ -1,14 +1,16 @@
+
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb, getAdminAuth } from '@/lib/firebase-admin';
 import { revalidatePath } from 'next/cache';
 import { Timestamp } from 'firebase-admin/firestore';
+import { UserRoles } from '@/lib/types';
 
 /**
  * Securely verifies if the request comes from an authenticated user with an 'admin' role.
  * It uses the Firebase ID token from the Authorization header.
  */
-async function getAdminUserFromRequest(request: NextRequest): Promise<{ uid: string; role: string } | null> {
+async function getAdminUserFromRequest(request: NextRequest): Promise<{ uid: string; roles: UserRoles } | null> {
     const authHeader = request.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
         console.warn("API request missing 'Authorization' Bearer token.");
@@ -25,12 +27,18 @@ async function getAdminUserFromRequest(request: NextRequest): Promise<{ uid: str
         const db = getAdminDb();
         const userDoc = await db.collection('users').doc(uid).get();
         
-        if (!userDoc.exists || userDoc.data()?.role !== 'admin') {
-            console.warn(`Admin action attempted by user ${uid} who is not an admin.`);
+        if (!userDoc.exists) {
+            console.warn(`Admin action attempted by non-existent user: ${uid}`);
+            return null;
+        }
+        
+        const userRoles = userDoc.data()?.roles as UserRoles;
+        if (!userRoles || (!userRoles.isAdmin && !userRoles.isModerator)) {
+            console.warn(`Admin action attempted by user ${uid} who is not an admin or moderator.`);
             return null;
         }
 
-        return { uid: uid, role: userDoc.data()?.role };
+        return { uid: uid, roles: userRoles };
     } catch (error) {
         console.error("Auth token verification failed:", error);
         return null;
@@ -65,7 +73,20 @@ export async function POST(request: NextRequest) {
                 if (!newRole || !['user', 'moderator', 'admin'].includes(newRole)) {
                     return NextResponse.json({ error: 'Invalid role provided' }, { status: 400 });
                 }
-                updateData = { role: newRole };
+
+                const targetUserDoc = await userRef.get();
+                if (!targetUserDoc.exists) {
+                    return NextResponse.json({ error: 'Target user not found' }, { status: 404 });
+                }
+                const currentRoles = (targetUserDoc.data()?.roles || {}) as UserRoles;
+                
+                const newRoles: UserRoles = {
+                    ...currentRoles,
+                    isAdmin: newRole === 'admin',
+                    isModerator: newRole === 'moderator' || newRole === 'admin',
+                };
+                
+                updateData = { roles: newRoles };
                 message = `Роль пользователя обновлена на ${newRole}`;
                 break;
 
