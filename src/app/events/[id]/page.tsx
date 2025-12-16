@@ -6,7 +6,7 @@ import { notFound } from 'next/navigation';
 import EventDetailClient from './_components/EventDetailClient';
 import { serializeFirestoreData } from '@/lib/utils';
 
-export const dynamic = 'force_dynamic';
+export const dynamic = 'force-dynamic';
 
 async function getEventData(eventId: string): Promise<{ event: Event | null, participants: User[] }> {
     try {
@@ -45,7 +45,7 @@ async function getEventData(eventId: string): Promise<{ event: Event | null, par
         return { event, participants };
     } catch (error) {
         console.error("Error fetching event data:", error);
-        return { event: null, participants: [] };
+        notFound();
     }
 }
 

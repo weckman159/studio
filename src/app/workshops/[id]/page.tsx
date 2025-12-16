@@ -6,7 +6,7 @@ import { notFound } from 'next/navigation';
 import WorkshopDetailClient from './_components/WorkshopDetailClient';
 import { serializeFirestoreData } from '@/lib/utils';
 
-export const dynamic = 'force_dynamic';
+export const dynamic = 'force-dynamic';
 
 
 async function getWorkshopData(workshopId: string): Promise<{ workshop: Workshop | null, reviews: Review[] }> {
@@ -14,7 +14,7 @@ async function getWorkshopData(workshopId: string): Promise<{ workshop: Workshop
         const adminDb = getAdminDb();
         if (!adminDb) {
             console.error("Firebase Admin not initialized");
-            return { workshop: null, reviews: [] };
+            notFound();
         }
         const workshopDocRef = adminDb.collection('workshops').doc(workshopId);
         const workshopDocSnap = await workshopDocRef.get();
@@ -35,7 +35,7 @@ async function getWorkshopData(workshopId: string): Promise<{ workshop: Workshop
         return { workshop, reviews };
     } catch (error) {
         console.error("Error fetching workshop data:", error);
-        return { workshop: null, reviews: [] };
+        notFound();
     }
 }
 

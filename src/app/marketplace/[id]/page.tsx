@@ -6,14 +6,14 @@ import type { MarketplaceItem } from '@/lib/types';
 import MarketplaceItemClient from './_components/MarketplaceItemClient';
 import { serializeFirestoreData } from '@/lib/utils';
 
-export const dynamic = 'force_dynamic';
+export const dynamic = 'force-dynamic';
 
 async function getItemData(itemId: string): Promise<MarketplaceItem | null> {
     try {
         const adminDb = getAdminDb();
         if (!adminDb) {
             console.error("Firebase Admin not initialized");
-            return null;
+            notFound();
         }
         const itemRef = adminDb.collection('marketplace').doc(itemId);
         
@@ -24,18 +24,13 @@ async function getItemData(itemId: string): Promise<MarketplaceItem | null> {
         return serializeFirestoreData({ id: itemSnap.id, ...itemSnap.data() } as MarketplaceItem);
     } catch (error) {
         console.error("Error fetching marketplace item:", error);
-        return null;
+        notFound();
     }
 }
 
 export default async function MarketplaceItemPage({ params }: { params: { id: string } }) {
     const { id } = params;
     const item = await getItemData(id);
-
-    // Эта проверка не нужна, если getItemData вызывает notFound()
-    // if (!item) {
-    //     notFound();
-    // }
     
     return <MarketplaceItemClient item={item!} />
 }
