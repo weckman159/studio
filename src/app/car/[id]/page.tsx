@@ -20,7 +20,7 @@ async function getCarData(carId: string): Promise<{ car: Car | null, timeline: T
     const carSnap = await carRef.get();
 
     if (!carSnap.exists) {
-      return { car: null, timeline: [] };
+      notFound(); // Вызываем notFound, если машина не найдена
     }
 
     const car = { id: carSnap.id, ...carSnap.data() } as Car;
@@ -43,26 +43,27 @@ async function getCarData(carId: string): Promise<{ car: Car | null, timeline: T
   }
 }
 
-export default async function CarPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default async function CarPage({ params }: { params: { id: string } }) {
+  const { id } = params;
   const { car, timeline } = await getCarData(id);
 
-  if (!car) {
-    notFound();
-  }
+  // Эта проверка уже не нужна, так как getCarData вызовет notFound()
+  // if (!car) {
+  //   notFound();
+  // }
 
   return <CarDetailClient initialCar={car} initialTimeline={timeline} />;
 }
 
 // Добавляем генерацию метаданных
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
-  const { id } = await params;
+export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+  const { id } = params;
   const { car } = await getCarData(id); // Используем существующую функцию
 
   if (!car) return { title: 'Автомобиль не найден' };
 
   const title = `${car.brand} ${car.model} ${car.year}`;
-  const description = `${car.engine}, ${car.specs?.currentHP || '?'} л.с. Бортжурнал и история обслуживания на AutoSphere.`;
+  const description = `${car.engine || ''}, ${car.mileage || '?'} км. Бортжурнал и история обслуживания на AutoSphere.`;
   const image = car.photoUrl || car.photos?.[0] || 'https://autosphere.app/default-og.jpg'; // Замените на свой дефолт
 
   return {

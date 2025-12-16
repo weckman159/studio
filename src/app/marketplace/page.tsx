@@ -1,3 +1,4 @@
+
 // src/app/marketplace/page.tsx
 // Главная страница маркетплейса с автозапчастями, аксессуарами, автомобилями
 // Поиск, фильтрация по категориям, сортировка по цене
@@ -5,7 +6,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { collection, query, orderBy, getDocs } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import Link from 'next/link';
@@ -59,11 +60,12 @@ function MarketplaceSkeleton() {
 export default function MarketplacePage() {
   const firestore = useFirestore();
   const [items, setItems] = useState<MarketplaceItem[]>([]);
-  const [filteredItems, setFilteredItems] = useState<MarketplaceItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Состояния для фильтрации и поиска
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortBy, setSortBy] = useState('createdAt_desc'); // date, price-asc, price-desc
-  const [loading, setLoading] = useState(true);
 
   // Загрузка товаров при монтировании
   useEffect(() => {
@@ -73,7 +75,6 @@ export default function MarketplacePage() {
   }, [firestore]);
 
   // Функция загрузки товаров из Firestore
-  // Gemini: получаем все объявления, сортируем по дате создания (новые первыми)
   const fetchItems = async () => {
     if (!firestore) return;
     try {
@@ -88,7 +89,6 @@ export default function MarketplacePage() {
         ...doc.data()
       } as MarketplaceItem));
       setItems(itemsData);
-      setFilteredItems(itemsData);
     } catch (error) {
       console.error('Ошибка загрузки товаров:', error);
     } finally {
@@ -96,9 +96,8 @@ export default function MarketplacePage() {
     }
   };
 
-  // Фильтрация и сортировка
-  // Gemini: применяем фильтры в реальном времени без запроса к БД
-  useEffect(() => {
+  // Фильтрация и сортировка с использованием useMemo для оптимизации
+  const filteredItems = useMemo(() => {
     let result = [...items];
 
     // Фильтр по категории
@@ -120,12 +119,12 @@ export default function MarketplacePage() {
       result.sort((a, b) => a.price - b.price);
     } else if (sortBy === 'price_desc') {
       result.sort((a, b) => b.price - a.price);
-    } else { // createdAt_desc is default
-       result.sort((a, b) => b.createdAt.toDate() - a.createdAt.toDate());
-    }
-
-    setFilteredItems(result);
+    } 
+    // `createdAt_desc` - сортировка по умолчанию из Firestore
+    
+    return result;
   }, [searchQuery, selectedCategory, sortBy, items]);
+
 
   // Форматирование цены
   const formatPrice = (price: number, currency: string) => {

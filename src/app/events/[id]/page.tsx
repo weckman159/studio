@@ -6,7 +6,7 @@ import { notFound } from 'next/navigation';
 import EventDetailClient from './_components/EventDetailClient';
 import { serializeFirestoreData } from '@/lib/utils';
 
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force_dynamic';
 
 async function getEventData(eventId: string): Promise<{ event: Event | null, participants: User[] }> {
     try {
@@ -19,7 +19,7 @@ async function getEventData(eventId: string): Promise<{ event: Event | null, par
         const eventDocSnap = await eventDocRef.get();
 
         if (!eventDocSnap.exists) {
-            return { event: null, participants: [] };
+            notFound();
         }
 
         const event = serializeFirestoreData({ id: eventDocSnap.id, ...eventDocSnap.data() } as Event);
@@ -50,13 +50,9 @@ async function getEventData(eventId: string): Promise<{ event: Event | null, par
 }
 
 
-export default async function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = await params;
+export default async function EventDetailPage({ params }: { params: { id: string } }) {
+    const { id } = params;
     const { event, participants } = await getEventData(id);
     
-    if (!event) {
-        notFound();
-    }
-
-    return <EventDetailClient initialEvent={event} initialParticipants={participants} />
+    return <EventDetailClient initialEvent={event!} initialParticipants={participants} />
 }

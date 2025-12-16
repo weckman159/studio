@@ -6,7 +6,7 @@ import type { MarketplaceItem } from '@/lib/types';
 import MarketplaceItemClient from './_components/MarketplaceItemClient';
 import { serializeFirestoreData } from '@/lib/utils';
 
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force_dynamic';
 
 async function getItemData(itemId: string): Promise<MarketplaceItem | null> {
     try {
@@ -19,7 +19,7 @@ async function getItemData(itemId: string): Promise<MarketplaceItem | null> {
         
         const itemSnap = await itemRef.get();
         if (!itemSnap.exists) {
-            return null;
+            notFound();
         }
         return serializeFirestoreData({ id: itemSnap.id, ...itemSnap.data() } as MarketplaceItem);
     } catch (error) {
@@ -28,13 +28,14 @@ async function getItemData(itemId: string): Promise<MarketplaceItem | null> {
     }
 }
 
-export default async function MarketplaceItemPage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = await params;
+export default async function MarketplaceItemPage({ params }: { params: { id: string } }) {
+    const { id } = params;
     const item = await getItemData(id);
 
-    if (!item) {
-        notFound();
-    }
+    // Эта проверка не нужна, если getItemData вызывает notFound()
+    // if (!item) {
+    //     notFound();
+    // }
     
-    return <MarketplaceItemClient item={item} />
+    return <MarketplaceItemClient item={item!} />
 }

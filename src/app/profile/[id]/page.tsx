@@ -19,17 +19,19 @@ async function getProfileData(userId: string) {
 
     try {
         const userRef = adminDb.collection('users').doc(userId);
-        const [userSnap, carsSnap, postsSnap, followersSnap, followingSnap] = await Promise.all([
-            userRef.get(),
+        const userSnap = await userRef.get();
+
+        if (!userSnap.exists) {
+            notFound();
+        }
+        
+        const [carsSnap, postsSnap, followersSnap, followingSnap] = await Promise.all([
             adminDb.collection('cars').where('userId', '==', userId).get(),
             adminDb.collection('posts').where('authorId', '==', userId).orderBy('createdAt', 'desc').limit(20).get(),
             userRef.collection('followers').get(),
             userRef.collection('following').get()
         ]);
 
-        if (!userSnap.exists) {
-            return { profile: null, cars: [], posts: [], followers: [], following: [] };
-        }
 
         const profile = serializeFirestoreData({ id: userSnap.id, ...userSnap.data() }) as User;
         const cars = carsSnap.docs.map((d: QueryDocumentSnapshot) => serializeFirestoreData({ id: d.id, ...d.data() }) as Car);
@@ -46,18 +48,14 @@ async function getProfileData(userId: string) {
 }
 
 
-export default async function ProfilePage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = await params;
+export default async function ProfilePage({ params }: { params: { id: string } }) {
+    const { id } = params;
     const { profile, cars, posts, followers, following } = await getProfileData(id);
-
-    if (!profile) {
-        notFound();
-    }
 
     return (
         <ProfileClientPage
             profileId={id}
-            initialProfile={profile}
+            initialProfile={profile!}
             initialCars={cars}
             initialPosts={posts}
             initialFollowers={followers}

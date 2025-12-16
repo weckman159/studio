@@ -6,7 +6,7 @@ import { notFound } from 'next/navigation';
 import WorkshopDetailClient from './_components/WorkshopDetailClient';
 import { serializeFirestoreData } from '@/lib/utils';
 
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force_dynamic';
 
 
 async function getWorkshopData(workshopId: string): Promise<{ workshop: Workshop | null, reviews: Review[] }> {
@@ -20,7 +20,7 @@ async function getWorkshopData(workshopId: string): Promise<{ workshop: Workshop
         const workshopDocSnap = await workshopDocRef.get();
 
         if (!workshopDocSnap.exists) {
-            return { workshop: null, reviews: [] };
+            notFound();
         }
 
         const workshop = serializeFirestoreData({ id: workshopDocSnap.id, ...workshopDocSnap.data() } as Workshop);
@@ -40,13 +40,9 @@ async function getWorkshopData(workshopId: string): Promise<{ workshop: Workshop
 }
 
 
-export default async function WorkshopPage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = await params;
+export default async function WorkshopPage({ params }: { params: { id: string } }) {
+    const { id } = params;
     const { workshop } = await getWorkshopData(id);
 
-    if (!workshop) {
-        notFound();
-    }
-    
-    return <WorkshopDetailClient initialWorkshop={workshop} />
+    return <WorkshopDetailClient initialWorkshop={workshop!} />
 }

@@ -1,3 +1,4 @@
+
 import 'server-only';
 // src/lib/firebase-admin.ts - Server-side Firebase Admin SDK
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
@@ -13,63 +14,59 @@ let adminAuth: Auth | undefined;
  * Uses service account credentials from environment variable
  */
 function initializeAdmin() {
-  if (getApps().length > 0 && adminApp) {
-    // Already initialized
+  if (getApps().find(app => app.name === 'firebase-admin-app')) {
+    if (!adminApp) {
+        adminApp = getApps().find(app => app.name === 'firebase-admin-app');
+        adminDb = getFirestore(adminApp);
+        adminAuth = getAuth(adminApp);
+    }
     return;
   }
 
   try {
-    // Parse service account key from environment variable
     const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
     
     if (!serviceAccountKey) {
-      console.warn('⚠️ FIREBASE_SERVICE_ACCOUNT_KEY not found. Admin SDK not initialized.');
+      console.warn('⚠️ FIREBASE_SERVICE_ACCOUNT_KEY not found. Admin SDK will not be initialized. Build may fail.');
       return;
     }
 
     let serviceAccount;
     try {
-      // Try to parse as JSON string
       serviceAccount = JSON.parse(serviceAccountKey);
     } catch (e) {
-      console.error('❌ Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY as JSON:', e);
+      console.error('❌ Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY as JSON. Ensure it is a valid JSON string.', e);
       return;
     }
 
-    // Initialize the admin app
+    // Initialize the admin app with a unique name
     adminApp = initializeApp({
       credential: cert(serviceAccount),
-    }, 'firebase-admin-app'); // Give a unique name to avoid conflicts
+    }, 'firebase-admin-app');
 
     adminDb = getFirestore(adminApp);
     adminAuth = getAuth(adminApp);
     
-    console.log('✅ Firebase Admin SDK initialized successfully');
+    console.log('✅ Firebase Admin SDK initialized successfully.');
+
   } catch (error: any) {
-    // Prevent re-initialization error
     if (!/already exists/i.test(error.message)) {
         console.error('❌ Error initializing Firebase Admin SDK:', error);
-    } else if (!adminApp) {
-        // If it exists but our variables are not set, get the default app
-        adminApp = getApps().find(app => app.name === 'firebase-admin-app') || getApps()[0];
-        adminDb = getFirestore(adminApp);
-        adminAuth = getAuth(adminApp);
     }
   }
 }
 
+// Call initialization on module load
+initializeAdmin();
+
+
 /**
  * Get Firestore Admin instance (server-side only)
- * Returns a mock implementation if Admin SDK is not initialized
+ * Returns a mock implementation if Admin SDK is not initialized to allow build to pass in some CI environments
  */
 export function getAdminDb(): Firestore {
   if (!adminDb) {
-    initializeAdmin();
-  }
-  
-  if (!adminDb) {
-    console.warn('⚠️ Using mock Firestore Admin - configure FIREBASE_SERVICE_ACCOUNT_KEY for production');
-    // Return a mock object that won't crash the app during development without keys
+    console.warn('⚠️ Using mock Firestore Admin - configure FIREBASE_SERVICE_ACCOUNT_KEY for production.');
     return {
       collection: (name: string) => ({
         doc: (id: string) => ({
@@ -103,7 +100,6 @@ export function getAdminDb(): Firestore {
       })
     } as unknown as Firestore;
   }
-  
   return adminDb;
 }
 
@@ -112,11 +108,7 @@ export function getAdminDb(): Firestore {
  */
 export function getAdminAuth(): Auth {
   if (!adminAuth) {
-    initializeAdmin();
-  }
-  
-  if (!adminAuth) {
-    console.warn('⚠️ Using mock Auth Admin - configure FIREBASE_SERVICE_ACCOUNT_KEY for production');
+    console.warn('⚠️ Using mock Auth Admin - configure FIREBASE_SERVICE_ACCOUNT_KEY for production.');
     return {
       verifyIdToken: async (token: string) => null,
       getUser: async (uid: string) => null,
@@ -125,6 +117,5 @@ export function getAdminAuth(): Auth {
       deleteUser: async (uid: string) => {},
     } as unknown as Auth;
   }
-  
   return adminAuth;
 }

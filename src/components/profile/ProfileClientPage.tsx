@@ -53,6 +53,7 @@ export function ProfileClientPage({
   const [posts] = useState<Post[]>(initialPosts);
   const [followers, setFollowers] = useState<string[]>(initialFollowers);
   const [following, setFollowing] = useState<string[]>(initialFollowing);
+  const [activeTab, setActiveTab] = useState('journal');
   
   const [isFollowing, setIsFollowing] = useState(false);
   const [loadingAction, setLoadingAction] = useState(false);
@@ -153,7 +154,7 @@ export function ProfileClientPage({
             </div>
             
             <div className="lg:col-span-3">
-              <Tabs defaultValue="journal" className="w-full">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent">
                    <TabsTrigger 
                     value="journal"

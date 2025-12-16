@@ -6,7 +6,7 @@ import type { Community, Post, User } from '@/lib/types';
 import CommunityDetailClient from './_components/CommunityDetailClient';
 import { serializeFirestoreData } from '@/lib/utils';
 
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force_dynamic';
 
 
 async function getCommunityData(communityId: string): Promise<{ community: Community | null; posts: Post[]; members: User[] }> {
@@ -20,7 +20,7 @@ async function getCommunityData(communityId: string): Promise<{ community: Commu
         const communityDocSnap = await communityDocRef.get();
 
         if (!communityDocSnap.exists) {
-            return { community: null, posts: [], members: [] };
+            notFound();
         }
 
         const community = serializeFirestoreData({ id: communityDocSnap.id, ...communityDocSnap.data() } as Community);
@@ -61,13 +61,9 @@ async function getCommunityData(communityId: string): Promise<{ community: Commu
 }
 
 
-export default async function CommunityDetailPage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = await params;
+export default async function CommunityDetailPage({ params }: { params: { id: string } }) {
+    const { id } = params;
     const { community, posts, members } = await getCommunityData(id);
 
-    if (!community) {
-        notFound();
-    }
-    
-    return <CommunityDetailClient initialCommunity={community} initialPosts={posts} initialMembers={members} />
+    return <CommunityDetailClient initialCommunity={community!} initialPosts={posts} initialMembers={members} />
 }

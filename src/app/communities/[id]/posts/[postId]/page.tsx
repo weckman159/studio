@@ -14,7 +14,7 @@ import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { serializeFirestoreData } from '@/lib/utils';
 
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force_dynamic';
 
 async function getPostData(postId: string): Promise<{ post: Post | null, comments: Comment[] }> {
     try {
@@ -27,7 +27,7 @@ async function getPostData(postId: string): Promise<{ post: Post | null, comment
         const postDocSnap = await postDocRef.get();
 
         if (!postDocSnap.exists) {
-            return { post: null, comments: [] };
+            notFound();
         }
 
         const post = serializeFirestoreData({ id: postDocSnap.id, ...postDocSnap.data() } as Post);
@@ -46,8 +46,8 @@ async function getPostData(postId: string): Promise<{ post: Post | null, comment
     }
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ postId: string }> }): Promise<Metadata> {
-  const { postId } = await params;
+export async function generateMetadata({ params }: { params: { postId: string } }): Promise<Metadata> {
+  const { postId } = params;
   const { post } = await getPostData(postId);
 
   if (!post) return { title: 'Пост не найден' };
@@ -68,13 +68,9 @@ export async function generateMetadata({ params }: { params: Promise<{ postId: s
 }
 
 
-export default async function CommunityPostPage({ params }: { params: Promise<{ id: string, postId: string }> }) {
-    const { postId } = await params;
+export default async function CommunityPostPage({ params }: { params: { id: string, postId: string } }) {
+    const { postId } = params;
     const { post, comments } = await getPostData(postId);
-
-    if (!post) {
-        notFound();
-    }
     
     return (
         <div className="min-h-screen">

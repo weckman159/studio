@@ -11,7 +11,7 @@ import { PostActions } from './_components/PostActions'
 import { Calendar } from 'lucide-react'
 
 type PostPageProps = {
-  params: Promise<{ id: string }>
+  params: { id: string }
 }
 
 async function getPostData(postId: string) {
@@ -25,7 +25,7 @@ async function getPostData(postId: string) {
     ]);
 
     if (!postSnap.exists) {
-        return { post: null, comments: [] };
+        notFound();
     }
 
     const post = serializeFirestoreData({ id: postSnap.id, ...postSnap.data() }) as Post;
@@ -37,7 +37,7 @@ async function getPostData(postId: string) {
 export async function generateMetadata(
   { params }: PostPageProps
 ): Promise<Metadata> {
-  const { id } = await params;
+  const { id } = params;
   const { post } = await getPostData(id);
 
   if (!post) {
@@ -61,12 +61,8 @@ export async function generateMetadata(
 }
 
 export default async function PostPage({ params }: PostPageProps) {
-  const { id } = await params;
+  const { id } = params;
   const { post, comments } = await getPostData(id);
-
-  if (!post) {
-    notFound()
-  }
 
   const coverImage = post.imageUrl;
 
