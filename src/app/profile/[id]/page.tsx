@@ -48,14 +48,18 @@ async function getProfileData(userId: string) {
 }
 
 
-export default async function ProfilePage({ params }: { params: { id: string } }) {
-    const { id } = params;
+export default async function ProfilePage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
     const { profile, cars, posts, followers, following } = await getProfileData(id);
+
+    if (!profile) {
+      notFound();
+    }
 
     return (
         <ProfileClientPage
             profileId={id}
-            initialProfile={profile!}
+            initialProfile={profile}
             initialCars={cars}
             initialPosts={posts}
             initialFollowers={followers}

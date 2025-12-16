@@ -5,13 +5,13 @@ import { getAdminDb } from '@/lib/firebase-admin'
 import type { Metadata } from 'next'
 import { stripHtml, serializeFirestoreData } from '@/lib/utils'
 import Image from 'next/image'
-import type { Post } from '@/lib/types'
+import type { Post, Comment } from '@/lib/types'
 import { PostComments } from './_components/PostComments'
 import { PostActions } from './_components/PostActions'
 import { Calendar } from 'lucide-react'
 
 type PostPageProps = {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 async function getPostData(postId: string) {
@@ -29,7 +29,7 @@ async function getPostData(postId: string) {
     }
 
     const post = serializeFirestoreData({ id: postSnap.id, ...postSnap.data() }) as Post;
-    const comments = commentsSnap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() })) as any[];
+    const comments = commentsSnap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() })) as Comment[];
     
     return { post, comments };
 }
@@ -37,7 +37,7 @@ async function getPostData(postId: string) {
 export async function generateMetadata(
   { params }: PostPageProps
 ): Promise<Metadata> {
-  const { id } = params;
+  const { id } = await params;
   const { post } = await getPostData(id);
 
   if (!post) {
@@ -61,7 +61,7 @@ export async function generateMetadata(
 }
 
 export default async function PostPage({ params }: PostPageProps) {
-  const { id } = params;
+  const { id } = await params;
   const { post, comments } = await getPostData(id);
 
   const coverImage = post.imageUrl;
