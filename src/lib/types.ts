@@ -25,13 +25,20 @@ export interface Modification {
   affiliateLink?: string;
 }
 
-// --- NEW TYPES FROM ARCHITECTURE DOC ---
+// --- NEW TYPES FROM ARCHITECTURE DOC & MERGED ---
 
 export interface UserRoles {
   isPremium: boolean;
   isFirm: boolean;
   isModerator: boolean;
   isAdmin: boolean;
+}
+
+export interface Achievement {
+  id: string;
+  icon: string;
+  title: string;
+  unlocked: boolean;
 }
 
 // Merged User type
@@ -49,6 +56,9 @@ export interface User {
   bio?: string;
   nickname?: string;
   location?: string;
+  profileVisibility?: 'public' | 'private';
+  achievements?: Achievement[];
+  skills?: string[];
 
   createdAt: any;
   updatedAt: any;
@@ -142,8 +152,8 @@ export interface Car {
   updatedAt: any;
   
   // Merged from old type for compatibility
-  brand: string;
-  userId: string;
+  brand: string; // Redundant with 'make', but needed for old components
+  userId: string; // Redundant with 'uid', but needed for old components
   description?: string;
   photoUrl?: string;
   engine?: string;
@@ -182,10 +192,10 @@ export interface Listing {
   photos: string[];
   status: 'active' | 'sold' | 'expired';
   createdAt: Date;
-  expiresAt: Date;
+  expiresAt: Date; // 30 days from creation
   updatedAt: Date;
-  viewCount?: number;
-  priceHistory?: PriceChange[];
+  viewCount?: number; // Premium only
+  priceHistory?: PriceChange[]; // Premium only
   soldAt?: Date;
   soldPriceEUR?: number;
 }

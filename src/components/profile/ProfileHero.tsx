@@ -1,3 +1,4 @@
+
 'use client'
 import { useState } from 'react'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
@@ -158,7 +159,7 @@ export function ProfileHero({
                 {/* Бейджи статуса */}
                 <div className="flex flex-wrap gap-2 mb-4">
                   <Badge className="bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0 text-sm px-3 py-1">
-                    {profile.role === 'admin' ? 'Администратор' : 'Участник'}
+                    {profile.roles?.isAdmin ? 'Администратор' : 'Участник'}
                   </Badge>
                   {(profile.achievements || []).slice(0, 2).map(badge => (
                     <Badge key={badge.id} variant="secondary" className="text-sm px-3 py-1">
