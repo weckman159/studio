@@ -1,27 +1,27 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { collection, query, getDocs, orderBy, limit } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
+import React, { useState, useEffect, useMemo } from 'react';
+import { collection, query, getDocs, orderBy, limit, DocumentData, startAfter, where } from 'firebase/firestore';
+import { useFirestore, useUser } from '@/firebase';
 import { PostCard } from '@/components/PostCard';
 import { PostFilters } from '@/components/PostFilters';
 import { Post } from '@/lib/types';
 import { serializeFirestoreData } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MessageSquare, Users, Newspaper } from 'lucide-react';
-import { useUser } from '@/firebase/provider';
+import { MessageSquare, Users, Newspaper, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 
+
 function FeedSkeleton() {
     return (
-        <div className="space-y-8">
-            {[...Array(3)].map((_, i) => (
-                <div key={i} className="flex flex-col md:flex-row gap-6 p-4 border border-border rounded-xl holographic-panel">
-                    <Skeleton className="w-full md:w-2/5 h-56 rounded-lg" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {[...Array(4)].map((_, i) => (
+                <div key={i} className="flex flex-col gap-6 p-4 border border-border rounded-xl holographic-panel">
+                    <Skeleton className="w-full h-56 rounded-lg" />
                     <div className="flex-1 space-y-4">
                         <Skeleton className="h-8 w-3/4" />
                         <Skeleton className="h-4 w-full" />
@@ -103,28 +103,47 @@ function AutoNewsWidget() {
   );
 }
 
-
 export default function PostsPage() {
     const firestore = useFirestore();
     const { user } = useUser();
-    const [posts, setPosts] = useState<Post[]>([]);
-    const [filteredPosts, setFilteredPosts] = useState<Post[]>([]);
-    const [loading, setLoading] = useState(true);
     
-    // Filter states
+    const [posts, setPosts] = useState<Post[]>([]);
+    const [lastDoc, setLastDoc] = useState<DocumentData | null>(null);
+    const [hasMore, setHasMore] = useState(true);
+    const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+    
     const [activeCategory, setActiveCategory] = useState('Все');
     const [searchQuery, setSearchQuery] = useState('');
     const [feedType, setFeedType] = useState<'global' | 'following'>('global');
+
+    const POSTS_PER_PAGE = 10;
 
     useEffect(() => {
         const fetchPosts = async () => {
             if (!firestore) return;
             setLoading(true);
+            setPosts([]);
+            setLastDoc(null);
+            
             try {
-                const postsQuery = query(collection(firestore, 'posts'), orderBy('createdAt', 'desc'), limit(50));
+                let baseQuery = collection(firestore, 'posts');
+                let conditions: any[] = [orderBy('createdAt', 'desc'), limit(POSTS_PER_PAGE)];
+                
+                if (activeCategory !== 'Все') {
+                    conditions.unshift(where('category', '==', activeCategory));
+                }
+
+                // TODO: Add logic for 'following' feedType
+
+                const postsQuery = query(baseQuery, ...conditions);
                 const snapshot = await getDocs(postsQuery);
                 const postsData = snapshot.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Post);
+                
                 setPosts(postsData);
+                setLastDoc(snapshot.docs[snapshot.docs.length - 1]);
+                setHasMore(snapshot.docs.length === POSTS_PER_PAGE);
+
             } catch (error) {
                 console.error("Error fetching posts:", error);
             } finally {
@@ -132,32 +151,46 @@ export default function PostsPage() {
             }
         };
         fetchPosts();
-    }, [firestore]);
+    }, [firestore, activeCategory, feedType]);
 
-    useEffect(() => {
-        let tempPosts = [...posts];
+    const handleLoadMore = async () => {
+        if (!firestore || !lastDoc || !hasMore) return;
+        setLoadingMore(true);
+        try {
+            let baseQuery = collection(firestore, 'posts');
+            let conditions: any[] = [
+                orderBy('createdAt', 'desc'),
+                startAfter(lastDoc),
+                limit(POSTS_PER_PAGE)
+            ];
 
-        if (feedType === 'following') {
-            // Placeholder for following feed logic
-            // In a real app, this would require fetching posts from users the current user follows
-            // For now, we can simulate by filtering or showing a message
-            tempPosts = []; // Or filter based on a list of followed user IDs
+            if (activeCategory !== 'Все') {
+                conditions.unshift(where('category', '==', activeCategory));
+            }
+            
+            const postsQuery = query(baseQuery, ...conditions);
+            const snapshot = await getDocs(postsQuery);
+            const newPostsData = snapshot.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Post);
+
+            setPosts(prevPosts => [...prevPosts, ...newPostsData]);
+            setLastDoc(snapshot.docs[snapshot.docs.length - 1]);
+            setHasMore(snapshot.docs.length === POSTS_PER_PAGE);
+
+        } catch (error) {
+            console.error("Error fetching more posts:", error);
+        } finally {
+            setLoadingMore(false);
         }
+    }
 
-        if (activeCategory !== 'Все') {
-            tempPosts = tempPosts.filter(p => p.category === activeCategory);
-        }
-
-        if (searchQuery.trim()) {
-            const lowercasedQuery = searchQuery.toLowerCase();
-            tempPosts = tempPosts.filter(p => 
-                p.title.toLowerCase().includes(lowercasedQuery) ||
-                (p.content && p.content.toLowerCase().includes(lowercasedQuery))
-            );
-        }
-
-        setFilteredPosts(tempPosts);
-    }, [posts, activeCategory, searchQuery, feedType]);
+    const filteredPosts = useMemo(() => {
+        if (!searchQuery) return posts;
+        const lowercasedQuery = searchQuery.toLowerCase();
+        return posts.filter(p => 
+            p.title.toLowerCase().includes(lowercasedQuery) ||
+            (p.content && p.content.toLowerCase().includes(lowercasedQuery))
+        );
+    }, [posts, searchQuery]);
 
 
     return (
@@ -178,7 +211,22 @@ export default function PostsPage() {
                     {loading ? (
                         <FeedSkeleton />
                     ) : filteredPosts.length > 0 ? (
-                        filteredPosts.map(post => <PostCard key={post.id} post={post} />)
+                        <>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                {filteredPosts.map(post => <PostCard key={post.id} post={post} />)}
+                            </div>
+                            
+                            {hasMore && (
+                                <div className="flex justify-end mt-8">
+                                    <Button onClick={handleLoadMore} disabled={loadingMore} variant="outline" size="lg">
+                                        {loadingMore ? (
+                                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                        ) : null}
+                                        ЕЩЕ
+                                    </Button>
+                                </div>
+                            )}
+                        </>
                     ) : (
                         <div className="holographic-panel rounded-xl text-center py-16">
                             <MessageSquare className="mx-auto h-12 w-12 text-text-muted mb-4"/>
