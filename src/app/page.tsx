@@ -1,6 +1,7 @@
+
 'use client';
-import React, { useEffect, useRef } from 'react';
-import { Sparkles, Users, Rss, Store, Car, Zap, Search, GaugeCircle, BatteryCharging, Palette, Info, Newspaper, MoreHorizontal, Heart, MessageCircle, Send, Shield, BarChart, ChevronRight, Gem, Infinity, Star, ThumbsUp } from 'lucide-react';
+import React from 'react';
+import { Sparkles, Users, Rss, Store, Car, Zap, Search, GaugeCircle, BatteryCharging, Palette, Info, Newspaper, MoreHorizontal, Heart, MessageCircle, Send, Shield, BarChart, ChevronRight, Gem, Infinity, Star, ThumbsUp, Flame, TrendingUp, Globe, Menu, User as UserIcon, LogOut, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
@@ -14,7 +15,7 @@ const FeaturedCarHero = () => {
                 <div className="w-[90%] aspect-[16/9] relative" style={{ backgroundImage: "url('https://picsum.photos/seed/nissangtr/1200/675')", backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }}>
                     <div className="absolute top-0 left-0">
                         <div className="flex items-center gap-2 bg-yellow-500/20 backdrop-blur-md border border-yellow-500/50 px-4 py-1.5 rounded-full shadow-[0_0_15px_rgba(234,179,8,0.3)]">
-                            <Star className="text-yellow-400 text-lg filled" />
+                            <Star className="text-yellow-400 text-lg" fill="currentColor" />
                             <span className="text-yellow-400 font-bold text-sm tracking-wider uppercase">Авто дня</span>
                         </div>
                     </div>
@@ -36,7 +37,7 @@ const FeaturedCarHero = () => {
                 </div>
             </div>
             <div className="relative z-20 p-8 w-full bg-gradient-to-t from-background-dark via-background-dark/90 to-transparent">
-                <div className="flex gap-4">
+                <div className="flex w-full justify-between items-end gap-4">
                     <Button className="bg-primary hover:bg-white text-background-dark transition-colors rounded-full px-8 py-3 text-base font-bold flex items-center gap-2 shadow-lg glow">
                         <span>Новое голосование</span>
                         <Palette className="text-[20px]" />
@@ -53,7 +54,7 @@ const FeaturedCarHero = () => {
 
 // Live Feed Component
 const LiveFeed = () => (
-    <section className="w-full">
+    <section className="w-full mt-6">
         <div className="flex items-center justify-between pb-4 mb-4 border-b border-primary/20">
             <h5 className="text-sm font-bold text-primary uppercase tracking-wider flex items-center gap-2"><Newspaper className="text-base" /> Live Feed</h5>
             <div className="flex items-center gap-2 text-xs">
@@ -138,3 +139,4 @@ export default function HomePage() {
         </div>
     );
 }
+
