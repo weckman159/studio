@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, doc, deleteDoc, where } from 'firebase/firestore';
 import type { Car } from '@/lib/types';
-import { Plus, Car as CarIcon } from "lucide-react";
+import { Plus, Car as CarIcon, Loader2 } from "lucide-react";
 import { AddCarForm } from '@/components/AddCarForm';
 import { useToast } from "@/hooks/use-toast";
 import { deleteFile } from '@/lib/storage';
@@ -66,12 +66,9 @@ export default function GaragePage() {
   
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="p-8">
         <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Загрузка гаража...</p>
-          </div>
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       </div>
     );
@@ -79,9 +76,9 @@ export default function GaragePage() {
 
   if (!user) {
     return (
-      <div className="container mx-auto px-4 py-8 text-center">
-        <h1 className="text-2xl font-bold mb-4">Мой гараж</h1>
-        <p className="mb-4">Пожалуйста, <Link href="/auth" className="text-primary underline">войдите</Link>, чтобы увидеть свой гараж.</p>
+      <div className="p-8 text-center">
+        <h1 className="text-2xl font-bold mb-4 text-white">Мой гараж</h1>
+        <p className="mb-4 text-text-secondary">Пожалуйста, <Link href="/auth" className="text-primary underline">войдите</Link>, чтобы увидеть свой гараж.</p>
       </div>
     );
   }
@@ -111,9 +108,9 @@ export default function GaragePage() {
         }}
         carToEdit={editingCar}
       />
-      <div className="container mx-auto px-4 py-8">
+      <div className="p-4 md:p-8">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Мой гараж</h1>
+          <h1 className="text-3xl font-bold text-white">Мой гараж</h1>
           <Button onClick={handleOpenAddCar}>
             <Plus className="mr-2 h-4 w-4" /> Добавить авто
           </Button>
@@ -126,33 +123,33 @@ export default function GaragePage() {
                 <GarageCard key={car.id} car={car} onEdit={handleEdit} onDelete={() => handleDelete(car)}/>
               ))}
             </div>
-             <Card className="mt-8">
+             <Card className="mt-8 holographic-panel">
                 <CardHeader>
-                  <CardTitle>Статистика гаража</CardTitle>
+                  <CardTitle className="text-white">Статистика гаража</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="text-center p-4 bg-muted/50 rounded-lg">
+                    <div className="text-center p-4 bg-surface rounded-lg">
                       <div className="text-3xl font-bold text-primary mb-1">
                         {garageStats.totalCars}
                       </div>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-text-secondary">
                         {garageStats.totalCars === 1 ? 'Автомобиль' : (garageStats.totalCars > 1 && garageStats.totalCars < 5 ? 'Автомобиля' : 'Автомобилей')}
                       </p>
                     </div>
-                    <div className="text-center p-4 bg-muted/50 rounded-lg">
+                    <div className="text-center p-4 bg-surface rounded-lg">
                        <div className="text-3xl font-bold text-primary mb-1">
                         {garageStats.averageYear || '-'}
                       </div>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-text-secondary">
                         Средний год выпуска
                       </p>
                     </div>
-                    <div className="text-center p-4 bg-muted/50 rounded-lg">
+                    <div className="text-center p-4 bg-surface rounded-lg">
                        <div className="text-3xl font-bold text-primary mb-1">
                         {garageStats.mostCommonBrand}
                       </div>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-text-secondary">
                         Самый частый бренд
                       </p>
                     </div>
@@ -161,10 +158,10 @@ export default function GaragePage() {
               </Card>
           </>
         ) : (
-          <div className="text-center py-16 border-2 border-dashed rounded-lg">
-            <CarIcon className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-            <h2 className="text-xl font-semibold text-muted-foreground">Ваш гараж пуст</h2>
-            <p className="text-muted-foreground mt-2">Начните с добавления вашего первого автомобиля.</p>
+          <div className="text-center py-16 border-2 border-dashed border-border rounded-xl holographic-panel">
+            <CarIcon className="mx-auto h-16 w-16 text-text-muted mb-4" />
+            <h2 className="text-xl font-semibold text-white">Ваш гараж пуст</h2>
+            <p className="text-text-secondary mt-2">Начните с добавления вашего первого автомобиля.</p>
             <Button className="mt-4" onClick={handleOpenAddCar}>
               <Plus className="mr-2 h-4 w-4" /> Добавить авто
             </Button>

@@ -57,13 +57,15 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
     }
 
     return (
-        <ProfileClientPage
-            profileId={id}
-            initialProfile={profile}
-            initialCars={cars}
-            initialPosts={posts}
-            initialFollowers={followers}
-            initialFollowing={following}
-        />
+        <div className="p-4 md:p-8">
+            <ProfileClientPage
+                profileId={id}
+                initialProfile={profile}
+                initialCars={cars}
+                initialPosts={posts}
+                initialFollowers={followers}
+                initialFollowing={following}
+            />
+        </div>
     );
 }

@@ -14,13 +14,12 @@ import Image from 'next/image';
 import type { Community } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
-
 function CommunitiesPageSkeleton() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {[...Array(6)].map((_, i) => (
-        <Card key={i} className="h-full flex flex-col">
-          <Skeleton className="aspect-video w-full rounded-t-lg" />
+        <Card key={i} className="holographic-panel flex flex-col">
+          <Skeleton className="aspect-video w-full" />
           <div className="flex flex-col flex-1 p-4">
             <CardHeader className="p-0 mb-2">
               <Skeleton className="h-6 w-3/4 mb-2" />
@@ -92,11 +91,11 @@ export default function CommunitiesPage() {
   }, [searchQuery, selectedCategory, communities]);
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="p-4 md:p-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
-          <h1 className="text-4xl font-bold mb-2">Сообщества</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-4xl font-bold mb-2 text-white">Сообщества</h1>
+          <p className="text-text-secondary">
             Найдите единомышленников и присоединяйтесь к интересным сообществам
           </p>
         </div>
@@ -111,13 +110,13 @@ export default function CommunitiesPage() {
 
       <div className="mb-8 space-y-4">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted h-5 w-5" />
           <Input
             type="text"
             placeholder="Поиск сообществ..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 h-12"
+            className="pl-10 h-12 bg-surface border-border"
           />
         </div>
 
@@ -138,9 +137,9 @@ export default function CommunitiesPage() {
       {loading ? <CommunitiesPageSkeleton /> :
       filteredCommunities.length === 0 ? (
         <div className="text-center py-12">
-          <Users className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-          <h3 className="text-xl font-semibold mb-2">Сообщества не найдены</h3>
-          <p className="text-muted-foreground mb-6">
+          <Users className="mx-auto h-16 w-16 text-text-muted mb-4" />
+          <h3 className="text-xl font-semibold mb-2 text-white">Сообщества не найдены</h3>
+          <p className="text-text-secondary mb-6">
             Попробуйте изменить параметры поиска или создайте новое сообщество
           </p>
           <Link href="/communities/create">
@@ -154,8 +153,8 @@ export default function CommunitiesPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCommunities.map(community => (
             <Link key={community.id} href={`/communities/${community.id}`}>
-              <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer flex flex-col">
-                <div className="aspect-video w-full overflow-hidden rounded-t-lg relative">
+              <Card className="holographic-panel h-full hover:border-primary/50 transition-all cursor-pointer flex flex-col">
+                <div className="aspect-video w-full overflow-hidden relative">
                     {community.imageUrl ? (
                       <Image 
                         src={community.imageUrl} 
@@ -164,8 +163,8 @@ export default function CommunitiesPage() {
                         className="object-cover"
                       />
                     ) : (
-                      <div className="bg-muted h-full flex items-center justify-center">
-                          <Users className="h-16 w-16 text-muted-foreground" />
+                      <div className="bg-surface h-full flex items-center justify-center">
+                          <Users className="h-16 w-16 text-text-muted" />
                       </div>
                     )}
                 </div>
@@ -173,12 +172,12 @@ export default function CommunitiesPage() {
                 <div className="flex flex-col flex-1 p-4">
                     <CardHeader className="p-0 mb-2">
                       <div className="flex items-start justify-between gap-2">
-                        <CardTitle className="text-xl">{community.name}</CardTitle>
+                        <CardTitle className="text-xl text-white">{community.name}</CardTitle>
                         {community.isPrivate && (
                           <Badge variant="secondary">Приватное</Badge>
                         )}
                       </div>
-                      <CardDescription className="line-clamp-2 pt-1">
+                      <CardDescription className="line-clamp-2 pt-1 text-text-secondary">
                         {community.description}
                       </CardDescription>
                     </CardHeader>
@@ -187,7 +186,7 @@ export default function CommunitiesPage() {
                       <Badge variant="outline">{community.category}</Badge>
                     </CardContent>
 
-                    <CardFooter className="p-0 pt-4 text-sm text-muted-foreground">
+                    <CardFooter className="p-0 pt-4 text-sm text-text-secondary">
                       <Users className="mr-2 h-4 w-4" />
                       {community.membersCount.toLocaleString('ru-RU')} участников
                     </CardFooter>

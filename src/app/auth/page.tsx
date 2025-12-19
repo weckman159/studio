@@ -1,13 +1,14 @@
+
 'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth, useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
@@ -46,22 +47,22 @@ export default function AuthPage() {
     if (!auth || !firestore) return;
     setLoading(true);
     try {
-      // 1. Создаем пользователя в Auth
+      // 1. Create user in Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // 2. Обновляем профиль (имя)
+      // 2. Update profile (name)
       await updateProfile(user, { displayName: name });
 
-      // 3. Создаем документ пользователя в Firestore
+      // 3. Create user document in Firestore
       await setDoc(doc(firestore, 'users', user.uid), {
         id: user.uid,
-        uid: user.uid, // дублируем для удобства поиска
+        uid: user.uid,
         displayName: name,
-        name: name, // поле для совместимости
+        name: name,
         email: user.email,
         photoURL: '',
-        role: 'user',
+        roles: { isAdmin: false, isModerator: false, isFirm: false, isPremium: false },
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         stats: {
@@ -86,20 +87,20 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="flex min-h-[80vh] items-center justify-center px-4">
-      <Card className="w-full max-w-md">
+    <div className="flex h-full w-full items-center justify-center p-4">
+      <Card className="w-full max-w-md holographic-panel">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="p-3 bg-primary/10 rounded-full">
+            <div className="p-3 bg-primary/10 rounded-full glow">
                 <CarFront className="h-8 w-8 text-primary" />
             </div>
           </div>
-          <CardTitle className="text-2xl">AutoSphere</CardTitle>
-          <CardDescription>Войдите или создайте аккаунт</CardDescription>
+          <CardTitle className="text-2xl text-white">AutoSphere</CardTitle>
+          <CardDescription className="text-text-secondary">Войдите или создайте аккаунт</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsList className="grid w-full grid-cols-2 mb-4 bg-black/20">
               <TabsTrigger value="login">Вход</TabsTrigger>
               <TabsTrigger value="register">Регистрация</TabsTrigger>
             </TabsList>
@@ -107,12 +108,12 @@ export default function AuthPage() {
             <TabsContent value="login">
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" required value={email} onChange={e => setEmail(e.target.value)} disabled={loading} />
+                  <Label htmlFor="email" className="text-text-secondary">Email</Label>
+                  <Input id="email" type="email" required value={email} onChange={e => setEmail(e.target.value)} disabled={loading} className="bg-black/20 border-primary/20 focus:border-primary"/>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">Пароль</Label>
-                  <Input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)} disabled={loading} />
+                  <Label htmlFor="password" className="text-text-secondary">Пароль</Label>
+                  <Input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)} disabled={loading} className="bg-black/20 border-primary/20 focus:border-primary"/>
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -124,16 +125,16 @@ export default function AuthPage() {
             <TabsContent value="register">
               <form onSubmit={handleRegister} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="reg-name">Имя пользователя</Label>
-                  <Input id="reg-name" required value={name} onChange={e => setName(e.target.value)} disabled={loading} placeholder="Например, AlexDriver" />
+                  <Label htmlFor="reg-name" className="text-text-secondary">Имя пользователя</Label>
+                  <Input id="reg-name" required value={name} onChange={e => setName(e.target.value)} disabled={loading} placeholder="Например, AlexDriver" className="bg-black/20 border-primary/20 focus:border-primary"/>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="reg-email">Email</Label>
-                  <Input id="reg-email" type="email" required value={email} onChange={e => setEmail(e.target.value)} disabled={loading} />
+                  <Label htmlFor="reg-email" className="text-text-secondary">Email</Label>
+                  <Input id="reg-email" type="email" required value={email} onChange={e => setEmail(e.target.value)} disabled={loading} className="bg-black/20 border-primary/20 focus:border-primary"/>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="reg-password">Пароль</Label>
-                  <Input id="reg-password" type="password" required value={password} onChange={e => setPassword(e.target.value)} disabled={loading} minLength={6} />
+                  <Label htmlFor="reg-password" className="text-text-secondary">Пароль</Label>
+                  <Input id="reg-password" type="password" required value={password} onChange={e => setPassword(e.target.value)} disabled={loading} minLength={6} className="bg-black/20 border-primary/20 focus:border-primary"/>
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

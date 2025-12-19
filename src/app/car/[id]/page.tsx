@@ -8,11 +8,9 @@ import { getAdminDb } from '@/lib/firebase-admin';
 import { serializeFirestoreData } from '@/lib/utils';
 import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
-// Критически важно для динамического рендеринга
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-// Динамический импорт Firebase Admin только при выполнении
 async function getCarData(carId: string): Promise<{ car: Car | null, timeline: TimelineEntry[] }> {
   try {
     const adminDb = getAdminDb();
@@ -21,7 +19,7 @@ async function getCarData(carId: string): Promise<{ car: Car | null, timeline: T
     const carSnap = await carRef.get();
 
     if (!carSnap.exists) {
-      notFound(); // Вызываем notFound, если машина не найдена
+      notFound();
     }
 
     const car = { id: carSnap.id, ...carSnap.data() } as Car;
@@ -53,19 +51,22 @@ export default async function CarPage({ params }: { params: Promise<{ id: string
     notFound();
   }
 
-  return <CarDetailClient initialCar={car} initialTimeline={timeline} />;
+  return (
+    <div className="p-4 md:p-8">
+      <CarDetailClient initialCar={car} initialTimeline={timeline} />
+    </div>
+  );
 }
 
-// Добавляем генерацию метаданных
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ id:string }> }): Promise<Metadata> {
   const { id } = await params;
-  const { car } = await getCarData(id); // Используем существующую функцию
+  const { car } = await getCarData(id);
 
   if (!car) return { title: 'Автомобиль не найден' };
 
   const title = `${car.brand} ${car.model} ${car.year}`;
   const description = `${car.engine || ''}, ${car.specs?.mileage?.toLocaleString() || '?'} км. Бортжурнал и история обслуживания на AutoSphere.`;
-  const image = car.photoUrl || car.photos?.[0] || 'https://autosphere.app/default-og.jpg'; // Замените на свой дефолт
+  const image = car.photoUrl || (car.photos && car.photos.length > 0 ? car.photos[0] : undefined);
 
   return {
     title: `${title} | Гараж AutoSphere`,
@@ -73,7 +74,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     openGraph: {
       title: title,
       description: description,
-      images: [image],
+      images: image ? [image] : [],
     },
   };
 }

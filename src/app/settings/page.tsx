@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
-// Интерфейс настроек уведомлений
+// Interface for notification settings
 interface NotificationSettings {
   emailNotifications: boolean;
   newComments: boolean;
@@ -35,7 +35,7 @@ interface NotificationSettings {
   eventReminders: boolean;
 }
 
-// Интерфейс настроек приватности
+// Interface for privacy settings
 interface PrivacySettings {
   profileVisibility: 'public' | 'private';
   showEmail: boolean;
@@ -50,21 +50,21 @@ export default function SettingsPage() {
   const auth = useAuth();
 
 
-  // Состояния
+  // States
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [activeTab, setActiveTab] = useState('account');
 
-  // Email и пароль
+  // Email and password
   const [newEmail, setNewEmail] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  // Настройки уведомлений
+  // Notification settings
   const [notifications, setNotifications] = useState<NotificationSettings>({
     emailNotifications: true,
     newComments: true,
@@ -74,7 +74,7 @@ export default function SettingsPage() {
     eventReminders: true
   });
 
-  // Настройки приватности
+  // Privacy settings
   const [privacy, setPrivacy] = useState<PrivacySettings>({
     profileVisibility: 'public',
     showEmail: false,
@@ -82,7 +82,7 @@ export default function SettingsPage() {
     allowMessages: true
   });
 
-  // Загрузка настроек
+  // Load settings
   useEffect(() => {
     if (user && firestore) {
       loadSettings();
@@ -91,7 +91,6 @@ export default function SettingsPage() {
     }
   }, [user, firestore, isUserLoading]);
 
-  // Функция загрузки настроек из Firestore
   const loadSettings = async () => {
     if (!user || !firestore) return;
 
@@ -107,82 +106,25 @@ export default function SettingsPage() {
 
       setNewEmail(user.email || '');
     } catch (error) {
-      console.error('Ошибка загрузки настроек:', error);
+      console.error('Error loading settings:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Функция смены email
   const handleUpdateEmail = async () => {
-    if (!user || !auth.currentUser) return;
+    if (!user || !auth || !auth.currentUser) return;
 
     setError('');
     setSuccess('');
 
     if (!newEmail.trim() || newEmail === user.email) {
-      setError('Введите новый email адрес');
+      setError('Enter a new email address');
       return;
     }
 
     if (!currentPassword) {
-      setError('Для изменения email введите текущий пароль');
-      return;
-    }
-
-    try {
-      setSaving(true);
-
-      if(!user.email) throw new Error("User email is not defined.");
-
-      // Реаутентификация пользователя
-      const credential = EmailAuthProvider.credential(user.email, currentPassword);
-      await reauthenticateWithCredential(auth.currentUser, credential);
-
-      // Обновление email
-      await updateEmail(auth.currentUser, newEmail);
-
-      // Обновление в Firestore
-      await updateDoc(doc(firestore, 'users', user.uid), {
-        email: newEmail,
-        updatedAt: serverTimestamp()
-      });
-
-      setSuccess('Email успешно обновлен');
-      setCurrentPassword('');
-    } catch (err: any) {
-      console.error('Ошибка обновления email:', err);
-      if (err.code === 'auth/wrong-password') {
-        setError('Неверный текущий пароль');
-      } else if (err.code === 'auth/email-already-in-use') {
-        setError('Этот email уже используется');
-      } else {
-        setError('Не удалось обновить email. Попробуйте позже.');
-      }
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // Функция смены пароля
-  const handleUpdatePassword = async () => {
-    if (!user || !auth.currentUser) return;
-
-    setError('');
-    setSuccess('');
-
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      setError('Заполните все поля');
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      setError('Новый пароль должен содержать минимум 6 символов');
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setError('Пароли не совпадают');
+      setError('To change email, enter your current password');
       return;
     }
 
@@ -191,440 +133,216 @@ export default function SettingsPage() {
       
       if(!user.email) throw new Error("User email is not defined.");
 
-      // Реаутентификация
       const credential = EmailAuthProvider.credential(user.email, currentPassword);
       await reauthenticateWithCredential(auth.currentUser, credential);
+      await updateEmail(auth.currentUser, newEmail);
+      await updateDoc(doc(firestore, 'users', user.uid), {
+        email: newEmail,
+        updatedAt: serverTimestamp()
+      });
 
-      // Обновление пароля
-      await updatePassword(auth.currentUser, newPassword);
-
-      setSuccess('Пароль успешно обновлен');
+      setSuccess('Email updated successfully');
       setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
     } catch (err: any) {
-      console.error('Ошибка обновления пароля:', err);
+      console.error('Error updating email:', err);
       if (err.code === 'auth/wrong-password') {
-        setError('Неверный текущий пароль');
+        setError('Incorrect current password');
+      } else if (err.code === 'auth/email-already-in-use') {
+        setError('This email is already in use');
       } else {
-        setError('Не удалось обновить пароль. Попробуйте позже.');
+        setError('Failed to update email. Please try again later.');
       }
     } finally {
       setSaving(false);
     }
   };
 
-  // Функция сохранения настроек уведомлений
-  const handleSaveNotifications = async () => {
-    if (!user || !firestore) return;
+  const handleUpdatePassword = async () => {
+    if (!user || !auth || !auth.currentUser) return;
 
     setError('');
     setSuccess('');
 
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setError('Please fill all fields');
+      return;
+    }
+    if (newPassword.length < 6) {
+      setError('New password must be at least 6 characters long');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      
+      if(!user.email) throw new Error("User email is not defined.");
+
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      await reauthenticateWithCredential(auth.currentUser, credential);
+      await updatePassword(auth.currentUser, newPassword);
+
+      setSuccess('Password updated successfully');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err: any) {
+      console.error('Error updating password:', err);
+      if (err.code === 'auth/wrong-password') {
+        setError('Incorrect current password');
+      } else {
+        setError('Failed to update password. Please try again later.');
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveNotifications = async () => {
+    if (!user || !firestore) return;
+    setError(''); setSuccess('');
     try {
       setSaving(true);
       await setDoc(doc(firestore, 'userSettings', user.uid), {
         notifications,
         updatedAt: serverTimestamp()
       }, { merge: true });
-      setSuccess('Настройки уведомлений сохранены');
+      setSuccess('Notification settings saved');
     } catch (err) {
-      console.error('Ошибка сохранения настроек:', err);
-      setError('Не удалось сохранить настройки');
+      console.error('Error saving settings:', err);
+      setError('Failed to save settings');
     } finally {
       setSaving(false);
     }
   };
 
-  // Функция сохранения настроек приватности
   const handleSavePrivacy = async () => {
     if (!user || !firestore) return;
-
-    setError('');
-    setSuccess('');
-
+    setError(''); setSuccess('');
     try {
       setSaving(true);
       await setDoc(doc(firestore, 'userSettings', user.uid), {
         privacy,
         updatedAt: serverTimestamp()
       }, { merge: true });
-
-      // Обновляем видимость профиля в документе пользователя
       await updateDoc(doc(firestore, 'users', user.uid), {
         profileVisibility: privacy.profileVisibility,
         updatedAt: serverTimestamp()
       });
-
-      setSuccess('Настройки приватности сохранены');
+      setSuccess('Privacy settings saved');
     } catch (err) {
-      console.error('Ошибка сохранения настроек:', err);
-      setError('Не удалось сохранить настройки');
+      console.error('Error saving settings:', err);
+      setError('Failed to save settings');
     } finally {
       setSaving(false);
     }
   };
 
-  // Проверка авторизации
   if (!user && !isUserLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="p-8">
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Для доступа к настройкам необходимо войти в систему.
-            <Link href="/auth" className="ml-2 underline">
-              Войти
-            </Link>
+            You need to be logged in to access settings.
+            <Link href="/auth" className="ml-2 underline text-primary">Login</Link>
           </AlertDescription>
         </Alert>
       </div>
     );
   }
 
-  // UI загрузки
   if (loading || isUserLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <Loader2 className="animate-spin h-12 w-12 text-primary mx-auto mb-4" />
-            <p className="text-muted-foreground">Загрузка настроек...</p>
-          </div>
-        </div>
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="animate-spin h-12 w-12 text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">Настройки</h1>
-        <p className="text-muted-foreground">
-          Управление вашим аккаунтом и настройками приватности
-        </p>
-      </div>
+    <div className="p-4 md:p-8">
+      <div className="max-w-4xl mx-auto">
+          <div className="mb-8">
+            <h1 className="text-4xl font-bold mb-2 text-white">Настройки</h1>
+            <p className="text-text-secondary">
+              Управление вашим аккаунтом и настройками приватности
+            </p>
+          </div>
 
-      {/* Сообщения */}
-      {error && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+          {error && <Alert variant="destructive" className="mb-6"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>}
+          {success && <Alert className="mb-6 bg-green-500/10 border-green-500/30 text-green-300"><AlertDescription>{success}</AlertDescription></Alert>}
 
-      {success && (
-        <Alert className="mb-6 bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
-          <AlertDescription className="text-green-800 dark:text-green-200">
-            {success}
-          </AlertDescription>
-        </Alert>
-      )}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 bg-black/20 mb-6">
+              <TabsTrigger value="account"><Mail className="mr-2 h-4 w-4" />Аккаунт</TabsTrigger>
+              <TabsTrigger value="security"><Lock className="mr-2 h-4 w-4" />Безопасность</TabsTrigger>
+              <TabsTrigger value="notifications"><Bell className="mr-2 h-4 w-4" />Уведомления</TabsTrigger>
+              <TabsTrigger value="privacy"><Shield className="mr-2 h-4 w-4" />Приватность</TabsTrigger>
+            </TabsList>
+            
+            <Card className="holographic-panel">
+              <TabsContent value="account" className="m-0">
+                <CardHeader><CardTitle>Email адрес</CardTitle><CardDescription>Изменить email для входа в систему</CardDescription></CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2"><Label htmlFor="newEmail">Новый email</Label><Input id="newEmail" type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} disabled={saving} /></div>
+                  <div className="space-y-2"><Label htmlFor="currentPasswordEmail">Текущий пароль (для подтверждения)</Label><Input id="currentPasswordEmail" type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} disabled={saving} /></div>
+                  <Button onClick={handleUpdateEmail} disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Обновить email</Button>
+                </CardContent>
+              </TabsContent>
 
-      {/* Вкладки */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
-          <TabsTrigger value="account">
-            <Mail className="mr-2 h-4 w-4" />
-            Аккаунт
-          </TabsTrigger>
-          <TabsTrigger value="security">
-            <Lock className="mr-2 h-4 w-4" />
-            Безопасность
-          </TabsTrigger>
-          <TabsTrigger value="notifications">
-            <Bell className="mr-2 h-4 w-4" />
-            Уведомления
-          </TabsTrigger>
-          <TabsTrigger value="privacy">
-            <Shield className="mr-2 h-4 w-4" />
-            Приватность
-          </TabsTrigger>
-        </TabsList>
+              <TabsContent value="security" className="m-0">
+                <CardHeader><CardTitle>Изменить пароль</CardTitle><CardDescription>Обновите пароль для повышения безопасности</CardDescription></CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2"><Label htmlFor="currentPasswordSec">Текущий пароль</Label><Input id="currentPasswordSec" type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} disabled={saving} /></div>
+                  <div className="space-y-2"><Label htmlFor="newPassword">Новый пароль</Label><div className="relative"><Input id="newPassword" type={showPassword ? 'text' : 'password'} value={newPassword} onChange={e => setNewPassword(e.target.value)} disabled={saving} /><Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full px-3 py-2" onClick={() => setShowPassword(!showPassword)}>{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</Button></div></div>
+                  <div className="space-y-2"><Label htmlFor="confirmPassword">Подтвердите новый пароль</Label><Input id="confirmPassword" type={showPassword ? 'text' : 'password'} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} disabled={saving} /></div>
+                  <Button onClick={handleUpdatePassword} disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Обновить пароль</Button>
+                </CardContent>
+              </TabsContent>
 
-        {/* Вкладка: Аккаунт */}
-        <TabsContent value="account">
-          <Card>
-            <CardHeader>
-              <CardTitle>Email адрес</CardTitle>
-              <CardDescription>
-                Изменить email для входа в систему
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="newEmail">Новый email</Label>
-                <Input
-                  id="newEmail"
-                  type="email"
-                  value={newEmail}
-                  onChange={e => setNewEmail(e.target.value)}
-                  disabled={saving}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="currentPasswordEmail">Текущий пароль (для подтверждения)</Label>
-                <Input
-                  id="currentPasswordEmail"
-                  type="password"
-                  value={currentPassword}
-                  onChange={e => setCurrentPassword(e.target.value)}
-                  disabled={saving}
-                />
-              </div>
-              <Button onClick={handleUpdateEmail} disabled={saving}>
-                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Обновить email
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
+              <TabsContent value="notifications" className="m-0">
+                <CardHeader><CardTitle>Уведомления</CardTitle><CardDescription>Управление уведомлениями по email и в приложении</CardDescription></CardHeader>
+                <CardContent className="space-y-6">
+                  {[
+                    { key: 'emailNotifications', label: 'Email уведомления', desc: 'Получать уведомления на email' },
+                    { key: 'newComments', label: 'Новые комментарии', desc: 'Уведомлять о комментариях к вашим постам' },
+                    { key: 'newLikes', label: 'Новые лайки', desc: 'Уведомлять о лайках ваших постов' },
+                    { key: 'marketplaceMessages', label: 'Сообщения на маркетплейсе', desc: 'Уведомлять о новых сообщениях по объявлениям' },
+                    { key: 'eventReminders', label: 'Напоминания о событиях', desc: 'Уведомлять о предстоящих событиях' },
+                  ].map(item => (
+                    <div className="flex items-center justify-between" key={item.key}>
+                      <div><Label>{item.label}</Label><p className="text-sm text-text-secondary">{item.desc}</p></div>
+                      <Switch checked={notifications[item.key as keyof NotificationSettings]} onCheckedChange={checked => setNotifications({...notifications, [item.key]: checked})} disabled={saving}/>
+                    </div>
+                  ))}
+                  <Button onClick={handleSaveNotifications} disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Сохранить</Button>
+                </CardContent>
+              </TabsContent>
 
-        {/* Вкладка: Безопасность */}
-        <TabsContent value="security">
-          <Card>
-            <CardHeader>
-              <CardTitle>Изменить пароль</CardTitle>
-              <CardDescription>
-                Обновите пароль для повышения безопасности
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                      <strong>Внимание:</strong> удаление аккаунта — необратимое действие. Все ваши данные, включая посты, фотографии и информацию о гараже, будут навсегда удалены без возможности восстановления.
-                  </AlertDescription>
-              </Alert>
-              <div className="space-y-2">
-                <Label htmlFor="currentPasswordSec">Текущий пароль</Label>
-                <Input
-                  id="currentPasswordSec"
-                  type="password"
-                  value={currentPassword}
-                  onChange={e => setCurrentPassword(e.target.value)}
-                  disabled={saving}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="newPassword">Новый пароль</Label>
-                <div className="relative">
-                  <Input
-                    id="newPassword"
-                    type={showPassword ? 'text' : 'password'}
-                    value={newPassword}
-                    onChange={e => setNewPassword(e.target.value)}
-                    disabled={saving}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-0 top-0 h-full px-3 py-2"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Подтвердите новый пароль</Label>
-                <Input
-                  id="confirmPassword"
-                  type={showPassword ? 'text' : 'password'}
-                  value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
-                  disabled={saving}
-                />
-              </div>
-              <Button onClick={handleUpdatePassword} disabled={saving}>
-                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Обновить пароль
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Вкладка: Уведомления */}
-        <TabsContent value="notifications">
-          <Card>
-            <CardHeader>
-              <CardTitle>Уведомления</CardTitle>
-              <CardDescription>
-                Управление уведомлениями по email и в приложении
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Email уведомления</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Получать уведомления на email
-                  </p>
-                </div>
-                <Switch
-                  checked={notifications.emailNotifications}
-                  onCheckedChange={checked => 
-                    setNotifications({...notifications, emailNotifications: checked})
-                  }
-                  disabled={saving}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Новые комментарии</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Уведомлять о комментариях к вашим постам
-                  </p>
-                </div>
-                <Switch
-                  checked={notifications.newComments}
-                  onCheckedChange={checked => 
-                    setNotifications({...notifications, newComments: checked})
-                  }
-                  disabled={saving}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Новые лайки</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Уведомлять о лайках ваших постов
-                  </p>
-                </div>
-                <Switch
-                  checked={notifications.newLikes}
-                  onCheckedChange={checked => 
-                    setNotifications({...notifications, newLikes: checked})
-                  }
-                  disabled={saving}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Сообщения на маркетплейсе</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Уведомлять о новых сообщениях по объявлениям
-                  </p>
-                </div>
-                <Switch
-                  checked={notifications.marketplaceMessages}
-                  onCheckedChange={checked => 
-                    setNotifications({...notifications, marketplaceMessages: checked})
-                  }
-                  disabled={saving}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Напоминания о событиях</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Уведомлять о предстоящих событиях
-                  </p>
-                </div>
-                <Switch
-                  checked={notifications.eventReminders}
-                  onCheckedChange={checked => 
-                    setNotifications({...notifications, eventReminders: checked})
-                  }
-                  disabled={saving}
-                />
-              </div>
-
-              <Button onClick={handleSaveNotifications} disabled={saving}>
-                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Сохранить настройки
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Вкладка: Приватность */}
-        <TabsContent value="privacy">
-          <Card>
-            <CardHeader>
-              <CardTitle>Приватность</CardTitle>
-              <CardDescription>
-                Управление видимостью вашего профиля и данных
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Публичный профиль</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Ваш профиль виден всем пользователям
-                  </p>
-                </div>
-                <Switch
-                  checked={privacy.profileVisibility === 'public'}
-                  onCheckedChange={checked => 
-                    setPrivacy({...privacy, profileVisibility: checked ? 'public' : 'private'})
-                  }
-                  disabled={saving}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Показывать email</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Другие пользователи увидят ваш email
-                  </p>
-                </div>
-                <Switch
-                  checked={privacy.showEmail}
-                  onCheckedChange={checked => 
-                    setPrivacy({...privacy, showEmail: checked})
-                  }
-                  disabled={saving}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Показывать гараж</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Другие пользователи увидят ваши автомобили
-                  </p>
-                </div>
-                <Switch
-                  checked={privacy.showGarage}
-                  onCheckedChange={checked => 
-                    setPrivacy({...privacy, showGarage: checked})
-                  }
-                  disabled={saving}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Разрешить сообщения</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Другие пользователи могут писать вам
-                  </p>
-                </div>
-                <Switch
-                  checked={privacy.allowMessages}
-                  onCheckedChange={checked => 
-                    setPrivacy({...privacy, allowMessages: checked})
-                  }
-                  disabled={saving}
-                />
-              </div>
-
-              <Button onClick={handleSavePrivacy} disabled={saving}>
-                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Сохранить настройки
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
+              <TabsContent value="privacy" className="m-0">
+                <CardHeader><CardTitle>Приватность</CardTitle><CardDescription>Управление видимостью вашего профиля и данных</CardDescription></CardHeader>
+                <CardContent className="space-y-6">
+                    {[
+                        { key: 'profileVisibility', label: 'Публичный профиль', desc: 'Ваш профиль виден всем пользователям' },
+                        { key: 'showEmail', label: 'Показывать email', desc: 'Другие пользователи увидят ваш email' },
+                        { key: 'showGarage', label: 'Показывать гараж', desc: 'Другие пользователи увидят ваши автомобили' },
+                        { key: 'allowMessages', label: 'Разрешить сообщения', desc: 'Другие пользователи могут писать вам' },
+                    ].map(item => (
+                      <div className="flex items-center justify-between" key={item.key}>
+                        <div><Label>{item.label}</Label><p className="text-sm text-text-secondary">{item.desc}</p></div>
+                        <Switch checked={item.key === 'profileVisibility' ? privacy.profileVisibility === 'public' : privacy[item.key as keyof Omit<PrivacySettings, 'profileVisibility'>]} onCheckedChange={checked => setPrivacy(prev => ({...prev, [item.key]: item.key === 'profileVisibility' ? (checked ? 'public' : 'private') : checked}))} disabled={saving}/>
+                      </div>
+                    ))}
+                  <Button onClick={handleSavePrivacy} disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Сохранить</Button>
+                </CardContent>
+              </TabsContent>
+            </Card>
       </Tabs>
+      </div>
     </div>
   );
 }

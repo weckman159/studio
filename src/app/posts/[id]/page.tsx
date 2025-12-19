@@ -9,6 +9,8 @@ import type { Post, Comment } from '@/lib/types'
 import { PostComments } from './_components/PostComments'
 import { PostActions } from './_components/PostActions'
 import { Calendar } from 'lucide-react'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import Link from 'next/link'
 
 type PostPageProps = {
   params: Promise<{ id: string }>
@@ -67,59 +69,55 @@ export default async function PostPage({ params }: PostPageProps) {
   const coverImage = post.imageUrl;
 
   return (
-    <div className="container max-w-3xl mx-auto px-4 py-8">
-       {coverImage && (
-        <div className="relative w-full max-h-[420px] aspect-video mb-8">
-            <Image
-                src={coverImage}
-                alt={post.title}
-                fill
-                className="object-cover rounded-2xl shadow-xl"
-                priority
-            />
-        </div>
-      )}
-      
-      <h1 className="text-3xl md:text-4xl font-bold mb-4">
-        {post.title}
-      </h1>
-
-      <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground mb-6 pb-6 border-b">
-        <div className="flex items-center gap-2">
-            {post.authorAvatar && (
-            <Image
-                src={post.authorAvatar}
-                alt={post.authorName ?? 'Автор'}
-                width={36}
-                height={36}
-                className="w-9 h-9 rounded-full object-cover"
-            />
+    <div className="p-4 md:p-8">
+        <div className="max-w-4xl mx-auto">
+            {coverImage && (
+                <div className="relative w-full aspect-video mb-8 rounded-2xl overflow-hidden shadow-2xl shadow-black/20">
+                    <Image
+                        src={coverImage}
+                        alt={post.title}
+                        fill
+                        className="object-cover"
+                        priority
+                    />
+                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                </div>
             )}
-            <div>
-                <div className="font-medium text-foreground">
-                    {post.authorName ?? 'Автор'}
-                </div>
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  <span>
-                    {post.createdAt
-                    ? new Date(post.createdAt).toLocaleDateString('ru-RU')
-                    : ''}
-                  </span>
-                </div>
+            
+            <h1 className="text-3xl md:text-4xl font-bold mb-4 text-white">
+                {post.title}
+            </h1>
+
+            <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-text-secondary mb-6 pb-6 border-b border-border">
+                <Link href={`/profile/${post.authorId}`} className="flex items-center gap-3 group">
+                    <Avatar className="h-10 w-10">
+                        <AvatarImage src={post.authorAvatar} alt={post.authorName} />
+                        <AvatarFallback>{post.authorName?.[0]}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                        <div className="font-medium text-text-primary group-hover:text-primary transition-colors">
+                            {post.authorName ?? 'Автор'}
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <Calendar className="h-3 w-3" />
+                            <span>
+                                {post.createdAt ? new Date(post.createdAt).toLocaleDateString('ru-RU') : ''}
+                            </span>
+                        </div>
+                    </div>
+                </Link>
+                <PostActions post={post} />
+            </div>
+
+            <article
+                className="prose prose-lg dark:prose-invert max-w-none text-text-secondary prose-headings:text-text-primary prose-strong:text-text-primary prose-a:text-primary hover:prose-a:underline prose-code:bg-surface prose-code:p-1 prose-code:rounded-md prose-pre:bg-surface prose-pre:border prose-pre:border-border prose-pre:rounded-xl"
+                dangerouslySetInnerHTML={{ __html: post.content ?? '' }}
+            />
+            
+            <div className="mt-12">
+                <PostComments post={post} initialComments={comments} />
             </div>
         </div>
-        <PostActions post={post} />
-      </div>
-
-      <article
-        className="prose dark:prose-invert max-w-none prose-img:rounded-xl prose-img:shadow-lg prose-a:text-primary hover:prose-a:underline prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-pre:bg-black/40 prose-pre:border prose-pre:border-white/10 prose-pre:rounded-xl"
-        dangerouslySetInnerHTML={{ __html: post.content ?? '' }}
-      />
-      
-      <div className="mt-12">
-        <PostComments post={post} initialComments={comments} />
-      </div>
     </div>
   )
 }
