@@ -3,7 +3,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, orderBy, getDocs, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ProfileSidebar } from '@/components/profile/ProfileSidebar';
 import { CarCard } from '@/components/profile/CarCard';
@@ -17,15 +17,11 @@ import { ProfilePageSkeleton } from './ProfilePageSkeleton';
 import { PhotoGrid } from './PhotoGrid';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { serializeFirestoreData } from '@/lib/utils';
 
 
 interface ProfileClientPageProps {
   profileId: string;
-  initialProfile: User;
-  initialCars: Car[];
-  initialPosts: Post[];
-  initialFollowers: string[];
-  initialFollowing: string[];
 }
 
 function ComingSoonPlaceholder({ title, icon: Icon }: { title: string, icon: React.ElementType }) {
@@ -38,22 +34,16 @@ function ComingSoonPlaceholder({ title, icon: Icon }: { title: string, icon: Rea
     );
 }
 
-export function ProfileClientPage({ 
-    profileId, 
-    initialProfile, 
-    initialCars, 
-    initialPosts, 
-    initialFollowers, 
-    initialFollowing 
-}: ProfileClientPageProps) {
+export function ProfileClientPage({ profileId }: ProfileClientPageProps) {
   const { user: authUser } = useUser();
   const firestore = useFirestore();
 
-  const [profile, setProfile] = useState<User>(initialProfile);
-  const [cars] = useState<Car[]>(initialCars);
-  const [posts] = useState<Post[]>(initialPosts);
-  const [followers, setFollowers] = useState<string[]>(initialFollowers);
-  const [following, setFollowing] = useState<string[]>(initialFollowing);
+  const [profile, setProfile] = useState<User | null>(null);
+  const [cars, setCars] = useState<Car[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [followers, setFollowers] = useState<string[]>([]);
+  const [following, setFollowing] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('journal');
   
   const [isFollowing, setIsFollowing] = useState(false);
@@ -66,6 +56,45 @@ export function ProfileClientPage({
   const onFollowersClick = () => setFollowersDialogOpen(true);
   const onFollowingClick = () => setFollowingDialogOpen(true);
   const onEditClick = () => setEditModalOpen(true);
+
+  // Data fetching effect
+  useEffect(() => {
+    if (!firestore || !profileId) return;
+
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const userRef = doc(firestore, 'users', profileId);
+        
+        const [userSnap, carsSnap, postsSnap, followersSnap, followingSnap] = await Promise.all([
+          getDoc(userRef),
+          getDocs(query(collection(firestore, 'cars'), where('userId', '==', profileId))),
+          getDocs(query(collection(firestore, 'posts'), where('authorId', '==', profileId), orderBy('createdAt', 'desc'))),
+          getDocs(collection(userRef, 'followers')),
+          getDocs(collection(userRef, 'following'))
+        ]);
+
+        if (!userSnap.exists()) {
+          // Handle case where user does not exist
+          setProfile(null);
+          return;
+        }
+
+        setProfile(serializeFirestoreData({ id: userSnap.id, ...userSnap.data() }) as User);
+        setCars(carsSnap.docs.map(d => serializeFirestoreData({ id: d.id, ...d.data() }) as Car));
+        setPosts(postsSnap.docs.map(d => serializeFirestoreData({ id: d.id, ...d.data() }) as Post));
+        setFollowers(followersSnap.docs.map(d => d.id));
+        setFollowing(followingSnap.docs.map(d => d.id));
+
+      } catch (error) {
+        console.error("Error fetching profile data on client:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [firestore, profileId]);
 
   useEffect(() => {
     if (authUser) {
@@ -104,8 +133,12 @@ export function ProfileClientPage({
     }
   };
 
-  if (!profile) {
+  if (loading) {
     return <ProfilePageSkeleton />;
+  }
+  
+  if (!profile) {
+      return <div>Профиль не найден.</div>
   }
   
   const isOwner = !!authUser && (authUser.uid === profile.id);
