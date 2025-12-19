@@ -7,7 +7,6 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-// ИСПРАВЛЕНИЕ: Добавлен Loader2 в импорт, так как он используется в JSX
 import { FileText, Users, Search as SearchIcon, Loader2 } from 'lucide-react';
 import type { Post, User } from '@/lib/types';
 import { serializeFirestoreData } from '@/lib/utils';
@@ -148,8 +147,10 @@ function SearchResultsComponent() {
 
 export default function SearchPage() {
     return (
-        <Suspense fallback={<div className="flex justify-center p-8"><Loader2 className="animate-spin"/></div>}>
-            <SearchResultsComponent />
-        </Suspense>
+        <div className="p-4 md:p-8">
+            <Suspense fallback={<div className="flex justify-center p-8"><Loader2 className="animate-spin"/></div>}>
+                <SearchResultsComponent />
+            </Suspense>
+        </div>
     )
 }

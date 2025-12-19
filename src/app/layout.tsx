@@ -1,7 +1,8 @@
+
 'use client';
 import React from 'react';
 import Link from 'next/link';
-import { Sparkles, Users, Rss, Store, Car, Zap, Search, GaugeCircle, BatteryCharging, Palette, Info, Newspaper, MoreHorizontal, Heart, MessageCircle, Send, Shield, BarChart, ChevronRight, Gem, Infinity, Filter, Bell, Menu, User as UserIcon, LogOut, Settings, Flame, TrendingUp, Globe } from 'lucide-react';
+import { Sparkles, Users, Rss, Store, Car, Zap, Search, GaugeCircle, BatteryCharging, Palette, Info, Newspaper, MoreHorizontal, Heart, MessageCircle, Send, Shield, BarChart, ChevronRight, Gem, Infinity, Star, ThumbsUp, Flame, TrendingUp, Globe, Menu, Bell, User as UserIcon, LogOut, Settings } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
@@ -13,6 +14,9 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
+import { Sidebar, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
+import GlobalSearch from '@/components/GlobalSearch';
+import { MobileNav } from '@/components/MobileNav';
 
 // Left Sidebar Component
 const LeftSidebar = () => {
@@ -22,65 +26,31 @@ const LeftSidebar = () => {
         { href: '/communities', label: 'Сообщества', icon: Users },
         { href: '/posts', label: 'Блоги', icon: Rss },
         { href: '/marketplace', label: 'Маркетплейс', icon: Store },
-        { href: '/garage', label: 'Автомобили', icon: Car },
+        { href: '/garage', label: 'Гараж', icon: Car },
+        { href: '/events', label: 'События', icon: Zap },
     ];
     return (
-        <aside className="w-[260px] hidden md:flex flex-none bg-background-dark text-white flex-col justify-between z-40 overflow-y-auto px-6 py-8 border-r border-primary/20 holographic-panel-dark scroll-effect">
-            <div className="flex flex-col">
-                <div className="flex items-center gap-3 mb-10">
+        <Sidebar>
+            <div className="flex flex-col h-full">
+                <div className="flex items-center gap-3 mb-10 p-6">
                     <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-background-dark glow">
                         <Sparkles className="text-[24px] filled" />
                     </div>
-                    <div>
+                    <div className="group-data-[collapsible=icon]:hidden">
                         <h1 className="text-white text-xl font-bold tracking-wider uppercase">AutoSphere</h1>
                         <p className="text-primary text-xs font-mono">COMMAND HUB v3.0</p>
                     </div>
                 </div>
-                <nav className="flex flex-col gap-3">
+                <nav className="flex flex-col gap-3 px-6">
                     {navItems.map(item => (
                         <Link key={item.label} href={item.href} className={`group flex items-center gap-4 px-5 py-3 rounded-lg transition-all duration-300 border-l-4 ${pathname === item.href ? 'bg-primary/10 border-primary text-primary glow' : 'text-white/70 hover:text-white hover:bg-primary/10 hover:border-primary/50 border-transparent'}`}>
                             <item.icon className="group-hover:scale-110 transition-transform text-[20px]" />
-                            <span className="text-base font-medium tracking-wide">{item.label}</span>
+                            <span className="text-base font-medium tracking-wide group-data-[collapsible=icon]:hidden">{item.label}</span>
                         </Link>
                     ))}
                 </nav>
-                <div className="mt-8 pt-6 border-t border-primary/20">
-                    <h3 className="text-xs font-bold text-primary uppercase tracking-widest mb-4 flex items-center gap-2">
-                        <Filter className="text-[16px]" /> Blog Filters
-                    </h3>
-                    <div className="flex flex-col gap-3">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-primary/50 text-[16px]" />
-                            <input className="w-full bg-primary/5 border border-primary/20 rounded-lg py-2 pl-9 pr-3 text-xs text-white focus:border-primary/50 focus:ring-0 placeholder-white/30 transition-colors" placeholder="Keywords..." type="text" />
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                            <button className="px-2 py-1 rounded bg-primary/20 border border-primary/30 text-[10px] text-primary hover:bg-primary/30 transition-colors">Latest</button>
-                            <button className="px-2 py-1 rounded bg-white/5 border border-white/10 text-[10px] text-white/70 hover:bg-white/10 transition-colors">Tech</button>
-                            <button className="px-2 py-1 rounded bg-white/5 border border-white/10 text-[10px] text-white/70 hover:bg-white/10 transition-colors">Mods</button>
-                            <button className="px-2 py-1 rounded bg-white/5 border border-white/10 text-[10px] text-white/70 hover:bg-white/10 transition-colors">Events</button>
-                        </div>
-                    </div>
-                </div>
-                <div className="mt-6 pt-6 border-t border-primary/20">
-                    <h3 className="text-xs font-bold text-primary uppercase tracking-widest mb-4 flex items-center gap-2">
-                        <Flame className="text-[16px]" /> Новые сообщества
-                    </h3>
-                    <div className="flex flex-col gap-3">
-                        <a className="flex items-center gap-3 group" href="#"><div className="w-8 h-8 rounded bg-white/5 border border-white/10 flex items-center justify-center group-hover:border-primary/50 transition-colors"><span className="text-[10px] font-bold text-white/70">UE</span></div><div className="flex flex-col"><span className="text-xs font-medium text-white/80 group-hover:text-primary transition-colors">Urban Explorers</span><span className="text-[10px] text-white/40">128 members</span></div></a>
-                        <a className="flex items-center gap-3 group" href="#"><div className="w-8 h-8 rounded bg-white/5 border border-white/10 flex items-center justify-center group-hover:border-primary/50 transition-colors"><span className="text-[10px] font-bold text-white/70">NR</span></div><div className="flex flex-col"><span className="text-xs font-medium text-white/80 group-hover:text-primary transition-colors">Night Riders</span><span className="text-[10px] text-white/40">86 members</span></div></a>
-                    </div>
-                </div>
-                <div className="mt-6 pt-6 border-t border-primary/20">
-                    <h3 className="text-xs font-bold text-primary uppercase tracking-widest mb-4 flex items-center gap-2">
-                        <TrendingUp className="text-[16px]" /> Популярные сообщества
-                    </h3>
-                    <div className="flex flex-col gap-3">
-                        <a className="flex items-center gap-3 group" href="#"><div className="w-8 h-8 rounded bg-primary/10 border border-primary/20 flex items-center justify-center group-hover:border-primary/50 transition-colors"><Users className="text-[16px] text-primary" /></div><div className="flex flex-col"><span className="text-xs font-medium text-white/80 group-hover:text-primary transition-colors">JDM Legends</span><span className="text-[10px] text-white/40">45.2k members</span></div></a>
-                        <a className="flex items-center gap-3 group" href="#"><div className="w-8 h-8 rounded bg-primary/10 border border-primary/20 flex items-center justify-center group-hover:border-primary/50 transition-colors"><GaugeCircle className="text-[16px] text-primary" /></div><div className="flex flex-col"><span className="text-xs font-medium text-white/80 group-hover:text-primary transition-colors">Euro Tuners</span><span className="text-[10px] text-white/40">32.1k members</span></div></a>
-                    </div>
-                </div>
             </div>
-        </aside>
+        </Sidebar>
     );
 };
 
@@ -98,28 +68,24 @@ const PageHeader = () => {
     };
 
     return (
-        <header className="h-16 flex-none bg-background-dark/80 backdrop-blur-md border-b border-primary/20 flex items-center justify-between px-8 z-30">
-            <div className="flex items-center gap-4">
-                <h2 className="text-white text-lg font-medium tracking-wide">Социальная сеть автолюбителей</h2>
+        <header className="h-16 flex-none bg-background-dark/80 backdrop-blur-md border-b border-primary/20 flex items-center justify-between px-4 md:px-8 z-30">
+            <div className="flex items-center gap-2">
+                <SidebarTrigger className="md:hidden"/>
+                <h2 className="text-white text-lg font-medium tracking-wide hidden md:block">Социальная сеть автолюбителей</h2>
             </div>
-            <div className="flex items-center gap-5">
-                <div className="relative w-64">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-primary/70 text-[20px]" />
-                    <input className="w-full bg-white/5 border border-primary/30 rounded-full py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/50 placeholder-primary/50 text-white" placeholder="Search..." type="text" />
-                </div>
+            <div className="flex items-center gap-2 md:gap-5">
+                <GlobalSearch />
                 <Button variant="ghost" size="icon" className="relative group text-white/70 hover:text-primary transition-colors">
                     <Bell className="text-[24px]" />
                     <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-primary rounded-full shadow-[0_0_5px_rgba(10,170,255,0.8)]"></span>
                 </Button>
-                <Button variant="ghost" size="icon" className="group text-white/70 hover:text-primary transition-colors">
-                    <Globe className="text-[24px]" />
-                </Button>
                 {user ? (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="group text-white/70 hover:text-primary transition-colors">
-                                <Menu className="text-[24px]" />
-                            </Button>
+                            <Avatar className="h-9 w-9 border border-primary/50 shadow-[0_0_10px_rgba(10,170,255,0.3)] cursor-pointer hover:scale-105 transition-transform">
+                                <AvatarImage src={user?.photoURL || ''} />
+                                <AvatarFallback>{user?.displayName?.[0]}</AvatarFallback>
+                            </Avatar>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="w-56" align="end">
                             <DropdownMenuLabel>{user.displayName || user.email}</DropdownMenuLabel>
@@ -133,31 +99,10 @@ const PageHeader = () => {
                 ) : (
                     <Button asChild><Link href="/auth">Войти</Link></Button>
                 )}
-                <Avatar className="h-10 w-10 border border-primary/50 shadow-[0_0_10px_rgba(10,170,255,0.3)] cursor-pointer hover:scale-105 transition-transform">
-                    <AvatarImage src={user?.photoURL || ''} />
-                    <AvatarFallback>{user?.displayName?.[0]}</AvatarFallback>
-                </Avatar>
             </div>
         </header>
     );
 };
-
-// Footer Component
-const PageFooter = () => (
-    <footer className="flex-none pt-4 pb-4 border-t border-primary/20 bg-background-dark/80 backdrop-blur-md z-30">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 px-8">
-            <div className="flex items-center gap-2 opacity-70 hover:opacity-100 transition-opacity text-primary">
-                <Infinity className="text-[18px]" />
-                <span className="text-xs font-bold tracking-wider uppercase">AutoSphere</span>
-            </div>
-            <div className="flex items-center gap-6">
-                <a className="text-xs font-medium text-white/70 hover:text-primary transition-colors" href="/about">About</a>
-                <a className="text-xs font-medium text-white/70 hover:text-primary transition-colors" href="/terms">Terms of Service</a>
-            </div>
-            <p className="text-[10px] text-white/50 font-mono">© {new Date().getFullYear()} AUTOSPHERE TECHNOLOGIES.</p>
-        </div>
-    </footer>
-);
 
 export default function RootLayout({
   children,
@@ -167,7 +112,7 @@ export default function RootLayout({
   return (
     <html lang="ru" suppressHydrationWarning className="dark">
       <head>
-        <title>AutoSphere 3D Command Hub</title>
+        <title>AutoSphere</title>
         <meta name="description" content="Платформа для автолюбителей: бортжурналы, сообщества, маркетплейс." />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -186,6 +131,7 @@ export default function RootLayout({
             disableTransitionOnChange
         >
           <FirebaseClientProvider>
+              <SidebarProvider>
                 <div className="flex h-full w-full relative z-10">
                     <LeftSidebar />
                     <main className="flex-1 flex flex-col min-w-0 bg-transparent relative overflow-hidden">
@@ -193,10 +139,11 @@ export default function RootLayout({
                         <div className="flex-1 overflow-y-auto scroll-effect">
                             {children}
                         </div>
-                        <PageFooter />
                     </main>
                 </div>
+                <MobileNav />
                 <Toaster />
+              </SidebarProvider>
           </FirebaseClientProvider>
         </ThemeProvider>
         <Analytics />
