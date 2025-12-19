@@ -6,14 +6,15 @@ import { collection, query, getDocs, orderBy, limit } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { PostCard } from '@/components/PostCard';
 import { PostFilters } from '@/components/PostFilters';
-import { AutoNewsWidget } from '@/components/AutoNewsWidget';
-import { TopUsersWidget } from '@/components/TopUsersWidget';
-import { FeedLayout } from '@/components/posts/FeedLayout'; // This is now obsolete
 import { Post } from '@/lib/types';
 import { serializeFirestoreData } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, Users, Newspaper } from 'lucide-react';
 import { useUser } from '@/firebase/provider';
+import Link from 'next/link';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 
 function FeedSkeleton() {
     return (
@@ -41,6 +42,67 @@ function FeedSkeleton() {
         </div>
     );
 }
+
+function TopUsersWidget() {
+  const topAuthors = [
+    { id: '1', name: 'Alex Driver', photoURL: 'https://i.pravatar.cc/150?u=a042581f4e29026704d', stats: { postsCount: 128 } },
+    { id: '2', name: 'Julia Stevens', photoURL: 'https://i.pravatar.cc/150?u=a042581f4e29026705d', stats: { postsCount: 94 } },
+    { id: '3', name: 'Max Power', photoURL: 'https://i.pravatar.cc/150?u=maxpower', stats: { postsCount: 81 } }
+  ];
+
+  return (
+    <Card className="holographic-panel">
+      <CardHeader>
+        <CardTitle className="flex items-center text-white"><Users className="mr-2 h-5 w-5" /> Топ авторы</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {topAuthors.map(author => (
+          <div key={author.id} className="flex items-center gap-3">
+            <Avatar>
+                <AvatarImage src={author.photoURL} />
+                <AvatarFallback>{author.name?.[0]}</AvatarFallback>
+            </Avatar>
+            <div className="flex-1">
+                <p className="font-semibold text-sm text-white">{author.name}</p>
+                <p className="text-xs text-text-secondary">{author.stats?.postsCount || 0} постов</p>
+            </div>
+            <Button size="sm" variant="outline" asChild>
+              <Link href={`/profile/${author.id}`}>Читать</Link>
+            </Button>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+function AutoNewsWidget() {
+  const news = [
+    { id: 1, title: "Производство твердотельных аккумуляторов началось на заводе в Неваде.", source: 'EV TECH', sourceUrl: '#' },
+    { id: 2, title: "Новый рекорд круга на Нюрбургринге установлен загадочным прототипом.", source: 'RACING', sourceUrl: '#' },
+    { id: 3, title: "Глобальный стандарт зарядки ускоряет внедрение в ЕС.", source: 'INDUSTRY', sourceUrl: '#' },
+  ];
+  return (
+    <Card className="holographic-panel">
+      <CardHeader>
+        <CardTitle className="flex items-center text-white"><Newspaper className="mr-2 h-5 w-5" /> Автоновости</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {news.map(item => (
+          <div key={item.id}>
+            <a href={item.sourceUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-white hover:text-primary line-clamp-2 text-sm">
+              {item.title}
+            </a>
+            <div className="text-xs text-text-secondary flex justify-between mt-1">
+              <span>{item.source}</span>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
 
 export default function PostsPage() {
     const firestore = useFirestore();
