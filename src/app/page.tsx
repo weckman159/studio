@@ -75,15 +75,15 @@ async function getHomepageData() {
 
 function GlassCard({ children, className }: { children: React.ReactNode, className?: string }) {
   return (
-    <div className={`rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 shadow-xl ${className}`}>
+    <Card variant="glass" className={className}>
       {children}
-    </div>
+    </Card>
   );
 }
 
 function PrimaryButton({ children, className }: { children: React.ReactNode, className?: string }) {
   return (
-    <Button asChild className={cn("bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 transition-transform duration-300 hover:-translate-y-0.5", className)}>
+    <Button asChild className={cn("bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 transition-transform duration-300 hover:-translate-y-0.5", className)}>
       <Link href="/posts/create">
         {children}
       </Link>
@@ -98,72 +98,25 @@ export default async function HomePage() {
   return (
     <div className="w-full max-w-7xl mx-auto px-4 py-8">
       {/* Hero Section */}
-      <section className="grid md:grid-cols-2 gap-8 mb-16 items-center">
+      <section className="text-center md:text-left mb-16">
         <div className="space-y-6">
           <h1 className="text-4xl md:text-5xl font-bold tracking-tighter leading-tight">
             Твоя история про машины
           </h1>
-          <p className="text-lg text-muted-foreground">
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto md:mx-0">
             Делись опытом, находи единомышленников и следи за лучшими проектами в автомобильном сообществе AutoSphere.
           </p>
           <PrimaryButton className="px-8 py-6 text-lg">
             Начать публикацию
           </PrimaryButton>
         </div>
-        
-        {carOfTheDay ? (
-          <Link href={`/car/${carOfTheDay.car.id}`}>
-            <GlassCard>
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center justify-between">
-                  <span>Авто дня</span>
-                  <span className="text-sm font-normal text-muted-foreground">{new Date().toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="relative aspect-video rounded-xl overflow-hidden mb-4">
-                  <Image 
-                    src={carOfTheDay.car.photoUrl || 'https://placehold.co/600x400'} 
-                    alt="Car of the day" 
-                    fill 
-                    className="object-cover" 
-                  />
-                </div>
-                <h3 className="text-xl font-bold">{carOfTheDay.car.brand} {carOfTheDay.car.model}</h3>
-                <p className="text-sm text-muted-foreground">Владелец: {carOfTheDay.user.name}</p>
-                <div className="flex items-center gap-4 mt-4 text-sm">
-                  <span className="flex items-center gap-1.5"><Heart className="h-4 w-4 text-primary" /> {carOfTheDay.car.likes || 0}</span>
-                  <span className="flex items-center gap-1.5"><MessageCircle className="h-4 w-4" /> {carOfTheDay.car.comments || 0}</span>
-                  {carOfTheDay.car.specs?.currentHP && <span className="flex items-center gap-1.5"><Zap className="h-4 w-4" /> {carOfTheDay.car.specs.currentHP} л.с.</span>}
-                </div>
-                <Button variant="outline" className="w-full mt-4">Смотреть</Button>
-              </CardContent>
-            </GlassCard>
-          </Link>
-        ) : (
-           <GlassCard>
-              <CardContent className="p-6 flex flex-col items-center justify-center h-full aspect-video">
-                  <Zap className="w-12 h-12 text-muted-foreground mb-4" />
-                  <h3 className="text-xl font-bold mb-2">Авто дня</h3>
-                  <p className="text-muted-foreground text-center">Голосование за автомобиль дня еще не завершено. Загляните позже!</p>
-              </CardContent>
-           </GlassCard>
-        )}
       </section>
 
-      {/* Main Content Grid */}
-      <div className="grid lg:grid-cols-3 gap-8">
-        {/* Main Feed */}
-        <main className="lg:col-span-2 space-y-8">
-           {posts.length > 0 ? (
-             posts.map(post => <PostCard key={post.id} post={post} />)
-           ) : (
-             <p className="text-muted-foreground">Постов пока нет.</p>
-           )}
-        </main>
-
-        {/* Sidebar */}
-        <aside className="lg:col-span-1 space-y-8">
+      {/* Three-column layout */}
+      <div className="grid lg:grid-cols-4 gap-8">
+        
+        {/* Left Sidebar */}
+        <aside className="lg:col-span-1 space-y-8 hidden lg:block">
           <GlassCard>
             <CardHeader>
               <CardTitle className="flex items-center"><BarChart2 className="mr-2 h-5 w-5" /> Тренды недели</CardTitle>
@@ -214,6 +167,57 @@ export default async function HomePage() {
               )}
             </CardContent>
           </GlassCard>
+        </aside>
+
+        {/* Main Feed */}
+        <main className="lg:col-span-2 space-y-8">
+           {posts.length > 0 ? (
+             posts.map(post => <PostCard key={post.id} post={post} />)
+           ) : (
+             <p className="text-muted-foreground">Постов пока нет.</p>
+           )}
+        </main>
+
+        {/* Right Sidebar */}
+        <aside className="lg:col-span-1 space-y-8">
+          {carOfTheDay ? (
+            <Link href={`/car/${carOfTheDay.car.id}`}>
+              <GlassCard>
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center justify-between">
+                    <span>Авто дня</span>
+                    <span className="text-sm font-normal text-muted-foreground">{new Date().toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="relative aspect-video rounded-xl overflow-hidden mb-4">
+                    <Image 
+                      src={carOfTheDay.car.photoUrl || 'https://placehold.co/600x400'} 
+                      alt="Car of the day" 
+                      fill 
+                      className="object-cover" 
+                    />
+                  </div>
+                  <h3 className="text-xl font-bold">{carOfTheDay.car.brand} {carOfTheDay.car.model}</h3>
+                  <p className="text-sm text-muted-foreground">Владелец: {carOfTheDay.user.name}</p>
+                  <div className="flex items-center gap-4 mt-4 text-sm">
+                    <span className="flex items-center gap-1.5"><Heart className="h-4 w-4 text-primary" /> {carOfTheDay.car.likes || 0}</span>
+                    <span className="flex items-center gap-1.5"><MessageCircle className="h-4 w-4" /> {carOfTheDay.car.comments || 0}</span>
+                    {carOfTheDay.car.specs?.currentHP && <span className="flex items-center gap-1.5"><Zap className="h-4 w-4" /> {carOfTheDay.car.specs.currentHP} л.с.</span>}
+                  </div>
+                  <Button variant="outline" className="w-full mt-4">Смотреть</Button>
+                </CardContent>
+              </GlassCard>
+            </Link>
+          ) : (
+             <GlassCard>
+                <CardContent className="p-6 flex flex-col items-center justify-center h-full min-h-[400px]">
+                    <Zap className="w-12 h-12 text-muted-foreground mb-4" />
+                    <h3 className="text-xl font-bold mb-2">Авто дня</h3>
+                    <p className="text-muted-foreground text-center">Голосование за автомобиль дня еще не завершено. Загляните позже!</p>
+                </CardContent>
+             </GlassCard>
+          )}
         </aside>
       </div>
     </div>
