@@ -63,6 +63,10 @@ export function ProfileClientPage({
   const [followersDialogOpen, setFollowersDialogOpen] = useState(false);
   const [followingDialogOpen, setFollowingDialogOpen] = useState(false);
 
+  const onFollowersClick = () => setFollowersDialogOpen(true);
+  const onFollowingClick = () => setFollowingDialogOpen(true);
+  const onEditClick = () => setEditModalOpen(true);
+
   useEffect(() => {
     if (authUser) {
         setIsFollowing(followers.includes(authUser.uid));
