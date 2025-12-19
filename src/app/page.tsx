@@ -1,225 +1,156 @@
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PostCard } from '@/components/PostCard';
-import { Heart, Zap, MessageCircle, Users, BarChart2 } from 'lucide-react';
-import { getAdminDb } from '@/lib/firebase-admin';
-import { serializeFirestoreData } from '@/lib/utils';
-import type { Post, Car, FeaturedCar, User } from '@/lib/types';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { 
+    Rss, 
+    Users, 
+    Book, 
+    ShoppingCart, 
+    Car,
+    Power,
+    User,
+    BarChart,
+    Newspaper,
+    ChevronRight,
+    Map
+} from 'lucide-react';
 
-async function getHomepageData() {
-  try {
-    const db = getAdminDb();
-    
-    const postsSnap = await db.collection('posts')
-      .where('status', '==', 'published')
-      .orderBy('createdAt', 'desc')
-      .limit(3)
-      .get();
-    const posts = postsSnap.docs.map(doc => serializeFirestoreData({id: doc.id, ...doc.data()}) as Post);
+function LeftSidebar() {
+    const navItems = [
+        { icon: Rss, label: "Главная", href: "/", active: true },
+        { icon: Users, label: "Сообщества", href: "/communities" },
+        { icon: Book, label: "Блоги", href: "/posts" },
+        { icon: ShoppingCart, label: "Маркетплейс", href: "/marketplace" },
+        { icon: Car, label: "Автомобили", href: "/garage" },
+    ];
 
-    const todayStr = new Date().toISOString().split('T')[0];
-    const featuredCarSnap = await db.collection('featuredCars').doc(todayStr).get();
-    let carOfTheDay: { car: Car; user: User } | null = null;
-    if (featuredCarSnap.exists){
-      const featuredData = featuredCarSnap.data() as FeaturedCar;
-      if (featuredData.carId && featuredData.userId) {
-        const [carSnap, userSnap] = await Promise.all([
-          db.collection('cars').doc(featuredData.carId).get(),
-          db.collection('users').doc(featuredData.userId).get(),
-        ]);
-        if (carSnap.exists && userSnap.exists) {
-          carOfTheDay = {
-            car: serializeFirestoreData({id: carSnap.id, ...carSnap.data()}) as Car,
-            user: serializeFirestoreData({id: userSnap.id, ...userSnap.data()}) as User
-          };
-        }
-      }
-    }
-
-    const topAuthorsSnap = await db.collection('users').orderBy('stats.postsCount', 'desc').limit(2).get();
-    const topAuthors = topAuthorsSnap.docs.map(doc => serializeFirestoreData({id: doc.id, ...doc.data()}) as User);
-
-    const trendsSnap = await db.collection('posts')
-      .where('status', '==', 'published')
-      .orderBy('createdAt', 'desc')
-      .limit(50)
-      .get();
-      
-    const categoryCounts: Record<string, number> = {};
-    trendsSnap.docs.forEach(doc => {
-      const category = doc.data().category;
-      if (category) {
-        categoryCounts[category] = (categoryCounts[category] || 0) + 1;
-      }
-    });
-
-    const trends = Object.entries(categoryCounts)
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 4)
-      .map(([name]) => name);
-
-    return { posts, carOfTheDay, topAuthors, trends };
-  } catch (error) {
-    console.error("Error fetching homepage data:", error);
-    return { posts: [], carOfTheDay: null, topAuthors: [], trends: [] };
-  }
-}
-
-
-function GlassCard({ children, className }: { children: React.ReactNode, className?: string }) {
-  return (
-    <Card variant="glass" className={className}>
-      {children}
-    </Card>
-  );
-}
-
-function PrimaryButton({ children, className }: { children: React.ReactNode, className?: string }) {
-  return (
-    <Button asChild className={cn("bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 transition-transform duration-300 hover:-translate-y-0.5", className)}>
-      <Link href="/posts/create">
-        {children}
-      </Link>
-    </Button>
-  );
-}
-
-
-export default async function HomePage() {
-  const { posts, carOfTheDay, topAuthors, trends } = await getHomepageData();
-
-  return (
-    <div className="w-full max-w-7xl mx-auto px-4 py-8">
-      {/* Hero Section */}
-      <section className="text-center md:text-left mb-16">
-        <div className="space-y-6">
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tighter leading-tight">
-            Твоя история про машины
-          </h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto md:mx-0">
-            Делись опытом, находи единомышленников и следи за лучшими проектами в автомобильном сообществе AutoSphere.
-          </p>
-          <PrimaryButton className="px-8 py-6 text-lg">
-            Начать публикацию
-          </PrimaryButton>
-        </div>
-      </section>
-
-      {/* Three-column layout */}
-      <div className="grid lg:grid-cols-4 gap-8">
-        
-        {/* Left Sidebar */}
-        <aside className="lg:col-span-1 space-y-8 hidden lg:block">
-          <GlassCard>
-            <CardHeader>
-              <CardTitle className="flex items-center"><BarChart2 className="mr-2 h-5 w-5" /> Тренды недели</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-wrap gap-2">
-              {trends.length > 0 ? trends.map(trend => (
-                <Link key={trend} href={`/posts?category=${encodeURIComponent(trend)}`}>
-                  <Badge variant="secondary" className="hover:bg-primary/20 cursor-pointer text-sm">
-                    #{trend}
-                  </Badge>
-                </Link>
-              )) : (
-                <p className="text-sm text-muted-foreground">Трендов пока нет.</p>
-              )}
-            </CardContent>
-          </GlassCard>
-          <GlassCard>
-            <CardHeader>
-              <CardTitle className="flex items-center"><Users className="mr-2 h-5 w-5" /> Топ авторы</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {topAuthors.length > 0 ? topAuthors.map(author => (
-                 <div key={author.id} className="flex items-center gap-3">
-                    <Avatar>
-                        <AvatarImage src={author.photoURL} />
-                        <AvatarFallback>{author.name?.[0]}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                        <p className="font-semibold text-sm">{author.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {author.stats?.postsCount || 0} постов
-                        </p>
-                    </div>
-                    <Button size="sm" variant="outline" asChild>
-                      <Link href={`/profile/${author.id}`}>Читать</Link>
-                    </Button>
-                 </div>
-              )) : (
-                [...Array(2)].map((_, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <Skeleton className="h-10 w-10 rounded-full" />
-                    <div className="flex-1 space-y-1">
-                      <Skeleton className="h-4 w-24" />
-                      <Skeleton className="h-3 w-16" />
-                    </div>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </GlassCard>
+    return (
+        <aside className="col-span-1 bg-[#0F141C] p-6 flex flex-col">
+            <div className="mb-8">
+                <h1 className="text-2xl font-bold text-white">AUTOSPHERE</h1>
+                <p className="text-xs text-muted-foreground">COMMAND HUB v3.0</p>
+            </div>
+            <nav className="flex flex-col gap-2">
+                {navItems.map(item => (
+                    <Link key={item.label} href={item.href}>
+                        <Button 
+                            variant={item.active ? "secondary" : "ghost"}
+                            className="w-full justify-start text-base"
+                        >
+                            <item.icon className="mr-3 h-5 w-5" />
+                            {item.label}
+                        </Button>
+                    </Link>
+                ))}
+            </nav>
+            <div className="mt-auto">
+                <Card className="bg-white/5 border-white/10">
+                    <CardHeader>
+                        <CardTitle className="text-sm flex items-center gap-2">
+                            <Power className="h-4 w-4 text-green-400" />
+                            ENERGY CORE STATUS
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-xs text-muted-foreground mb-2">Main power at 98%. All systems optimal.</p>
+                        <div className="w-full bg-green-900/50 rounded-full h-1.5">
+                            <div className="bg-green-400 h-1.5 rounded-full" style={{width: "98%"}}></div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
         </aside>
+    );
+}
 
-        {/* Main Feed */}
-        <main className="lg:col-span-2 space-y-8">
-           {posts.length > 0 ? (
-             posts.map(post => <PostCard key={post.id} post={post} />)
-           ) : (
-             <p className="text-muted-foreground">Постов пока нет.</p>
-           )}
-        </main>
-
-        {/* Right Sidebar */}
-        <aside className="lg:col-span-1 space-y-8">
-          {carOfTheDay ? (
-            <Link href={`/car/${carOfTheDay.car.id}`}>
-              <GlassCard>
-                <CardHeader className="pb-4">
-                  <CardTitle className="flex items-center justify-between">
-                    <span>Авто дня</span>
-                    <span className="text-sm font-normal text-muted-foreground">{new Date().toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}</span>
-                  </CardTitle>
+function RightSidebar() {
+    return (
+        <aside className="col-span-1 bg-[#0F141C] p-6 space-y-8">
+            <Card className="bg-transparent border-0 shadow-none">
+                <CardHeader className="p-0 text-center flex flex-col items-center">
+                    <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-primary mb-3">
+                       <div className="absolute inset-0.5 bg-background rounded-full p-1">
+                          <img src="https://i.pravatar.cc/150?u=alexdriver" alt="Alex Driver" className="w-full h-full rounded-full object-cover"/>
+                       </div>
+                    </div>
+                    <CardTitle className="text-white">Alex Driver</CardTitle>
+                    <p className="text-sm text-muted-foreground">Premium Member</p>
                 </CardHeader>
-                <CardContent>
-                  <div className="relative aspect-video rounded-xl overflow-hidden mb-4">
-                    <Image 
-                      src={carOfTheDay.car.photoUrl || 'https://placehold.co/600x400'} 
-                      alt="Car of the day" 
-                      fill 
-                      className="object-cover" 
-                    />
-                  </div>
-                  <h3 className="text-xl font-bold">{carOfTheDay.car.brand} {carOfTheDay.car.model}</h3>
-                  <p className="text-sm text-muted-foreground">Владелец: {carOfTheDay.user.name}</p>
-                  <div className="flex items-center gap-4 mt-4 text-sm">
-                    <span className="flex items-center gap-1.5"><Heart className="h-4 w-4 text-primary" /> {carOfTheDay.car.likes || 0}</span>
-                    <span className="flex items-center gap-1.5"><MessageCircle className="h-4 w-4" /> {carOfTheDay.car.comments || 0}</span>
-                    {carOfTheDay.car.specs?.currentHP && <span className="flex items-center gap-1.5"><Zap className="h-4 w-4" /> {carOfTheDay.car.specs.currentHP} л.с.</span>}
-                  </div>
-                  <Button variant="outline" className="w-full mt-4">Смотреть</Button>
-                </CardContent>
-              </GlassCard>
-            </Link>
-          ) : (
-             <GlassCard>
-                <CardContent className="p-6 flex flex-col items-center justify-center h-full min-h-[400px]">
-                    <Zap className="w-12 h-12 text-muted-foreground mb-4" />
-                    <h3 className="text-xl font-bold mb-2">Авто дня</h3>
-                    <p className="text-muted-foreground text-center">Голосование за автомобиль дня еще не завершено. Загляните позже!</p>
-                </CardContent>
-             </GlassCard>
-          )}
+            </Card>
+
+            <div className="space-y-4">
+                <h3 className="font-semibold text-white">TOP 10 CARS</h3>
+                <div className="space-y-2">
+                    {[...Array(5)].map((_, i) => (
+                        <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 cursor-pointer">
+                            <div className="flex items-center gap-3">
+                                <span className="font-bold text-lg text-muted-foreground w-6">0{i+1}</span>
+                                <div>
+                                    <p className="font-semibold text-sm">Car Model {i+1}</p>
+                                    <p className="text-xs text-muted-foreground">1,000 HP • Electric</p>
+                                </div>
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-muted-foreground"/>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+             <div className="space-y-4">
+                <h3 className="font-semibold text-white">AUTO NEWS</h3>
+                <div className="space-y-4">
+                     {[...Array(3)].map((_, i) => (
+                        <div key={i}>
+                            <p className="text-xs text-primary mb-1">EV TECH</p>
+                            <p className="font-semibold text-sm hover:underline cursor-pointer">Solid-state battery production begins</p>
+                        </div>
+                     ))}
+                </div>
+            </div>
         </aside>
+    );
+}
+
+export default function HomePage() {
+  return (
+      <div className="grid grid-cols-[280px_1fr_360px] min-h-screen">
+          <LeftSidebar />
+          
+          <main className="col-span-1 p-8 overflow-y-auto">
+              <header className="flex justify-between items-center mb-8">
+                  <h2 className="text-lg font-semibold text-white">CONTROL CONSOLE</h2>
+                  <div className="flex items-center gap-4">
+                      <p className="text-sm text-muted-foreground">Search...</p>
+                      <p className="text-sm font-bold text-white">10:42 AM</p>
+                  </div>
+              </header>
+
+              {/* Featured Car Placeholder */}
+              <Card className="glass p-8 mb-8">
+                <h2 className="text-4xl font-bold text-white">Tesla Model S Plaid</h2>
+                <p className="text-muted-foreground mt-2 mb-6">Experience the pinnacle of electric performance.</p>
+                <div className="flex gap-4">
+                    <Button variant="primary" size="lg">Customize</Button>
+                    <Button variant="outline" size="lg">Explore Specs</Button>
+                </div>
+              </Card>
+
+              {/* Live Feed Placeholder */}
+              <div>
+                <h3 className="text-xl font-semibold mb-4 text-white">LIVE FEED</h3>
+                <div className="grid md:grid-cols-2 gap-6">
+                    <Card className="bg-[#161B26]"><CardContent className="p-6">Post 1</CardContent></Card>
+                    <Card className="bg-[#161B26]"><CardContent className="p-6">Post 2</CardContent></Card>
+                </div>
+              </div>
+
+              <footer className="mt-12 pt-6 border-t border-white/10 text-center text-muted-foreground text-xs">
+                © 2024 AUTOSPHERE TECHNOLOGIES.
+              </footer>
+          </main>
+          
+          <RightSidebar />
       </div>
-    </div>
   );
 }
