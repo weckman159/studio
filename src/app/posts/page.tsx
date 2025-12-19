@@ -2,14 +2,14 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { collection, query, getDocs, orderBy, limit, DocumentData, startAfter, where } from 'firebase/firestore';
+import { collection, query, getDocs, orderBy, where, limit } from 'firebase/firestore';
 import { useFirestore, useUser } from '@/firebase';
 import { PostCard } from '@/components/PostCard';
 import { PostFilters } from '@/components/PostFilters';
 import { Post } from '@/lib/types';
 import { serializeFirestoreData } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MessageSquare, Users, Newspaper, Loader2 } from 'lucide-react';
+import { MessageSquare, Users, Newspaper, Loader2, Star } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -103,46 +103,43 @@ function AutoNewsWidget() {
   );
 }
 
+
 export default function PostsPage() {
     const firestore = useFirestore();
     const { user } = useUser();
     
     const [posts, setPosts] = useState<Post[]>([]);
-    const [lastDoc, setLastDoc] = useState<DocumentData | null>(null);
-    const [hasMore, setHasMore] = useState(true);
+    const [popularPosts, setPopularPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
-    const [loadingMore, setLoadingMore] = useState(false);
     
     const [activeCategory, setActiveCategory] = useState('Все');
     const [searchQuery, setSearchQuery] = useState('');
     const [feedType, setFeedType] = useState<'global' | 'following'>('global');
 
-    const POSTS_PER_PAGE = 10;
-
     useEffect(() => {
         const fetchPosts = async () => {
             if (!firestore) return;
             setLoading(true);
-            setPosts([]);
-            setLastDoc(null);
-            
             try {
-                let baseQuery = collection(firestore, 'posts');
-                let conditions: any[] = [orderBy('createdAt', 'desc'), limit(POSTS_PER_PAGE)];
-                
+                // Fetch new posts
+                let newPostsQuery = query(collection(firestore, 'posts'), orderBy('createdAt', 'desc'));
                 if (activeCategory !== 'Все') {
-                    conditions.unshift(where('category', '==', activeCategory));
+                    newPostsQuery = query(newPostsQuery, where('category', '==', activeCategory));
                 }
-
-                // TODO: Add logic for 'following' feedType
-
-                const postsQuery = query(baseQuery, ...conditions);
-                const snapshot = await getDocs(postsQuery);
-                const postsData = snapshot.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Post);
                 
-                setPosts(postsData);
-                setLastDoc(snapshot.docs[snapshot.docs.length - 1]);
-                setHasMore(snapshot.docs.length === POSTS_PER_PAGE);
+                // Fetch popular posts
+                const popularPostsQuery = query(collection(firestore, 'posts'), orderBy('likesCount', 'desc'), limit(4));
+                
+                const [newPostsSnap, popularPostsSnap] = await Promise.all([
+                    getDocs(newPostsQuery),
+                    getDocs(popularPostsQuery)
+                ]);
+
+                const newPostsData = newPostsSnap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Post);
+                const popularPostsData = popularPostsSnap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Post);
+                
+                setPosts(newPostsData);
+                setPopularPosts(popularPostsData);
 
             } catch (error) {
                 console.error("Error fetching posts:", error);
@@ -153,35 +150,6 @@ export default function PostsPage() {
         fetchPosts();
     }, [firestore, activeCategory, feedType]);
 
-    const handleLoadMore = async () => {
-        if (!firestore || !lastDoc || !hasMore) return;
-        setLoadingMore(true);
-        try {
-            let baseQuery = collection(firestore, 'posts');
-            let conditions: any[] = [
-                orderBy('createdAt', 'desc'),
-                startAfter(lastDoc),
-                limit(POSTS_PER_PAGE)
-            ];
-
-            if (activeCategory !== 'Все') {
-                conditions.unshift(where('category', '==', activeCategory));
-            }
-            
-            const postsQuery = query(baseQuery, ...conditions);
-            const snapshot = await getDocs(postsQuery);
-            const newPostsData = snapshot.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Post);
-
-            setPosts(prevPosts => [...prevPosts, ...newPostsData]);
-            setLastDoc(snapshot.docs[snapshot.docs.length - 1]);
-            setHasMore(snapshot.docs.length === POSTS_PER_PAGE);
-
-        } catch (error) {
-            console.error("Error fetching more posts:", error);
-        } finally {
-            setLoadingMore(false);
-        }
-    }
 
     const filteredPosts = useMemo(() => {
         if (!searchQuery) return posts;
@@ -211,27 +179,28 @@ export default function PostsPage() {
                     {loading ? (
                         <FeedSkeleton />
                     ) : filteredPosts.length > 0 ? (
-                        <>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                {filteredPosts.map(post => <PostCard key={post.id} post={post} />)}
-                            </div>
-                            
-                            {hasMore && (
-                                <div className="flex justify-end mt-8">
-                                    <Button onClick={handleLoadMore} disabled={loadingMore} variant="outline" size="lg">
-                                        {loadingMore ? (
-                                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                                        ) : null}
-                                        ЕЩЕ
-                                    </Button>
-                                </div>
-                            )}
-                        </>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            {filteredPosts.map(post => <PostCard key={post.id} post={post} />)}
+                        </div>
                     ) : (
                         <div className="holographic-panel rounded-xl text-center py-16">
                             <MessageSquare className="mx-auto h-12 w-12 text-text-muted mb-4"/>
                             <h3 className="text-xl font-semibold text-white">Публикаций не найдено</h3>
                             <p className="text-text-secondary mt-2">Попробуйте изменить фильтры или стать первым автором!</p>
+                        </div>
+                    )}
+
+                    {/* Popular Posts Section */}
+                    {popularPosts.length > 0 && (
+                        <div className="pt-8 mt-8 border-t border-border/20">
+                            <h2 className="text-2xl font-bold mb-6 text-white flex items-center gap-2">
+                                <Star className="text-primary" /> Популярные публикации
+                            </h2>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                                {popularPosts.map(post => (
+                                    <PostCard key={post.id} post={post} />
+                                ))}
+                            </div>
                         </div>
                     )}
                 </main>
