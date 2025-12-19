@@ -161,7 +161,7 @@ export function ProfileClientPage({
                             <Button size="sm" onClick={onEditClick}><Edit className="mr-2 h-4 w-4"/>Редактировать</Button>
                         ) : (
                             <>
-                                <Button size="sm" onClick={isFollowing ? onUnfollow : onFollow}>{isFollowing ? <UserCheck className="mr-2 h-4 w-4"/> : <UserPlus className="mr-2 h-4 w-4"/>}{isFollowing ? 'Отписаться' : 'Подписаться'}</Button>
+                                <Button size="sm" onClick={isFollowing ? handleUnfollow : handleFollow}>{isFollowing ? <UserCheck className="mr-2 h-4 w-4"/> : <UserPlus className="mr-2 h-4 w-4"/>}{isFollowing ? 'Отписаться' : 'Подписаться'}</Button>
                                 <Button size="sm" variant="outline"><MessageCircle className="mr-2 h-4 w-4"/>Написать</Button>
                             </>
                         )}
