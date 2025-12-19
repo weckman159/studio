@@ -27,7 +27,7 @@ async function getHomepageData() {
     const todayStr = new Date().toISOString().split('T')[0];
     const featuredCarSnap = await db.collection('featuredCars').doc(todayStr).get();
     let carOfTheDay: { car: Car; user: User } | null = null;
-    if (featuredCarSnap.exists) {
+    if (featuredCarSnap.exists){
       const featuredData = featuredCarSnap.data() as FeaturedCar;
       if (featuredData.carId && featuredData.userId) {
         const [carSnap, userSnap] = await Promise.all([
