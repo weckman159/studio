@@ -148,104 +148,95 @@ export default function PostsPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [feedType, setFeedType] = useState<'global' | 'following'>('global');
 
-    const fetchPosts = useCallback(async (loadMore = false) => {
+    const fetchPosts = useCallback(async (loadMore = false, reset = false) => {
         if (!firestore) return;
         
-        let queryRef;
+        let currentLastVisible = reset ? null : lastVisible;
+
         if (loadMore) {
-            setLoadingMore(true);
-            if (!lastVisible) { // Should not happen if hasMore is true, but as a safeguard
-                setLoadingMore(false);
+            if (!currentLastVisible) {
+                setHasMore(false);
                 return;
             }
-            queryRef = query(collection(firestore, 'posts'), orderBy('createdAt', 'desc'), startAfter(lastVisible), limit(POSTS_PER_PAGE));
+            setLoadingMore(true);
         } else {
             setLoading(true);
-            setPosts([]);
-            setLastVisible(null);
-            queryRef = query(collection(firestore, 'posts'), orderBy('createdAt', 'desc'), limit(POSTS_PER_PAGE));
         }
 
         try {
-            const documentSnapshots = await getDocs(queryRef);
-            const newPosts = documentSnapshots.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Post);
+            let baseQuery;
+            if (feedType === 'following' && user) {
+                const followingRef = collection(firestore, 'users', user.uid, 'following');
+                const followingSnap = await getDocs(followingRef);
+                const followingIds = followingSnap.docs.map(doc => doc.id);
 
-            setPosts(prevPosts => loadMore ? [...prevPosts, ...newPosts] : newPosts);
+                if (followingIds.length > 0) {
+                    baseQuery = query(collection(firestore, 'posts'), where('authorId', 'in', followingIds), orderBy('createdAt', 'desc'));
+                } else {
+                    setPosts([]);
+                    setHasMore(false);
+                    setLoading(false);
+                    setLoadingMore(false);
+                    return;
+                }
+            } else {
+                baseQuery = query(collection(firestore, 'posts'), orderBy('createdAt', 'desc'));
+            }
+
+            if (activeCategory !== 'Все') {
+                baseQuery = query(baseQuery, where('category', '==', activeCategory));
+            }
+            
+            let finalQuery = baseQuery;
+            if (loadMore && currentLastVisible) {
+                finalQuery = query(finalQuery, startAfter(currentLastVisible), limit(POSTS_PER_PAGE));
+            } else {
+                finalQuery = query(finalQuery, limit(POSTS_PER_PAGE));
+            }
+
+            const documentSnapshots = await getDocs(finalQuery);
+            const newPosts = documentSnapshots.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Post);
+            
+            setPosts(prev => (loadMore && !reset) ? [...prev, ...newPosts] : newPosts);
             
             const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
             setLastVisible(lastDoc || null);
-
             setHasMore(documentSnapshots.docs.length === POSTS_PER_PAGE);
+
         } catch (error) {
             console.error("Error fetching posts:", error);
         } finally {
             setLoading(false);
             setLoadingMore(false);
         }
-    }, [firestore, lastVisible]);
+    }, [firestore, feedType, user, activeCategory, lastVisible]);
 
 
     useEffect(() => {
-        const fetchInitialData = async () => {
-            if (!firestore) return;
-            setLoading(true);
-
-            try {
-                // Initial post fetch
-                let basePostsQuery = query(collection(firestore, 'posts'), orderBy('createdAt', 'desc'));
-                
-                if (feedType === 'following' && user) {
-                    const followingRef = collection(firestore, 'users', user.uid, 'following');
-                    const followingSnap = await getDocs(followingRef);
-                    const followingIds = followingSnap.docs.map(doc => doc.id);
-
-                    if (followingIds.length > 0) {
-                        basePostsQuery = query(basePostsQuery, where('authorId', 'in', followingIds));
-                    } else {
-                        setPosts([]);
-                        setHasMore(false);
-                        // Don't return yet, still need to fetch widgets
-                    }
-                }
-
-                if (activeCategory !== 'Все') {
-                    basePostsQuery = query(basePostsQuery, where('category', '==', activeCategory));
-                }
-
-                const finalPostsQuery = query(basePostsQuery, limit(POSTS_PER_PAGE));
-
-                // Widget queries
-                const popularPostsQuery = query(collection(firestore, 'posts'), orderBy('likesCount', 'desc'), limit(4));
+        const fetchWidgetData = async () => {
+             if (!firestore) return;
+             try {
                 const topAuthorsQuery = query(collection(firestore, 'users'), orderBy('stats.postsCount', 'desc'), limit(3));
                 const latestNewsQuery = query(collection(firestore, 'autoNews'), orderBy('publishedAt', 'desc'), limit(3));
-
-                const [postsSnap, popularPostsSnap, authorsSnap, newsSnap] = await Promise.all([
-                    getDocs(finalPostsQuery),
-                    getDocs(popularPostsQuery),
+                const popularPostsQuery = query(collection(firestore, 'posts'), orderBy('likesCount', 'desc'), limit(4));
+                
+                const [authorsSnap, newsSnap, popularSnap] = await Promise.all([
                     getDocs(topAuthorsQuery),
-                    getDocs(latestNewsQuery)
+                    getDocs(latestNewsQuery),
+                    getDocs(popularSnap)
                 ]);
 
-                // Set posts and pagination state
-                const postsData = postsSnap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Post);
-                setPosts(postsData);
-                setLastVisible(postsSnap.docs[postsSnap.docs.length - 1] || null);
-                setHasMore(postsSnap.docs.length === POSTS_PER_PAGE);
-
-                // Set widget data
-                setPopularPosts(popularPostsSnap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Post));
                 setTopAuthors(authorsSnap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as User));
                 setLatestNews(newsSnap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as AutoNews));
-
-            } catch (error) {
-                console.error("Error fetching initial page data:", error);
-            } finally {
-                setLoading(false);
-            }
+                setPopularPosts(popularSnap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Post));
+             } catch (error) {
+                 console.error("Error fetching widget data:", error);
+             }
         };
 
-        fetchInitialData();
-    }, [firestore, user, feedType, activeCategory]);
+        fetchWidgetData();
+        fetchPosts(false, true); // Initial fetch, reset pagination
+    }, [firestore, user, feedType, activeCategory, fetchPosts]);
 
     const filteredPosts = useMemo(() => {
         if (!searchQuery) return posts;
@@ -278,7 +269,7 @@ export default function PostsPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 {filteredPosts.map(post => <PostCard key={post.id} post={post} />)}
                             </div>
-                             {hasMore && (
+                            {hasMore && !loading && (
                                 <div className="flex justify-center pt-8">
                                     <Button onClick={() => fetchPosts(true)} disabled={loadingMore}>
                                         {loadingMore ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Ещё'}
@@ -315,3 +306,4 @@ export default function PostsPage() {
         </div>
     );
 }
+
