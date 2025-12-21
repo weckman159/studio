@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { serializeFirestoreData } from '@/lib/utils';
 import { PhotoGrid } from './PhotoGrid';
-
+import { useToast } from '@/hooks/use-toast';
 
 interface ProfileClientPageProps {
   profileId: string;
@@ -37,6 +37,7 @@ function ComingSoonPlaceholder({ title, icon: Icon }: { title: string, icon: Rea
 export function ProfileClientPage({ profileId }: ProfileClientPageProps) {
   const { user: authUser } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
 
   const [profile, setProfile] = useState<User | null>(null);
   const [cars, setCars] = useState<Car[]>([]);
@@ -110,8 +111,10 @@ export function ProfileClientPage({ profileId }: ProfileClientPageProps) {
       await setDoc(followingRef, { createdAt: serverTimestamp() });
       setFollowers(prev => [...prev, authUser.uid]);
       setIsFollowing(true);
+      toast({ title: 'Вы подписались на', description: profile.displayName });
     } catch (e) {
       console.error("Error following user: ", e);
+      toast({ title: 'Ошибка', variant: 'destructive' });
     } finally {
       setLoadingAction(false);
     }
@@ -125,8 +128,10 @@ export function ProfileClientPage({ profileId }: ProfileClientPageProps) {
       await deleteDoc(followingRef);
       setFollowers(prev => prev.filter(id => id !== authUser.uid));
       setIsFollowing(false);
+      toast({ title: 'Вы отписались от', description: profile.displayName, variant: 'default' });
     } catch (e) {
       console.error("Error unfollowing user: ", e);
+      toast({ title: 'Ошибка', variant: 'destructive' });
     } finally {
         setLoadingAction(false);
     }
