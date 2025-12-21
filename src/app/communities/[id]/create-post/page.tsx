@@ -18,7 +18,8 @@ export default function CreateCommunityPostPage() {
     const { user, isUserLoading } = useUser();
     const firestore = useFirestore();
     
-    const communityId = params.id as string;
+    // useParams can return string | string[] | undefined
+    const communityId = Array.isArray(params.id) ? params.id[0] : params.id;
     
     const [community, setCommunity] = useState<Community | null>(null);
     const [isMember, setIsMember] = useState(false);

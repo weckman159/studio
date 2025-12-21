@@ -15,7 +15,7 @@ import { Loader2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { Event } from '@/lib/types';
 
-export default function EventSettingsClient({ params }: { params: Promise<{ id: string }> }) {
+export default async function EventSettingsClient({ params }: { params: Promise<{ id: string }> }) {
     const [eventId, setEventId] = useState<string>('');
     const [event, setEvent] = useState<Event | null>(null);
     const [loading, setLoading] = useState(true);

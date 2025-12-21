@@ -19,11 +19,11 @@ type PostPageProps = {
 async function getPostData(postId: string) {
     const db = getAdminDb();
     const postRef = db.collection('posts').doc(postId);
-    const commentsRef = postRef.collection('comments').orderBy('createdAt', 'asc');
+    const commentsQuery = db.collection('comments').where('postId', '==', postId).orderBy('createdAt', 'asc');
     
     const [postSnap, commentsSnap] = await Promise.all([
       postRef.get(),
-      commentsRef.get()
+      commentsQuery.get()
     ]);
 
     if (!postSnap.exists) {

@@ -15,7 +15,7 @@ import { Loader2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { Community } from '@/lib/types';
 
-export default function CommunitySettingsClient({ params }: { params: Promise<{ id: string }> }) {
+export default async function CommunitySettingsClient({ params }: { params: Promise<{ id: string }> }) {
     const [communityId, setCommunityId] = useState<string>('');
     const [community, setCommunity] = useState<Community | null>(null);
     const [loading, setLoading] = useState(true);

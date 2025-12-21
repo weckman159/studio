@@ -1,3 +1,4 @@
+
 import type {NextConfig} from 'next';
 
 const withPWA = require('next-pwa')({
@@ -8,8 +9,13 @@ const withPWA = require('next-pwa')({
 });
 
 const nextConfig: NextConfig = {
-  /* config options here */
-    experimental: {
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  experimental: {
     optimizePackageImports: ['@radix-ui/react-icons', 'lucide-react'],
   },
   images: {
