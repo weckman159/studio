@@ -25,9 +25,10 @@ service cloud.firestore {
 
     // --- Collections ---
 
-    // Users: Publicly readable unless visibility is 'private'. Writable only by owner.
+    // Users: Get single public profile is allowed for signed-in users. Listing all users is denied.
     match /users/{userId} {
-      allow read: if !('profileVisibility' in resource.data) || resource.data.profileVisibility != 'private';
+      allow get: if isSignedIn() && (isOwner(userId) || resource.data.profileVisibility != 'private');
+      allow list: if false; // Deny listing all users to prevent data scraping
       allow create: if isOwner(userId);
       // Prevent self-promotion, role/status changes by non-admins
       allow update: if isOwner(userId) && !request.resource.data.keys().hasAny(['role', 'status', 'createdAt']);
@@ -59,7 +60,9 @@ service cloud.firestore {
     // Comments (root collection for efficient querying)
     match /comments/{commentId} {
       allow read: if true;
-      allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
+      allow create: if isSignedIn() 
+                    && request.resource.data.authorId == request.auth.uid
+                    && request.resource.data.content.size() < 2000; // Added content size validation
       allow update: if isSignedIn() && resource.data.authorId == request.auth.uid
                     && !request.resource.data.keys().hasAny(['authorId', 'createdAt', 'postId']);
       allow delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isModOrAdmin());
