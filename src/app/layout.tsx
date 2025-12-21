@@ -2,7 +2,7 @@
 'use client';
 import React, { Suspense } from 'react';
 import Link from 'next/link';
-import { Sparkles, Users, Rss, Store, Car, Zap, Search, GaugeCircle, BatteryCharging, Palette, Info, Newspaper, MoreHorizontal, Heart, MessageCircle, Send, Shield, BarChart, ChevronRight, Gem, Infinity, Star, ThumbsUp, Flame, TrendingUp, Globe, Menu, Bell, User as UserIcon, LogOut, Settings } from 'lucide-react';
+import { Sparkles, Users, Rss, Store, Car, Zap, Search, Bell, Menu, User as UserIcon, LogOut, Settings } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
