@@ -17,13 +17,13 @@ import {
 import { Settings, User, LogOut, CarFront, Menu, Shield, PlusSquare } from 'lucide-react';
 import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
-import { useSidebar } from './ui/sidebar';
+import { useSidebar } from '@/components/ui/sidebar';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import { ThemeToggle } from './ThemeToggle';
-import { Notifications } from './Notifications';
-import { Skeleton } from './ui/skeleton';
-import GlobalSearch from './GlobalSearch';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { Notifications } from '@/components/Notifications';
+import { Skeleton } from '@/components/ui/skeleton';
+import GlobalSearch from '@/components/GlobalSearch';
 
 
 export function Header() {

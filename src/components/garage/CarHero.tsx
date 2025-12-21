@@ -1,3 +1,4 @@
+
 'use client'
 import { useState } from 'react'
 import Image from 'next/image'
@@ -39,6 +40,7 @@ export function CarHero({ car }: { car: Car }) {
           fill
           className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
           data-ai-hint={carHeroImage.hint}
+          priority
         />
       )}
       
