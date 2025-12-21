@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -158,14 +157,20 @@ export default function GaragePage() {
               </Card>
           </>
         ) : (
-          <div className="text-center py-16 border-2 border-dashed border-border rounded-xl holographic-panel">
-            <CarIcon className="mx-auto h-16 w-16 text-text-muted mb-4" />
-            <h2 className="text-xl font-semibold text-white">Ваш гараж пуст</h2>
-            <p className="text-text-secondary mt-2">Начните с добавления вашего первого автомобиля.</p>
-            <Button className="mt-4" onClick={handleOpenAddCar}>
-              <Plus className="mr-2 h-4 w-4" /> Добавить авто
-            </Button>
-          </div>
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center p-12 text-center">
+              <div className="mb-4 rounded-full border border-dashed border-border p-6">
+                <CarIcon className="h-16 w-16 text-muted-foreground" />
+              </div>
+              <h2 className="text-2xl font-bold mb-2">Ваш гараж пуст</h2>
+              <p className="max-w-xs text-muted-foreground mb-6">
+                Добавьте свой первый автомобиль, чтобы начать вести бортжурнал, отслеживать расходы и делиться успехами.
+              </p>
+              <Button size="lg" onClick={handleOpenAddCar}>
+                <Plus className="mr-2 h-4 w-4" /> Добавить автомобиль
+              </Button>
+            </CardContent>
+          </Card>
         )}
       </div>
     </>
