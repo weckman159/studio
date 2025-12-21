@@ -2,7 +2,7 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react';
-import { collection, query, orderBy, getDocs, onSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, onSnapshot, QueryDocumentSnapshot } from 'firebase/firestore';
 import { useFirestore, useUser } from '@/firebase';
 import { User, UserRoles } from '@/lib/types';
 import { serializeFirestoreData } from '@/lib/utils';
@@ -42,7 +42,7 @@ export default function AdminUsersPage() {
         const q = query(collection(firestore, 'users'), orderBy('createdAt', 'desc'));
         
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const usersData = querySnapshot.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as User);
+            const usersData = querySnapshot.docs.map((doc: QueryDocumentSnapshot) => serializeFirestoreData({ id: doc.id, ...doc.data() }) as User);
             setUsers(usersData);
             setLoading(false);
         }, (error) => {

@@ -11,7 +11,7 @@ import {
   getCountFromServer
 } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
-import { User as UserData, Workshop, Feedback, Post } from '@/lib/types';
+import { Post } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { serializeFirestoreData } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
