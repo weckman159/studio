@@ -117,10 +117,10 @@ export default function AuthPage() {
               <Form {...loginForm}>
                 <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
                   <FormField control={loginForm.control} name="email" render={({ field }) => (
-                    <FormItem><FormLabel className="text-text-secondary">Email</FormLabel><FormControl><Input type="email" {...field} disabled={loading} className="bg-black/20 border-primary/20 focus:border-primary" /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel className="text-text-secondary">Email</FormLabel><FormControl><Input type="email" {...field} disabled={loading} className="bg-black/20 border-primary/20 focus:border-primary" autoComplete="email" /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={loginForm.control} name="password" render={({ field }) => (
-                     <FormItem><FormLabel className="text-text-secondary">Пароль</FormLabel><FormControl><div className="relative"><Input type={showPassword ? 'text' : 'password'} {...field} disabled={loading} className="bg-black/20 border-primary/20 focus:border-primary" autoComplete="off"/><Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground" onClick={() => setShowPassword(!showPassword)}>{showPassword ? <EyeOff/> : <Eye/>}</Button></div></FormControl><FormMessage /></FormItem>
+                     <FormItem><FormLabel className="text-text-secondary">Пароль</FormLabel><FormControl><div className="relative"><Input type={showPassword ? 'text' : 'password'} {...field} disabled={loading} className="bg-black/20 border-primary/20 focus:border-primary" autoComplete="current-password"/><Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}>{showPassword ? <EyeOff/> : <Eye/>}</Button></div></FormControl><FormMessage /></FormItem>
                   )} />
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null} Войти
@@ -133,13 +133,13 @@ export default function AuthPage() {
               <Form {...registerForm}>
                 <form onSubmit={registerForm.handleSubmit(handleRegister)} className="space-y-4">
                   <FormField control={registerForm.control} name="name" render={({ field }) => (
-                    <FormItem><FormLabel className="text-text-secondary">Имя пользователя</FormLabel><FormControl><Input placeholder="Например, AlexDriver" {...field} disabled={loading} className="bg-black/20 border-primary/20 focus:border-primary"/></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel className="text-text-secondary">Имя пользователя</FormLabel><FormControl><Input placeholder="Например, AlexDriver" {...field} disabled={loading} className="bg-black/20 border-primary/20 focus:border-primary" autoComplete="name"/></FormControl><FormMessage /></FormItem>
                   )} />
                    <FormField control={registerForm.control} name="email" render={({ field }) => (
-                    <FormItem><FormLabel className="text-text-secondary">Email</FormLabel><FormControl><Input type="email" {...field} disabled={loading} className="bg-black/20 border-primary/20 focus:border-primary"/></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel className="text-text-secondary">Email</FormLabel><FormControl><Input type="email" {...field} disabled={loading} className="bg-black/20 border-primary/20 focus:border-primary" autoComplete="email"/></FormControl><FormMessage /></FormItem>
                   )} />
                    <FormField control={registerForm.control} name="password" render={({ field }) => (
-                    <FormItem><FormLabel className="text-text-secondary">Пароль</FormLabel><FormControl><div className="relative"><Input type={showPassword ? 'text' : 'password'} {...field} disabled={loading} className="bg-black/20 border-primary/20 focus:border-primary" autoComplete="off"/><Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground" onClick={() => setShowPassword(!showPassword)}>{showPassword ? <EyeOff/> : <Eye/>}</Button></div></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel className="text-text-secondary">Пароль</FormLabel><FormControl><div className="relative"><Input type={showPassword ? 'text' : 'password'} {...field} disabled={loading} className="bg-black/20 border-primary/20 focus:border-primary" autoComplete="new-password"/><Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}>{showPassword ? <EyeOff/> : <Eye/>}</Button></div></FormControl><FormMessage /></FormItem>
                   )} />
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null} Создать аккаунт

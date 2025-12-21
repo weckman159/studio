@@ -1,4 +1,3 @@
-
 // src/components/profile/ProfileClientPage.tsx
 'use client';
 
@@ -7,7 +6,7 @@ import { doc, getDoc, collection, query, where, orderBy, getDocs, setDoc, delete
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ProfileSidebar } from '@/components/profile/ProfileSidebar';
 import { CarCard } from '@/components/profile/CarCard';
-import { Wrench, Calendar, Camera, ShoppingBag, Edit, UserPlus, UserCheck, MessageCircle } from 'lucide-react';
+import { Wrench, Calendar, Camera, ShoppingBag, Edit, UserPlus, UserCheck, MessageSquare, Plus } from 'lucide-react';
 import { useUser, useFirestore } from '@/firebase';
 import type { Car, User, Post } from '@/lib/types';
 import { EditProfileModal } from '@/components/EditProfileModal';
@@ -19,6 +18,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { serializeFirestoreData } from '@/lib/utils';
 import { PhotoGrid } from './PhotoGrid';
 import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
 
 interface ProfileClientPageProps {
   profileId: string;
@@ -225,7 +225,20 @@ export function ProfileClientPage({ profileId }: ProfileClientPageProps) {
                   {posts.length > 0 ? (
                     posts.map(post => <PostCard key={post.id} post={post} />)
                   ) : (
-                    <div className="text-center py-12 text-muted-foreground">У пользователя еще нет постов.</div>
+                    <div className="text-center py-16 border-2 border-dashed border-border/30 rounded-xl bg-card/50">
+                        <MessageSquare className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                        <h3 className="text-xl font-semibold text-foreground">Публикаций пока нет</h3>
+                        <p className="text-muted-foreground mt-2 max-w-sm mx-auto">
+                            {isOwner ? "Ваш первый пост появится здесь после его создания." : "У этого пользователя еще нет публикаций."}
+                        </p>
+                        {isOwner && (
+                            <Button asChild size="lg" className="mt-6">
+                                <Link href="/posts/create">
+                                    <Plus className="mr-2 h-4 w-4" /> Создать первый пост
+                                </Link>
+                            </Button>
+                        )}
+                    </div>
                   )}
                 </TabsContent>
 

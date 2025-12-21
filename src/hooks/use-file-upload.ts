@@ -65,16 +65,17 @@ export const useFileUpload = (options: UseFileUploadOptions = {}): UseFileUpload
           results.push(result);
       }
       
+      setProgress(100);
       onSuccess?.(results);
       return results;
     } catch (err: any) {
       const msg = err.message || 'Ошибка загрузки';
       setError(msg);
+      setProgress(0);
       onError?.(err);
       return [];
     } finally {
       setUploading(false);
-      setProgress(100);
     }
   }, [maxFiles, maxSizeInMB, onSuccess, onError]);
 
