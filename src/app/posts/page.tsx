@@ -9,12 +9,16 @@ import { PostFilters } from '@/components/PostFilters';
 import { Post, User, AutoNews } from '@/lib/types';
 import { serializeFirestoreData } from '@/lib/utils';
 import { MessageSquare, Star } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
-import { TopUsersWidget } from '@/components/widgets/TopUsersWidget';
-import { AutoNewsWidget } from '@/components/widgets/AutoNewsWidget';
+import Link from 'next/link';
 
+// Import new reusable widgets
+import { TopUsersWidget } from '@/components/TopUsersWidget';
+import { AutoNewsWidget } from '@/components/AutoNewsWidget';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
+const POSTS_PER_PAGE = 8;
 
 function FeedSkeleton() {
     return (
@@ -45,8 +49,6 @@ function FeedSkeleton() {
 
 
 // --- MAIN PAGE COMPONENT ---
-const POSTS_PER_PAGE = 8;
-
 export default function PostsPage() {
     const firestore = useFirestore();
     const { user } = useUser();
@@ -71,14 +73,10 @@ export default function PostsPage() {
     const fetchPosts = useCallback(async (loadMore = false) => {
         if (!firestore) return;
         
-        if (loadMore) {
-            if (!hasMore) {
-                setLoadingMore(false);
-                return;
-            }
-            setLoadingMore(true);
-        } else {
-            setLoading(true);
+        const currentLoadingStateSetter = loadMore ? setLoadingMore : setLoading;
+        currentLoadingStateSetter(true);
+
+        if (!loadMore) {
             setPosts([]);
             setLastVisible(null);
             setHasMore(true);
@@ -96,8 +94,7 @@ export default function PostsPage() {
                 } else {
                     setPosts([]);
                     setHasMore(false);
-                    setLoading(false);
-                    setLoadingMore(false);
+                    currentLoadingStateSetter(false);
                     return;
                 }
             } else {
@@ -108,10 +105,10 @@ export default function PostsPage() {
                 postsQuery = query(postsQuery, where('category', '==', activeCategory));
             }
             
+            postsQuery = query(postsQuery, limit(POSTS_PER_PAGE));
+
             if (loadMore && lastVisible) {
-                postsQuery = query(postsQuery, startAfter(lastVisible), limit(POSTS_PER_PAGE));
-            } else {
-                postsQuery = query(postsQuery, limit(POSTS_PER_PAGE));
+                postsQuery = query(postsQuery, startAfter(lastVisible));
             }
 
             const postsSnap = await getDocs(postsQuery);
@@ -129,22 +126,19 @@ export default function PostsPage() {
         } catch (error) {
             console.error("Error fetching posts:", error);
         } finally {
-            if (!loadMore) {
-                setLoading(false);
-            }
-            setLoadingMore(false);
+            currentLoadingStateSetter(false);
         }
-    }, [firestore, activeCategory, feedType, user, lastVisible, hasMore]);
+    }, [firestore, activeCategory, feedType, user, lastVisible]);
     
     useEffect(() => {
-        const fetchSideData = async () => {
+        const fetchInitialData = async () => {
              if (!firestore) return;
              try {
                 const topAuthorsQuery = query(collection(firestore, 'users'), orderBy('stats.postsCount', 'desc'), limit(3));
                 const latestNewsQuery = query(collection(firestore, 'autoNews'), orderBy('publishedAt', 'desc'), limit(3));
                 const popularPostsQuery = query(collection(firestore, 'posts'), orderBy('likesCount', 'desc'), limit(4));
                 
-                const [authorsSnap, newsSnap, popularPostsSnap] = await Promise.all([
+                const [authorsSnap, newsSnap, popularSnap] = await Promise.all([
                     getDocs(topAuthorsQuery),
                     getDocs(latestNewsQuery),
                     getDocs(popularPostsQuery)
@@ -152,12 +146,12 @@ export default function PostsPage() {
 
                 setTopAuthors(authorsSnap.docs.map((doc: QueryDocumentSnapshot) => serializeFirestoreData({ id: doc.id, ...doc.data() }) as User));
                 setLatestNews(newsSnap.docs.map((doc: QueryDocumentSnapshot) => serializeFirestoreData({ id: doc.id, ...doc.data() }) as AutoNews));
-                setPopularPosts(popularPostsSnap.docs.map((doc: QueryDocumentSnapshot) => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Post));
+                setPopularPosts(popularSnap.docs.map((doc: QueryDocumentSnapshot) => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Post));
              } catch(error) {
                  console.error("Error fetching widget data:", error)
              }
         }
-        fetchSideData();
+        fetchInitialData();
     }, [firestore]);
 
     useEffect(() => {
