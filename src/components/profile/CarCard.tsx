@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { Zap, Gauge, Wrench } from 'lucide-react'
-import type { Car } from '@/lib/types';
+import type { Car, CarStatus, CarStatusConfig } from '@/lib/types';
 import Image from 'next/image';
 
 
@@ -13,11 +13,15 @@ interface CarCardProps {
 
 
 export function CarCard({ car }: CarCardProps) {
-  const statusConfig: Record<string, { label: string, color: string }> = {
-    daily: { label: 'Дейли', color: 'bg-green-500' },
+  const statusConfig: Record<CarStatus, CarStatusConfig> = {
+    owned: { label: 'Дейли', color: 'bg-green-500' },
     project: { label: 'В постройке', color: 'bg-yellow-500' },
-    weekend: { label: 'Проект выходного дня', color: 'bg-purple-500' },
+    dream: { label: 'Мечта', color: 'bg-blue-500' },
+    parted: { label: 'Разобрана', color: 'bg-gray-500' },
+    sold: { label: 'Продана', color: 'bg-red-500' },
   }
+
+  const currentStatus = statusConfig[car.status] || { label: 'Владею', color: 'bg-green-500' };
 
   return (
     <Link href={`/car/${car.id}`}>
@@ -41,9 +45,9 @@ export function CarCard({ car }: CarCardProps) {
         <div className="absolute inset-0 p-6 flex flex-col justify-between">
           {/* Статус */}
           <div>
-            {/* <Badge className={`${statusConfig[car.status].color} border-0 text-white`}>
-              {statusConfig[car.status].label}
-            </Badge> */}
+            <Badge className={`${currentStatus.color} border-0 text-white`}>
+              {currentStatus.label}
+            </Badge>
           </div>
           
           {/* Название и спеки */}

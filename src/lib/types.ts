@@ -6,6 +6,7 @@ export type CarStatus = 'owned' | 'sold' | 'project' | 'dream' | 'parted';
 export type FitmentStatus = 'flush' | 'tucked' | 'poke';
 export type TimelineType = 'purchase' | 'maintenance' | 'tuning' | 'accident' | 'sale';
 export type ModCategory = 'engine' | 'suspension' | 'exterior' | 'interior' | 'audio';
+export type CarStatusConfig = { label: string, color: string };
 
 export interface WheelSetup {
   et: number;
