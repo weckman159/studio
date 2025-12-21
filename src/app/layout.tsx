@@ -18,6 +18,7 @@ import { Sidebar, SidebarProvider, SidebarTrigger } from '@/components/ui/sideba
 import GlobalSearch from '@/components/GlobalSearch';
 import { MobileNav } from '@/components/MobileNav';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Footer } from '@/components/Footer';
 
 // Left Sidebar Component
 const LeftSidebar = () => {
@@ -139,8 +140,11 @@ export default function RootLayout({
                     <LeftSidebar />
                     <main className="flex-1 flex flex-col min-w-0 bg-transparent relative">
                         <PageHeader />
-                        <div className="flex-1 overflow-y-auto scroll-effect">
-                            {children}
+                        <div className="flex-1 flex flex-col overflow-y-auto scroll-effect">
+                            <div className="flex-1">
+                                {children}
+                            </div>
+                            <Footer />
                         </div>
                     </main>
                 </div>

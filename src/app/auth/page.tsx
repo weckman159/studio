@@ -3,6 +3,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth, useFirestore } from '@/firebase';
@@ -10,31 +13,49 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Label } from '@/components/ui/label';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, CarFront } from 'lucide-react';
+import { Loader2, CarFront, Eye, EyeOff } from 'lucide-react';
+
+const loginSchema = z.object({
+  email: z.string().email({ message: "Введите корректный email" }),
+  password: z.string().min(1, { message: "Введите пароль" }),
+});
+
+const registerSchema = z.object({
+  name: z.string().min(2, { message: "Имя должно содержать минимум 2 символа" }).max(50),
+  email: z.string().email({ message: "Введите корректный email" }),
+  password: z.string().min(6, { message: "Пароль должен содержать минимум 6 символов" }),
+});
 
 export default function AuthPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
+  const [activeTab, setActiveTab] = useState('login');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const auth = useAuth();
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const loginForm = useForm<z.infer<typeof loginSchema>>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
+  });
+
+  const registerForm = useForm<z.infer<typeof registerSchema>>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: { name: '', email: '', password: '' },
+  });
+
+  const handleLogin = async (values: z.infer<typeof loginSchema>) => {
     if (!auth) return;
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth, values.email, values.password);
       toast({ title: "Успешный вход", description: "С возвращением!" });
       router.push('/');
     } catch (error: any) {
-      console.error(error);
-      let msg = "Ошибка входа";
+      let msg = "Ошибка входа. Проверьте данные.";
       if (error.code === 'auth/invalid-credential') msg = "Неверный email или пароль";
       toast({ variant: "destructive", title: "Ошибка", description: msg });
     } finally {
@@ -42,41 +63,28 @@ export default function AuthPage() {
     }
   };
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleRegister = async (values: z.infer<typeof registerSchema>) => {
     if (!auth || !firestore) return;
     setLoading(true);
     try {
-      // 1. Create user in Auth
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
-
-      // 2. Update profile (name)
-      await updateProfile(user, { displayName: name });
-
-      // 3. Create user document in Firestore
+      await updateProfile(user, { displayName: values.name });
       await setDoc(doc(firestore, 'users', user.uid), {
         id: user.uid,
         uid: user.uid,
-        displayName: name,
-        name: name,
+        displayName: values.name,
+        name: values.name,
         email: user.email,
         photoURL: '',
         roles: { isAdmin: false, isModerator: false, isFirm: false, isPremium: false },
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-        stats: {
-            postsCount: 0,
-            followersCount: 0,
-            followingCount: 0,
-            carsCount: 0
-        }
+        stats: { postsCount: 0, followersCount: 0, followingCount: 0, carsCount: 0 }
       });
-
       toast({ title: "Регистрация успешна", description: "Добро пожаловать в AutoSphere!" });
       router.push('/');
     } catch (error: any) {
-      console.error(error);
       let msg = "Ошибка регистрации";
       if (error.code === 'auth/email-already-in-use') msg = "Этот email уже занят";
       if (error.code === 'auth/weak-password') msg = "Пароль слишком простой (мин. 6 символов)";
@@ -88,59 +96,56 @@ export default function AuthPage() {
 
   return (
     <div className="flex h-full w-full items-center justify-center p-4">
-      <Card className="w-full max-w-md holographic-panel">
+      <Card className="w-full max-w-md holographic-panel-dark">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="p-3 bg-primary/10 rounded-full glow">
-                <CarFront className="h-8 w-8 text-primary" />
+            <div className="p-3 bg-primary/10 rounded-full">
+              <CarFront className="h-8 w-8 text-primary" />
             </div>
           </div>
           <CardTitle className="text-2xl text-white">AutoSphere</CardTitle>
           <CardDescription className="text-text-secondary">Войдите или создайте аккаунт</CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="login" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-4 bg-black/20">
               <TabsTrigger value="login">Вход</TabsTrigger>
               <TabsTrigger value="register">Регистрация</TabsTrigger>
             </TabsList>
             
             <TabsContent value="login">
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-text-secondary">Email</Label>
-                  <Input id="email" type="email" required value={email} onChange={e => setEmail(e.target.value)} disabled={loading} className="bg-black/20 border-primary/20 focus:border-primary"/>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-text-secondary">Пароль</Label>
-                  <Input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)} disabled={loading} className="bg-black/20 border-primary/20 focus:border-primary"/>
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Войти
-                </Button>
-              </form>
+              <Form {...loginForm}>
+                <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
+                  <FormField control={loginForm.control} name="email" render={({ field }) => (
+                    <FormItem><FormLabel className="text-text-secondary">Email</FormLabel><FormControl><Input type="email" {...field} disabled={loading} className="bg-black/20 border-primary/20 focus:border-primary" /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={loginForm.control} name="password" render={({ field }) => (
+                     <FormItem><FormLabel className="text-text-secondary">Пароль</FormLabel><FormControl><div className="relative"><Input type={showPassword ? 'text' : 'password'} {...field} disabled={loading} className="bg-black/20 border-primary/20 focus:border-primary" autoComplete="off"/><Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground" onClick={() => setShowPassword(!showPassword)}>{showPassword ? <EyeOff/> : <Eye/>}</Button></div></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null} Войти
+                  </Button>
+                </form>
+              </Form>
             </TabsContent>
 
             <TabsContent value="register">
-              <form onSubmit={handleRegister} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="reg-name" className="text-text-secondary">Имя пользователя</Label>
-                  <Input id="reg-name" required value={name} onChange={e => setName(e.target.value)} disabled={loading} placeholder="Например, AlexDriver" className="bg-black/20 border-primary/20 focus:border-primary"/>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="reg-email" className="text-text-secondary">Email</Label>
-                  <Input id="reg-email" type="email" required value={email} onChange={e => setEmail(e.target.value)} disabled={loading} className="bg-black/20 border-primary/20 focus:border-primary"/>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="reg-password" className="text-text-secondary">Пароль</Label>
-                  <Input id="reg-password" type="password" required value={password} onChange={e => setPassword(e.target.value)} disabled={loading} minLength={6} className="bg-black/20 border-primary/20 focus:border-primary"/>
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Создать аккаунт
-                </Button>
-              </form>
+              <Form {...registerForm}>
+                <form onSubmit={registerForm.handleSubmit(handleRegister)} className="space-y-4">
+                  <FormField control={registerForm.control} name="name" render={({ field }) => (
+                    <FormItem><FormLabel className="text-text-secondary">Имя пользователя</FormLabel><FormControl><Input placeholder="Например, AlexDriver" {...field} disabled={loading} className="bg-black/20 border-primary/20 focus:border-primary"/></FormControl><FormMessage /></FormItem>
+                  )} />
+                   <FormField control={registerForm.control} name="email" render={({ field }) => (
+                    <FormItem><FormLabel className="text-text-secondary">Email</FormLabel><FormControl><Input type="email" {...field} disabled={loading} className="bg-black/20 border-primary/20 focus:border-primary"/></FormControl><FormMessage /></FormItem>
+                  )} />
+                   <FormField control={registerForm.control} name="password" render={({ field }) => (
+                    <FormItem><FormLabel className="text-text-secondary">Пароль</FormLabel><FormControl><div className="relative"><Input type={showPassword ? 'text' : 'password'} {...field} disabled={loading} className="bg-black/20 border-primary/20 focus:border-primary" autoComplete="off"/><Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground" onClick={() => setShowPassword(!showPassword)}>{showPassword ? <EyeOff/> : <Eye/>}</Button></div></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null} Создать аккаунт
+                  </Button>
+                </form>
+              </Form>
             </TabsContent>
           </Tabs>
         </CardContent>
