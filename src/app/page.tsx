@@ -15,7 +15,7 @@ const FeaturedCarHero = () => {
                 <div className="w-[90%] aspect-[16/9] relative" style={{ backgroundImage: "url('https://picsum.photos/seed/nissangtr/1200/675')", backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }}>
                     <div className="absolute top-0 left-0">
                         <div className="flex items-center gap-2 bg-yellow-500/20 backdrop-blur-md border border-yellow-500/50 px-4 py-1.5 rounded-full shadow-[0_0_15px_rgba(234,179,8,0.3)]">
-                            <Star className="text-yellow-400 text-lg" fill="currentColor" />
+                            <Star className="text-yellow-400 h-5 w-5" fill="currentColor" />
                             <span className="text-yellow-400 font-bold text-sm tracking-wider uppercase">Авто дня</span>
                         </div>
                     </div>
@@ -37,12 +37,12 @@ const FeaturedCarHero = () => {
                 </div>
             </div>
             <div className="relative z-20 p-8 w-full bg-gradient-to-t from-background-dark via-background-dark/90 to-transparent">
-                <div className="flex w-full justify-between items-end gap-4">
+                <div className="flex w-full justify-between items-end">
                     <Button className="bg-primary hover:bg-white text-background-dark transition-colors rounded-full px-8 py-3 text-base font-bold flex items-center gap-2 shadow-lg glow">
                         <span>Новое голосование</span>
                         <Palette className="text-[20px]" />
                     </Button>
-                    <Button variant="outline" className="bg-transparent border border-primary text-primary hover:bg-primary hover:text-background-dark transition-colors rounded-full px-8 py-3 text-base font-bold flex items-center gap-2 shadow-lg">
+                    <Button className="bg-primary hover:bg-white text-background-dark transition-colors rounded-full px-8 py-3 text-base font-bold flex items-center gap-2 shadow-lg glow">
                         <span>Смотреть машину</span>
                         <Info className="text-[20px]" />
                     </Button>
