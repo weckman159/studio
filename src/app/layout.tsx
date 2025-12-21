@@ -2,7 +2,7 @@
 'use client';
 import React, { Suspense } from 'react';
 import Link from 'next/link';
-import { Sparkles, Users, Rss, Store, Car, Zap, Search, Bell, Menu, User as UserIcon, LogOut, Settings } from 'lucide-react';
+import { Sparkles, Users, Rss, Store, Car, Zap, Search, Bell, Menu, User as UserIcon, LogOut, Settings, Shield } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
@@ -19,10 +19,15 @@ import GlobalSearch from '@/components/GlobalSearch';
 import { MobileNav } from '@/components/MobileNav';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Footer } from '@/components/Footer';
+import { useUserProfile } from '@/hooks/useUserProfile';
+
 
 // Left Sidebar Component
 const LeftSidebar = () => {
     const pathname = usePathname();
+    const { user } = useUser();
+    const { profile } = useUserProfile(user?.uid);
+
     const navItems = [
         { href: '/', label: 'Главная', icon: Sparkles },
         { href: '/communities', label: 'Сообщества', icon: Users },
@@ -31,6 +36,11 @@ const LeftSidebar = () => {
         { href: '/garage', label: 'Гараж', icon: Car },
         { href: '/events', label: 'События', icon: Zap },
     ];
+
+    if (profile?.roles?.isAdmin) {
+      navItems.push({ href: '/admin', label: 'Админка', icon: Shield });
+    }
+
     return (
         <Sidebar>
             <div className="flex flex-col h-full">
