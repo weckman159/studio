@@ -39,7 +39,7 @@ service cloud.firestore {
       allow read, write: if isOwner(userId);
     }
     
-    // Posts & Comments: Readable by all, creatable by signed-in users, editable only by owner.
+    // Posts: Readable by all, creatable by signed-in users, editable only by owner.
     match /posts/{postId} {
       allow read: if true;
       allow create: if isSignedIn() 
@@ -49,18 +49,20 @@ service cloud.firestore {
                     && !request.resource.data.keys().hasAny(['authorId', 'createdAt', 'likesCount', 'commentsCount']); // Prevent changing ownership or stats
       allow delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isModOrAdmin());
 
-      // Subcollections
-      match /comments/{commentId} {
-        allow read: if true;
-        allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
-        allow update: if isSignedIn() && resource.data.authorId == request.auth.uid
-                      && !request.resource.data.keys().hasAny(['authorId', 'createdAt', 'postId']);
-        allow delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isModOrAdmin());
-      }
+      // Likes subcollection
       match /likes/{likeId} {
         allow read: if true;
         allow create, delete: if isOwner(likeId);
       }
+    }
+
+    // Comments (root collection for efficient querying)
+    match /comments/{commentId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
+      allow update: if isSignedIn() && resource.data.authorId == request.auth.uid
+                    && !request.resource.data.keys().hasAny(['authorId', 'createdAt', 'postId']);
+      allow delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isModOrAdmin());
     }
 
     // Garage: Readable by all, writable only by owner.
