@@ -25,9 +25,9 @@ service cloud.firestore {
 
     // --- Collections ---
 
-    // Users: Readable by signed-in users, but only owners can update their own non-critical data.
+    // Users: Publicly readable unless visibility is 'private'. Writable only by owner.
     match /users/{userId} {
-      allow read: if isSignedIn();
+      allow read: if !('profileVisibility' in resource.data) || resource.data.profileVisibility != 'private';
       allow create: if isOwner(userId);
       // Prevent self-promotion, role/status changes by non-admins
       allow update: if isOwner(userId) && !request.resource.data.keys().hasAny(['role', 'status', 'createdAt']);
@@ -101,7 +101,7 @@ service cloud.firestore {
 
     // Admin-only collections
     match /moderationActions/{actionId} { allow read, write: if isModOrAdmin(); }
-    match /feedback/{fbId} { allow create: if true; allow read, write: if isModOrAdmin(); }
+    match /feedback/{fbId} { allow create: if true; allow read, write: if isModOrMoxdAdmin(); }
     
     // Read-only collections
     match /featuredCars/{date} { allow read: if true; allow write: if false; }
