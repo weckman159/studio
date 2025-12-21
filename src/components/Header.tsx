@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -142,7 +143,7 @@ export function Header() {
                       <span>Гараж</span>
                     </Link>
                   </DropdownMenuItem>
-                   {profile?.role === 'admin' && (
+                   {profile?.roles?.isAdmin && (
                     <DropdownMenuItem asChild>
                       <Link href="/admin">
                         <Shield className="mr-2 h-4 w-4" />
