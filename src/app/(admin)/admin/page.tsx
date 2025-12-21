@@ -20,6 +20,7 @@ import { Users, Wrench, MessageSquare, FileText, Loader2, Shield } from 'lucide-
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 function StatCard({ title, value, icon: Icon, description, href }: { title: string, value: string | number, icon: any, description: string, href?: string }) {
   const content = (
