@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -99,7 +99,9 @@ export function Header() {
         </nav>
 
         <div className="flex-1 flex items-center justify-center px-8">
-            <GlobalSearch />
+            <Suspense fallback={<Skeleton className="h-10 w-full max-w-lg bg-card" />}>
+              <GlobalSearch />
+            </Suspense>
         </div>
 
         {/* Right side actions */}
