@@ -137,7 +137,7 @@ export default function RootLayout({
               <SidebarProvider>
                 <div className="flex h-full w-full relative z-10">
                     <LeftSidebar />
-                    <main className="flex-1 flex flex-col min-w-0 bg-transparent relative overflow-hidden">
+                    <main className="flex-1 flex flex-col min-w-0 bg-transparent relative">
                         <PageHeader />
                         <div className="flex-1 overflow-y-auto scroll-effect">
                             {children}
