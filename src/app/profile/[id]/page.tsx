@@ -1,7 +1,6 @@
 
 // src/app/profile/[id]/page.tsx
 import { getAdminDb } from '@/lib/firebase-admin';
-import type { User } from '@/lib/types';
 import { notFound } from 'next/navigation';
 import { ProfileClientPage } from '@/components/profile/ProfileClientPage';
 
@@ -42,3 +41,4 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
         </div>
     );
 }
+

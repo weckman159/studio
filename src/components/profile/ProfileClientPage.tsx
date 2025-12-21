@@ -14,10 +14,10 @@ import { EditProfileModal } from '@/components/EditProfileModal';
 import { UserListDialog } from '@/components/UserListDialog';
 import { PostCard } from '@/components/PostCard';
 import { ProfilePageSkeleton } from './ProfilePageSkeleton';
-import { PhotoGrid } from './PhotoGrid';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { serializeFirestoreData } from '@/lib/utils';
+import { PhotoGrid } from './PhotoGrid';
 
 
 interface ProfileClientPageProps {
@@ -75,7 +75,6 @@ export function ProfileClientPage({ profileId }: ProfileClientPageProps) {
         ]);
 
         if (!userSnap.exists()) {
-          // Handle case where user does not exist
           setProfile(null);
           return;
         }
@@ -143,8 +142,8 @@ export function ProfileClientPage({ profileId }: ProfileClientPageProps) {
   
   const isOwner = !!authUser && (authUser.uid === profile.id);
 
-  // Update profile stats for Hero component
-  profile.stats = {
+  // Combine fetched stats with any existing stats on the profile object
+  const profileStats = {
       ...profile.stats,
       followersCount: followers.length,
       followingCount: following.length,
@@ -185,9 +184,9 @@ export function ProfileClientPage({ profileId }: ProfileClientPageProps) {
                     <h1 className="text-3xl font-bold text-white">{profile.displayName}</h1>
                     <p className="text-text-secondary mb-4">@{profile.nickname || profile.email?.split('@')[0]}</p>
                     <div className="flex flex-wrap items-center gap-6 text-white mb-4">
-                        <button onClick={onFollowersClick} className="hover:text-primary"><span className="font-bold text-xl">{profile.stats?.followersCount ?? 0}</span><span className="text-text-secondary text-sm ml-2">Подписчиков</span></button>
-                        <button onClick={onFollowingClick} className="hover:text-primary"><span className="font-bold text-xl">{profile.stats?.followingCount ?? 0}</span><span className="text-text-secondary text-sm ml-2">Подписок</span></button>
-                        <div><span className="font-bold text-xl">{profile.stats?.carsCount ?? 0}</span><span className="text-text-secondary text-sm ml-2">Машин</span></div>
+                        <button onClick={onFollowersClick} className="hover:text-primary"><span className="font-bold text-xl">{profileStats.followersCount}</span><span className="text-text-secondary text-sm ml-2">Подписчиков</span></button>
+                        <button onClick={onFollowingClick} className="hover:text-primary"><span className="font-bold text-xl">{profileStats.followingCount}</span><span className="text-text-secondary text-sm ml-2">Подписок</span></button>
+                        <div><span className="font-bold text-xl">{profileStats.carsCount}</span><span className="text-text-secondary text-sm ml-2">Машин</span></div>
                     </div>
                     <div className="flex flex-wrap gap-2">
                         {isOwner ? (
@@ -205,7 +204,7 @@ export function ProfileClientPage({ profileId }: ProfileClientPageProps) {
         
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             <div className="hidden lg:block lg:col-span-1">
-              <ProfileSidebar profile={profile} />
+              <ProfileSidebar profile={{...profile, stats: profileStats}} />
             </div>
             
             <div className="lg:col-span-3">
