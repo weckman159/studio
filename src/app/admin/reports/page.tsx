@@ -1,10 +1,12 @@
+
 'use client'
 
 import { useEffect, useState } from 'react';
-import { collection, query, orderBy, getDocs, doc, updateDoc, writeBatch } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, doc, updateDoc, writeBatch, onSnapshot } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { serializeFirestoreData } from '@/lib/utils';
+import type { Report } from '@/lib/types';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -13,16 +15,6 @@ import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Loader2, MoreHorizontal, ShieldCheck, Trash2, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
-
-interface Report {
-    id: string;
-    entityId: string;
-    entityType: 'post' | 'comment' | 'user';
-    entityTitle: string;
-    reportedBy: string;
-    status: 'open' | 'resolved' | 'dismissed';
-    createdAt: any;
-}
 
 const getStatusVariant = (status: Report['status']): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
@@ -52,20 +44,17 @@ export default function AdminReportsPage() {
         if (!firestore) return;
         setLoading(true);
 
-        const fetchReports = async () => {
-            const q = query(collection(firestore, 'reports'), orderBy('createdAt', 'desc'));
-            try {
-                const snapshot = await getDocs(q);
-                const data = snapshot.docs.map(d => serializeFirestoreData({ id: d.id, ...d.data() }) as Report);
-                setReports(data);
-            } catch (error: any) {
-                toast({ variant: 'destructive', title: 'Ошибка загрузки жалоб', description: error.message });
-            } finally {
-                setLoading(false);
-            }
-        };
+        const q = query(collection(firestore, 'reports'), orderBy('createdAt', 'desc'));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const data = snapshot.docs.map(d => serializeFirestoreData({ id: d.id, ...d.data() }) as Report);
+            setReports(data);
+            setLoading(false);
+        }, (error: any) => {
+            toast({ variant: 'destructive', title: 'Ошибка загрузки жалоб', description: error.message });
+            setLoading(false);
+        });
 
-        fetchReports();
+        return () => unsubscribe();
     }, [firestore, toast]);
 
     const handleUpdateStatus = async (reportId: string, status: Report['status']) => {
@@ -73,21 +62,12 @@ export default function AdminReportsPage() {
         const reportRef = doc(firestore, 'reports', reportId);
         try {
             await updateDoc(reportRef, { status });
-            setReports(prev => prev.map(r => r.id === reportId ? { ...r, status } : r));
             toast({ title: 'Статус обновлен' });
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Ошибка обновления статуса' });
         }
     };
     
-    const handleDeleteReport = async (reportId: string) => {
-        if(!confirm('Вы уверены, что хотите удалить эту жалобу?')) return;
-        // This would typically be a batched delete in a real app, but for simplicity:
-        await updateDoc(doc(firestore, 'reports', reportId), {status: 'dismissed'});
-        setReports(prev => prev.filter(r => r.id !== reportId));
-        toast({title: "Жалоба удалена"});
-    }
-
     if (loading) {
         return <div className="flex justify-center p-8"><Loader2 className="animate-spin h-8 w-8"/></div>;
     }

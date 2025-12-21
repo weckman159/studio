@@ -449,3 +449,13 @@ export interface InventoryItem {
   forSale: boolean;
   salePrice?: number;
 }
+
+export interface Report {
+    id: string;
+    entityId: string;
+    entityType: 'post' | 'comment' | 'user';
+    entityTitle: string;
+    reportedBy: string;
+    status: 'open' | 'resolved' | 'dismissed';
+    createdAt: any;
+}
