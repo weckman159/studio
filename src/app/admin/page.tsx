@@ -12,15 +12,16 @@ import {
   getCountFromServer
 } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
-import { Post } from '@/lib/types';
+import { Post, Feedback } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { serializeFirestoreData } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, Wrench, MessageSquare, FileText, Loader2, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
+import { ru } from 'date-fns/locale';
 
 function StatCard({ title, value, icon: Icon, description, href }: { title: string, value: string | number, icon: any, description: string, href?: string }) {
   const content = (
@@ -45,6 +46,7 @@ export default function AdminDashboardPage() {
 
     const [stats, setStats] = useState({ users: 0, posts: 0, workshops: 0, feedback: 0, openReports: 0 });
     const [recentPosts, setRecentPosts] = useState<Post[]>([]);
+    const [recentFeedback, setRecentFeedback] = useState<Feedback[]>([]);
     const [isLoadingData, setIsLoadingData] = useState(true);
 
     useEffect(() => {
@@ -59,12 +61,14 @@ export default function AdminDashboardPage() {
                 const fbRef = collection(firestore, 'feedback');
                 const reportsRef = query(collection(firestore, 'reports'), where('status', '==', 'open'));
 
-                const [usersCount, postsCount, workshopsCount, feedbackCount, openReportsCount] = await Promise.all([
+                const [usersCount, postsCount, workshopsCount, feedbackCount, openReportsCount, postsSnap, feedbackSnap] = await Promise.all([
                     getCountFromServer(usersRef),
                     getCountFromServer(postsRef),
                     getCountFromServer(wsRef),
                     getCountFromServer(fbRef),
-                    getCountFromServer(reportsRef)
+                    getCountFromServer(reportsRef),
+                    getDocs(query(postsRef, orderBy('createdAt', 'desc'), limit(5))),
+                    getDocs(query(fbRef, orderBy('createdAt', 'desc'), limit(3)))
                 ]);
                 
                 setStats({
@@ -74,11 +78,9 @@ export default function AdminDashboardPage() {
                     feedback: feedbackCount.data().count,
                     openReports: openReportsCount.data().count,
                 });
-
-                // Fetch recent posts
-                const postsQuery = query(collection(firestore, 'posts'), orderBy('createdAt', 'desc'), limit(5));
-                const postsSnap = await getDocs(postsQuery);
+                
                 setRecentPosts(postsSnap.docs.map(d => serializeFirestoreData({id: d.id, ...d.data()} as Post)));
+                setRecentFeedback(feedbackSnap.docs.map(d => serializeFirestoreData({id: d.id, ...d.data()} as Feedback)));
 
             } catch (error) {
                 console.error("Admin stats load error:", error);
@@ -137,10 +139,20 @@ export default function AdminDashboardPage() {
                         <CardTitle>Обратная связь</CardTitle>
                         <Badge>{stats.feedback}</Badge>
                     </CardHeader>
-                    <CardContent className="flex flex-col items-center justify-center h-full min-h-[200px] text-center">
-                         <MessageSquare className="h-10 w-10 text-muted-foreground mb-3" />
-                        <p className="text-muted-foreground">Здесь будут отображаться сообщения от пользователей.</p>
-                        <p className="text-xs text-muted-foreground mt-1">(Функционал в разработке)</p>
+                    <CardContent className="space-y-3">
+                       {recentFeedback.length > 0 ? recentFeedback.map(fb => (
+                           <div key={fb.id} className="p-2 rounded-lg border bg-muted/50">
+                               <p className="text-sm line-clamp-2">{fb.msg}</p>
+                               <p className="text-xs text-muted-foreground mt-1">
+                                   {fb.email} • {fb.createdAt ? format(fb.createdAt, 'dd MMM yyyy', { locale: ru }) : ''}
+                               </p>
+                           </div>
+                       )) : (
+                        <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-center">
+                            <MessageSquare className="h-10 w-10 text-muted-foreground mb-3" />
+                            <p className="text-muted-foreground">Сообщений пока нет.</p>
+                        </div>
+                       )}
                     </CardContent>
                 </Card>
             </div>

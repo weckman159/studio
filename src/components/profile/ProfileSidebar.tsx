@@ -6,8 +6,10 @@ import { Instagram, Youtube, Send } from 'lucide-react'
 import type { User } from '@/lib/types'
 
 export function ProfileSidebar({ profile }: { profile: User }) {
+  // Use real data from the profile object, fallback to empty array if undefined
   const achievements = profile.achievements || [];
   const skills = profile.skills || [];
+  const socials = profile.socials || {};
 
   return (
     <div className="sticky top-24 space-y-6">
@@ -22,29 +24,29 @@ export function ProfileSidebar({ profile }: { profile: User }) {
       )}
 
       {/* Соцсети */}
-      {profile.socials && Object.values(profile.socials).some(Boolean) && (
+      {Object.values(socials).some(Boolean) && (
         <Card className="p-6">
           <h3 className="font-semibold text-lg mb-4">Соцсети</h3>
           <div className="flex flex-col gap-2">
-            {profile.socials.instagram && (
+            {socials.instagram && (
               <Button variant="outline" className="w-full justify-start" asChild>
-                <a href={profile.socials.instagram} target="_blank" rel="noopener noreferrer">
+                <a href={socials.instagram} target="_blank" rel="noopener noreferrer">
                   <Instagram className="mr-2 h-5 w-5 text-pink-500" />
                   Instagram
                 </a>
               </Button>
             )}
-            {profile.socials.youtube && (
+            {socials.youtube && (
               <Button variant="outline" className="w-full justify-start" asChild>
-                <a href={profile.socials.youtube} target="_blank" rel="noopener noreferrer">
+                <a href={socials.youtube} target="_blank" rel="noopener noreferrer">
                   <Youtube className="mr-2 h-5 w-5 text-red-500" />
                   YouTube
                 </a>
               </Button>
             )}
-            {profile.socials.telegram && (
+            {socials.telegram && (
               <Button variant="outline" className="w-full justify-start" asChild>
-                <a href={profile.socials.telegram} target="_blank" rel="noopener noreferrer">
+                <a href={socials.telegram} target="_blank" rel="noopener noreferrer">
                   <Send className="mr-2 h-5 w-5 text-blue-500" />
                   Telegram
                 </a>
