@@ -1,6 +1,6 @@
 
 'use client';
-import React from 'react';
+import React, { Suspense } from 'react';
 import Link from 'next/link';
 import { Sparkles, Users, Rss, Store, Car, Zap, Search, GaugeCircle, BatteryCharging, Palette, Info, Newspaper, MoreHorizontal, Heart, MessageCircle, Send, Shield, BarChart, ChevronRight, Gem, Infinity, Star, ThumbsUp, Flame, TrendingUp, Globe, Menu, Bell, User as UserIcon, LogOut, Settings } from 'lucide-react';
 import { usePathname } from 'next/navigation';
@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Sidebar, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import GlobalSearch from '@/components/GlobalSearch';
 import { MobileNav } from '@/components/MobileNav';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Left Sidebar Component
 const LeftSidebar = () => {
@@ -74,7 +75,9 @@ const PageHeader = () => {
                 <h2 className="text-white text-lg font-medium tracking-wide hidden md:block">Социальная сеть автолюбителей</h2>
             </div>
             <div className="flex items-center gap-2 md:gap-5">
-                <GlobalSearch />
+                <Suspense fallback={<Skeleton className="h-10 w-full max-w-lg bg-surface" />}>
+                  <GlobalSearch />
+                </Suspense>
                 <Button variant="ghost" size="icon" className="relative group text-white/70 hover:text-primary transition-colors">
                     <Bell className="text-[24px]" />
                     <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-primary rounded-full shadow-[0_0_5px_rgba(10,170,255,0.8)]"></span>
