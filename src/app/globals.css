@@ -68,13 +68,15 @@
         height: 8px;
     }
     .scroll-effect::-webkit-scrollbar-track {
-        background: transparent;
+        background-color: hsl(var(--muted) / 0.5);
     }
     .scroll-effect::-webkit-scrollbar-thumb {
-        background: rgba(10, 170, 255, 0.3);
-        border-radius: 4px;
+        background-color: hsl(var(--primary) / 0.4);
+        border-radius: 10px;
+        border: 2px solid transparent;
+        background-clip: content-box;
     }
     .scroll-effect::-webkit-scrollbar-thumb:hover {
-        background: rgba(10, 170, 255, 0.5);
+        background-color: hsl(var(--primary) / 0.7);
     }
 }
