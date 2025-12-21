@@ -35,3 +35,7 @@ cors-fix.js
 service-account.json
 service-account.json
 service-account.json
+deploy.log
+*.log
+node_modules/
+.firebase/
