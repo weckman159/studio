@@ -8,14 +8,13 @@ import { PostCard } from '@/components/PostCard';
 import { PostFilters } from '@/components/PostFilters';
 import { Post, User, AutoNews } from '@/lib/types';
 import { serializeFirestoreData } from '@/lib/utils';
+import { MessageSquare, Star } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MessageSquare, Users, Newspaper, Loader2, Star } from 'lucide-react';
-import Link from 'next/link';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
+import { TopUsersWidget } from '@/components/widgets/TopUsersWidget';
+import { AutoNewsWidget } from '@/components/widgets/AutoNewsWidget';
 
-const POSTS_PER_PAGE = 8;
 
 function FeedSkeleton() {
     return (
@@ -44,134 +43,56 @@ function FeedSkeleton() {
     );
 }
 
-function TopUsersWidget({ topAuthors, loading }: { topAuthors: User[], loading: boolean }) {
-  if (loading) {
-    return (
-      <Card>
-        <CardHeader><CardTitle className="flex items-center"><Users className="mr-2 h-5 w-5" /> Топ авторы</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="flex items-center gap-3">
-              <Skeleton className="h-10 w-10 rounded-full" />
-              <div className="flex-1 space-y-1">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-3 w-16" />
-              </div>
-              <Skeleton className="h-8 w-20" />
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-    );
-  }
 
-  return (
-    <Card className="holographic-panel">
-      <CardHeader>
-        <CardTitle className="flex items-center text-white"><Users className="mr-2 h-5 w-5" /> Топ авторы</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {topAuthors.map(author => (
-          <div key={author.id} className="flex items-center gap-3">
-            <Avatar>
-                <AvatarImage src={author.photoURL} />
-                <AvatarFallback>{author.name?.[0]}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1">
-                <p className="font-semibold text-sm text-white">{author.name}</p>
-                <p className="text-xs text-text-secondary">{author.stats?.postsCount || 0} постов</p>
-            </div>
-            <Button size="sm" variant="outline" asChild>
-              <Link href={`/profile/${author.id}`}>Читать</Link>
-            </Button>
-          </div>
-        ))}
-      </CardContent>
-    </Card>
-  );
-}
-
-function AutoNewsWidget({ news, loading }: { news: AutoNews[], loading: boolean }) {
-  if (loading) {
-    return (
-      <Card>
-        <CardHeader><CardTitle className="flex items-center"><Newspaper className="mr-2 h-5 w-5" /> Автоновости</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          {[...Array(3)].map((_, i) => (
-             <div key={i} className="space-y-1.5">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-3/4" />
-             </div>
-          ))}
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card className="holographic-panel">
-      <CardHeader>
-        <CardTitle className="flex items-center text-white"><Newspaper className="mr-2 h-5 w-5" /> Автоновости</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {news.map(item => (
-          <div key={item.id}>
-            <a href={item.sourceUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-white hover:text-primary line-clamp-2 text-sm">
-              {item.title}
-            </a>
-            <div className="text-xs text-text-secondary flex justify-between mt-1">
-              <span>{item.source}</span>
-            </div>
-          </div>
-        ))}
-      </CardContent>
-    </Card>
-  );
-}
-
+// --- MAIN PAGE COMPONENT ---
+const POSTS_PER_PAGE = 8;
 
 export default function PostsPage() {
     const firestore = useFirestore();
     const { user } = useUser();
     
+    // States for data
     const [posts, setPosts] = useState<Post[]>([]);
     const [popularPosts, setPopularPosts] = useState<Post[]>([]);
     const [topAuthors, setTopAuthors] = useState<User[]>([]);
     const [latestNews, setLatestNews] = useState<AutoNews[]>([]);
     
+    // States for loading and pagination
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
     const [lastVisible, setLastVisible] = useState<DocumentSnapshot | null>(null);
     const [hasMore, setHasMore] = useState(true);
-
+    
+    // States for filters
     const [activeCategory, setActiveCategory] = useState('Все');
     const [searchQuery, setSearchQuery] = useState('');
     const [feedType, setFeedType] = useState<'global' | 'following'>('global');
 
-    const fetchPosts = useCallback(async (loadMore = false, reset = false) => {
+    const fetchPosts = useCallback(async (loadMore = false) => {
         if (!firestore) return;
         
-        let currentLastVisible = reset ? null : lastVisible;
-
         if (loadMore) {
-            if (!currentLastVisible) {
-                setHasMore(false);
+            if (!hasMore) {
+                setLoadingMore(false);
                 return;
             }
             setLoadingMore(true);
         } else {
             setLoading(true);
+            setPosts([]);
+            setLastVisible(null);
+            setHasMore(true);
         }
 
         try {
-            let baseQuery;
+            let postsQuery;
             if (feedType === 'following' && user) {
                 const followingRef = collection(firestore, 'users', user.uid, 'following');
                 const followingSnap = await getDocs(followingRef);
                 const followingIds = followingSnap.docs.map(doc => doc.id);
 
                 if (followingIds.length > 0) {
-                    baseQuery = query(collection(firestore, 'posts'), where('authorId', 'in', followingIds), orderBy('createdAt', 'desc'));
+                    postsQuery = query(collection(firestore, 'posts'), where('authorId', 'in', followingIds), orderBy('createdAt', 'desc'));
                 } else {
                     setPosts([]);
                     setHasMore(false);
@@ -180,63 +101,69 @@ export default function PostsPage() {
                     return;
                 }
             } else {
-                baseQuery = query(collection(firestore, 'posts'), orderBy('createdAt', 'desc'));
+                postsQuery = query(collection(firestore, 'posts'), orderBy('createdAt', 'desc'));
             }
 
             if (activeCategory !== 'Все') {
-                baseQuery = query(baseQuery, where('category', '==', activeCategory));
+                postsQuery = query(postsQuery, where('category', '==', activeCategory));
             }
             
-            let finalQuery = baseQuery;
-            if (loadMore && currentLastVisible) {
-                finalQuery = query(finalQuery, startAfter(currentLastVisible), limit(POSTS_PER_PAGE));
+            if (loadMore && lastVisible) {
+                postsQuery = query(postsQuery, startAfter(lastVisible), limit(POSTS_PER_PAGE));
             } else {
-                finalQuery = query(finalQuery, limit(POSTS_PER_PAGE));
+                postsQuery = query(postsQuery, limit(POSTS_PER_PAGE));
             }
 
-            const documentSnapshots = await getDocs(finalQuery);
-            const newPosts = documentSnapshots.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Post);
+            const postsSnap = await getDocs(postsQuery);
+            const newPosts = postsSnap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Post);
             
-            setPosts(prev => (loadMore && !reset) ? [...prev, ...newPosts] : newPosts);
+            setPosts(prev => loadMore ? [...prev, ...newPosts] : newPosts);
             
-            const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+            const lastDoc = postsSnap.docs[postsSnap.docs.length - 1];
             setLastVisible(lastDoc || null);
-            setHasMore(documentSnapshots.docs.length === POSTS_PER_PAGE);
+
+            if (postsSnap.docs.length < POSTS_PER_PAGE) {
+                setHasMore(false);
+            }
 
         } catch (error) {
             console.error("Error fetching posts:", error);
         } finally {
-            setLoading(false);
+            if (!loadMore) {
+                setLoading(false);
+            }
             setLoadingMore(false);
         }
-    }, [firestore, feedType, user, activeCategory, lastVisible]);
-
-
+    }, [firestore, activeCategory, feedType, user, lastVisible, hasMore]);
+    
     useEffect(() => {
-        const fetchWidgetData = async () => {
+        const fetchSideData = async () => {
              if (!firestore) return;
              try {
                 const topAuthorsQuery = query(collection(firestore, 'users'), orderBy('stats.postsCount', 'desc'), limit(3));
                 const latestNewsQuery = query(collection(firestore, 'autoNews'), orderBy('publishedAt', 'desc'), limit(3));
                 const popularPostsQuery = query(collection(firestore, 'posts'), orderBy('likesCount', 'desc'), limit(4));
                 
-                const [authorsSnap, newsSnap, popularSnap] = await Promise.all([
+                const [authorsSnap, newsSnap, popularPostsSnap] = await Promise.all([
                     getDocs(topAuthorsQuery),
                     getDocs(latestNewsQuery),
-                    getDocs(popularSnap)
+                    getDocs(popularPostsQuery)
                 ]);
 
-                setTopAuthors(authorsSnap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as User));
-                setLatestNews(newsSnap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as AutoNews));
-                setPopularPosts(popularSnap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Post));
-             } catch (error) {
-                 console.error("Error fetching widget data:", error);
+                setTopAuthors(authorsSnap.docs.map((doc: QueryDocumentSnapshot) => serializeFirestoreData({ id: doc.id, ...doc.data() }) as User));
+                setLatestNews(newsSnap.docs.map((doc: QueryDocumentSnapshot) => serializeFirestoreData({ id: doc.id, ...doc.data() }) as AutoNews));
+                setPopularPosts(popularPostsSnap.docs.map((doc: QueryDocumentSnapshot) => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Post));
+             } catch(error) {
+                 console.error("Error fetching widget data:", error)
              }
-        };
+        }
+        fetchSideData();
+    }, [firestore]);
 
-        fetchWidgetData();
-        fetchPosts(false, true); // Initial fetch, reset pagination
-    }, [firestore, user, feedType, activeCategory, fetchPosts]);
+    useEffect(() => {
+        fetchPosts(false);
+    }, [activeCategory, feedType, fetchPosts]);
+
 
     const filteredPosts = useMemo(() => {
         if (!searchQuery) return posts;
@@ -246,6 +173,7 @@ export default function PostsPage() {
             (p.content && p.content.toLowerCase().includes(lowercasedQuery))
         );
     }, [posts, searchQuery]);
+
 
     return (
         <div className="p-4 md:p-8">
@@ -269,8 +197,8 @@ export default function PostsPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 {filteredPosts.map(post => <PostCard key={post.id} post={post} />)}
                             </div>
-                            {hasMore && !loading && (
-                                <div className="flex justify-center pt-8">
+                             {hasMore && !loading && (
+                                <div className="flex justify-center mt-8">
                                     <Button onClick={() => fetchPosts(true)} disabled={loadingMore}>
                                         {loadingMore ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Ещё'}
                                     </Button>
@@ -282,7 +210,7 @@ export default function PostsPage() {
                             <MessageSquare className="mx-auto h-12 w-12 text-text-muted mb-4"/>
                             <h3 className="text-xl font-semibold text-white">Публикаций не найдено</h3>
                             <p className="text-text-secondary mt-2">
-                                {feedType === 'following' && posts.length === 0 ? 'Подпишитесь на авторов, чтобы видеть их посты здесь.' : 'Попробуйте изменить фильтры или стать первым автором!'}
+                                {feedType === 'following' ? 'Подпишитесь на авторов, чтобы видеть их посты здесь.' : 'Попробуйте изменить фильтры или стать первым автором!'}
                             </p>
                         </div>
                     )}
@@ -299,11 +227,10 @@ export default function PostsPage() {
                     )}
                 </main>
                 <aside className="lg:col-span-1 space-y-6 hidden lg:block">
-                    <TopUsersWidget topAuthors={topAuthors} loading={loading} />
-                    <AutoNewsWidget news={latestNews} loading={loading} />
+                    <TopUsersWidget topAuthors={topAuthors} loading={loading && topAuthors.length === 0} />
+                    <AutoNewsWidget news={latestNews} loading={loading && latestNews.length === 0} />
                 </aside>
             </div>
         </div>
     );
 }
-
