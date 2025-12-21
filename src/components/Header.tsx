@@ -23,6 +23,7 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { ThemeToggle } from './ThemeToggle';
 import { Notifications } from './Notifications';
 import { Skeleton } from './ui/skeleton';
+import GlobalSearch from './GlobalSearch';
 
 
 export function Header() {
@@ -34,12 +35,18 @@ export function Header() {
 
   const { profile, isLoading: isProfileLoading } = useUserProfile(authUser?.uid);
 
+  // This effect should be in a layout component or a client component that wraps the page
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
+    const mainContent = document.querySelector('main > div[data-radix-scroll-area-viewport]');
+    if (!mainContent) return;
+
+    const handleScroll = (e: Event) => {
+      const target = e.target as HTMLElement;
+      setIsScrolled(target.scrollTop > 10);
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+
+    mainContent.addEventListener('scroll', handleScroll);
+    return () => mainContent.removeEventListener('scroll', handleScroll);
   }, []);
 
   const isLoading = isUserLoading || isProfileLoading;
@@ -68,9 +75,9 @@ export function Header() {
   return (
     <header className={cn(
       "sticky top-0 z-30 w-full h-18 border-b transition-colors duration-300",
-      isScrolled ? "border-white/10 bg-black/20 backdrop-blur-lg" : "border-transparent"
+      isScrolled ? "border-border/40 bg-background/95 backdrop-blur-sm" : "border-transparent bg-transparent"
     )}>
-      <div className="container flex items-center max-w-7xl mx-auto px-4">
+      <div className="container flex items-center max-w-7xl mx-auto px-4 h-16">
         {/* Mobile Menu Trigger */}
         <Button variant="ghost" size="icon" onClick={toggleSidebar} className="md:hidden mr-2">
             <Menu className="h-6 w-6" />
@@ -83,7 +90,6 @@ export function Header() {
             <span className="font-bold text-xl hidden sm:inline-block">AutoSphere</span>
         </Link>
         
-        {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-6">
             {navLinks.map(link => (
                 <Link key={link.label} href={link.href} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
@@ -92,7 +98,9 @@ export function Header() {
             ))}
         </nav>
 
-        <div className="flex-1" />
+        <div className="flex-1 flex items-center justify-center px-8">
+            <GlobalSearch />
+        </div>
 
         {/* Right side actions */}
         <div className="flex items-center justify-end space-x-2">

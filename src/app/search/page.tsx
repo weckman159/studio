@@ -1,3 +1,4 @@
+
 'use client';
 import { useSearchParams } from 'next/navigation';
 import { useState, useEffect, Suspense } from 'react';
@@ -50,7 +51,7 @@ function SearchResultsComponent() {
                 .map((d: any) => serializeFirestoreData({ id: d.id, ...d.data() } as Post))
                 .filter((p: Post) => 
                     p.title?.toLowerCase().includes(q) || 
-                    p.content?.toLowerCase().includes(q)
+                    (p.content && p.content.toLowerCase().includes(q))
                 );
             setPosts(filteredPosts);
 

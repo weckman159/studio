@@ -1,24 +1,21 @@
+
 'use client';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Search } from 'lucide-react';
 import { Input } from './ui/input';
-import { Button } from './ui/button';
-import { useSidebar } from './ui/sidebar';
 
 export default function GlobalSearch() {
-  const [query, setQuery] = useState('');
   const router = useRouter();
-  const { isMobile } = useSidebar();
+  const searchParams = useSearchParams();
+  const [query, setQuery] = useState(searchParams.get('q') || '');
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (query.trim()) {
       router.push(`/search?q=${encodeURIComponent(query)}`);
-      // Clear input after search on mobile for better UX
-      if (isMobile) {
-        setQuery('');
-      }
+    } else {
+      router.push('/search');
     }
   }
 
