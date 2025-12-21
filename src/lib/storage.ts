@@ -22,12 +22,14 @@ export interface UploadResult {
   fileName: string;
 }
 
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
 /**
- * Валидация (оставляем без изменений)
+ * Валидация изображения
  */
 const validateImage = (file: File, maxSizeInMB: number = 5): void => {
-  if (!file.type.startsWith('image/')) {
-    throw new Error('Файл должен быть изображением');
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    throw new Error('Неверный тип файла. Разрешены только: JPG, PNG, WEBP, GIF');
   }
   if (file.size > maxSizeInMB * 1024 * 1024) {
     throw new Error(`Размер файла не должен превышать ${maxSizeInMB}MB`);
