@@ -20,10 +20,10 @@ import { signOut } from 'firebase/auth';
 import { useSidebar } from '@/components/ui/sidebar';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import { ThemeToggle } from './ThemeToggle';
-import { Notifications } from './Notifications';
-import { Skeleton } from './ui/skeleton';
-import GlobalSearch from './GlobalSearch';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { Notifications } from '@/components/Notifications';
+import { Skeleton } from '@/components/ui/skeleton';
+import GlobalSearch from '@/components/GlobalSearch';
 
 
 export function Header() {
