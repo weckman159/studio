@@ -112,6 +112,12 @@ service cloud.firestore {
     match /moderationActions/{actionId} { allow read, write: if isModOrAdmin(); }
     match /feedback/{fbId} { allow create: if true; allow read, write: if isModOrAdmin(); }
     
+    // Reports: any signed-in user can create, only mods/admins can read/update/delete
+    match /reports/{reportId} {
+      allow create: if isSignedIn();
+      allow read, update, delete: if isModOrAdmin();
+    }
+    
     // Read-only collections
     match /featuredCars/{date} { allow read: if true; allow write: if false; }
     match /autoNews/{newsId} { allow read: if true; allow write: if false; }
