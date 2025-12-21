@@ -17,7 +17,7 @@ import {
 import { Settings, User, LogOut, CarFront, Menu, Shield, PlusSquare } from 'lucide-react';
 import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
-import { useSidebar } from './ui/sidebar';
+import { useSidebar } from '@/components/ui/sidebar';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { ThemeToggle } from './ThemeToggle';
@@ -153,12 +153,6 @@ export function Header() {
                       <span>Гараж</span>
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/settings">
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Настройки</span>
-                    </Link>
-                  </DropdownMenuItem>
                    {profile?.roles?.isAdmin && (
                     <DropdownMenuItem asChild>
                       <Link href="/admin">
@@ -167,6 +161,12 @@ export function Header() {
                       </Link>
                     </DropdownMenuItem>
                   )}
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings">
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Настройки</span>
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />

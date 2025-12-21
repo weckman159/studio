@@ -2,24 +2,17 @@
 'use client';
 import React, { Suspense } from 'react';
 import Link from 'next/link';
-import { Sparkles, Users, Rss, Store, Car, Zap, Search, Bell, Menu, User as UserIcon, LogOut, Settings, Shield } from 'lucide-react';
+import { Sparkles, Users, Rss, Store, Car, Zap, Shield } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
-import { FirebaseClientProvider, useUser, useAuth } from "@/firebase";
+import { FirebaseClientProvider, useUser } from "@/firebase";
 import { ThemeProvider } from "next-themes";
 import { Analytics } from '@vercel/analytics/react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { signOut } from 'firebase/auth';
-import { useToast } from '@/hooks/use-toast';
-import { Sidebar, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
-import GlobalSearch from '@/components/GlobalSearch';
-import { MobileNav } from '@/components/MobileNav';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Sidebar, SidebarProvider } from '@/components/ui/sidebar';
 import { Footer } from '@/components/Footer';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { Header } from '@/components/Header';
 
 
 // Left Sidebar Component
@@ -66,58 +59,6 @@ const LeftSidebar = () => {
     );
 };
 
-// Header Component (inside main content)
-const PageHeader = () => {
-    const { user } = useUser();
-    const { toast } = useToast();
-    const auth = useAuth();
-    const handleLogout = () => {
-        if (auth) {
-            signOut(auth).then(() => {
-                toast({ title: 'Вы вышли из системы.' });
-            });
-        }
-    };
-
-    return (
-        <header className="h-16 flex-none bg-background-dark/80 backdrop-blur-md border-b border-primary/20 flex items-center justify-between px-4 md:px-8 z-30">
-            <div className="flex items-center gap-2">
-                <SidebarTrigger className="md:hidden"/>
-                <h2 className="text-white text-lg font-medium tracking-wide hidden md:block">Социальная сеть автолюбителей</h2>
-            </div>
-            <div className="flex items-center gap-2 md:gap-5">
-                <Suspense fallback={<Skeleton className="h-10 w-full max-w-lg bg-surface" />}>
-                  <GlobalSearch />
-                </Suspense>
-                <Button variant="ghost" size="icon" className="relative group text-white/70 hover:text-primary transition-colors">
-                    <Bell className="text-[24px]" />
-                    <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-primary rounded-full shadow-[0_0_5px_rgba(10,170,255,0.8)]"></span>
-                </Button>
-                {user ? (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Avatar className="h-9 w-9 border border-primary/50 shadow-[0_0_10px_rgba(10,170,255,0.3)] cursor-pointer hover:scale-105 transition-transform">
-                                <AvatarImage src={user?.photoURL || ''} />
-                                <AvatarFallback>{user?.displayName?.[0]}</AvatarFallback>
-                            </Avatar>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="w-56" align="end">
-                            <DropdownMenuLabel>{user.displayName || user.email}</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem asChild><Link href={`/profile/${user.uid}`}><UserIcon className="mr-2 h-4 w-4" />Профиль</Link></DropdownMenuItem>
-                            <DropdownMenuItem asChild><Link href="/settings"><Settings className="mr-2 h-4 w-4" />Настройки</Link></DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={handleLogout}><LogOut className="mr-2 h-4 w-4" />Выйти</DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                ) : (
-                    <Button asChild><Link href="/auth">Войти</Link></Button>
-                )}
-            </div>
-        </header>
-    );
-};
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -149,7 +90,7 @@ export default function RootLayout({
                 <div className="flex h-full w-full relative z-10">
                     <LeftSidebar />
                     <main className="flex-1 flex flex-col min-w-0 bg-transparent relative">
-                        <PageHeader />
+                        <Header />
                         <div className="flex-1 flex flex-col overflow-y-auto scroll-effect">
                             <div className="flex-1">
                                 {children}
@@ -158,7 +99,6 @@ export default function RootLayout({
                         </div>
                     </main>
                 </div>
-                <MobileNav />
                 <Toaster />
               </SidebarProvider>
           </FirebaseClientProvider>
