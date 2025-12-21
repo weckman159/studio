@@ -123,7 +123,7 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#0a0a0a" />
       </head>
-      <body className="bg-background-dark text-[#e6e6db] font-display h-screen w-screen overflow-hidden selection:bg-primary selection:text-black relative">
+      <body className="bg-background-dark text-[#e6e6db] font-display h-screen w-screen selection:bg-primary selection:text-black relative">
         <div className="absolute inset-0 z-0 opacity-10" style={{backgroundImage: "url('data:image/svg+xml,%3Csvg width=\\'20\\' height=\\'20\\' viewBox=\\'0 0 20 20\\' xmlns=\\'http://www.w3.org/2000/svg\\'%3E%3Cg fill=\\'%230af\\' fill-opacity=\\'0.2\\' fill-rule=\\'evenodd\\'%3E%3Ccircle cx=\\'3\\' cy=\\'3\\' r=\\'3\'/%3E%3Ccircle cx=\\'13\\' cy=\\'13\\' r=\\'3\'/%3E%3C/g%3E%3C/svg%3E')"}}></div>
         <div className="absolute inset-0 z-0 pointer-events-none" style={{background: "radial-gradient(circle at center, rgba(10, 170, 255, 0.05) 0%, transparent 50%)"}}></div>
         

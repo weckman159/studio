@@ -2,7 +2,7 @@
 'use client';
 import { useSearchParams } from 'next/navigation';
 import { useState, useEffect, Suspense } from 'react';
-import { collection, query, getDocs, limit, where, orderBy } from 'firebase/firestore';
+import { collection, query, getDocs, limit, where, orderBy, QueryDocumentSnapshot } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,7 +34,7 @@ function SearchResultsComponent() {
             const usersSnap = await getDocs(usersQ);
             
             const filteredUsers = usersSnap.docs
-                .map((d: any) => serializeFirestoreData({ id: d.id, ...d.data() } as User))
+                .map((d: QueryDocumentSnapshot) => serializeFirestoreData({ id: d.id, ...d.data() } as User))
                 .filter((u: User) => 
                     u.name?.toLowerCase().includes(q) || 
                     u.displayName?.toLowerCase().includes(q) ||
@@ -48,7 +48,7 @@ function SearchResultsComponent() {
             const postsSnap = await getDocs(postsQ);
 
             const filteredPosts = postsSnap.docs
-                .map((d: any) => serializeFirestoreData({ id: d.id, ...d.data() } as Post))
+                .map((d: QueryDocumentSnapshot) => serializeFirestoreData({ id: d.id, ...d.data() } as Post))
                 .filter((p: Post) => 
                     p.title?.toLowerCase().includes(q) || 
                     (p.content && p.content.toLowerCase().includes(q))
@@ -104,7 +104,7 @@ function SearchResultsComponent() {
                     <Link key={user.id} href={`/profile/${user.id}`}>
                         <div className="flex items-center gap-3 p-3 rounded-md hover:bg-muted border">
                             <Avatar>
-                                <AvatarImage src={user.photoURL} />
+                                {user.photoURL && <AvatarImage src={user.photoURL} />}
                                 <AvatarFallback>{user.displayName?.[0] || 'U'}</AvatarFallback>
                             </Avatar>
                             <div>

@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { collection, query, getDocs, orderBy, where, limit } from 'firebase/firestore';
+import { collection, query, getDocs, orderBy, where, limit, QueryDocumentSnapshot } from 'firebase/firestore';
 import { useFirestore, useUser } from '@/firebase';
 import { PostCard } from '@/components/PostCard';
 import { PostFilters } from '@/components/PostFilters';
@@ -135,8 +135,8 @@ export default function PostsPage() {
                     getDocs(popularPostsQuery)
                 ]);
 
-                const newPostsData = newPostsSnap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Post);
-                const popularPostsData = popularPostsSnap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Post);
+                const newPostsData = newPostsSnap.docs.map((doc: QueryDocumentSnapshot) => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Post);
+                const popularPostsData = popularPostsSnap.docs.map((doc: QueryDocumentSnapshot) => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Post);
                 
                 setPosts(newPostsData);
                 setPopularPosts(popularPostsData);
@@ -190,7 +190,6 @@ export default function PostsPage() {
                         </div>
                     )}
 
-                    {/* Popular Posts Section */}
                     {popularPosts.length > 0 && (
                         <div className="pt-8 mt-8 border-t border-border/20">
                             <h2 className="text-2xl font-bold mb-6 text-white flex items-center gap-2">

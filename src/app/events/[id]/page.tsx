@@ -5,6 +5,7 @@ import type { Event, User } from '@/lib/types';
 import { notFound } from 'next/navigation';
 import EventDetailClient from './_components/EventDetailClient';
 import { serializeFirestoreData } from '@/lib/utils';
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,7 +36,7 @@ async function getEventData(eventId: string): Promise<{ event: Event | null, par
                 if(chunk.length > 0){
                     const usersQuery = adminDb.collection('users').where('__name__', 'in', chunk);
                     const usersSnapshot = await usersQuery.get();
-                    usersSnapshot.forEach((doc: any) => {
+                    usersSnapshot.forEach((doc: QueryDocumentSnapshot) => {
                         participants.push(serializeFirestoreData({ id: doc.id, ...doc.data() } as User));
                     });
                 }
@@ -56,4 +57,3 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
     
     return <EventDetailClient initialEvent={event!} initialParticipants={participants} />
 }
-

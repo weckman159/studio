@@ -1,8 +1,9 @@
+
 // src/app/news/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, getDocs, limit } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, limit, QueryDocumentSnapshot } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -34,7 +35,7 @@ export default function NewsPage() {
             try {
                 const q = query(collection(firestore, 'autoNews'), orderBy('publishedAt', 'desc'), limit(20));
                 const snap = await getDocs(q);
-                setNews(snap.docs.map((d: any) => serializeFirestoreData({id: d.id, ...d.data()} as NewsItem)));
+                setNews(snap.docs.map((d: QueryDocumentSnapshot) => serializeFirestoreData({id: d.id, ...d.data()} as NewsItem)));
             } catch(e) {
                 console.error(e);
             } finally {
