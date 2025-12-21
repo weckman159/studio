@@ -8,6 +8,7 @@ import {
   query, 
   orderBy, 
   limit,
+  where,
   getCountFromServer
 } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
@@ -18,9 +19,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, Wrench, MessageSquare, FileText, Loader2, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 
-function StatCard({ title, value, icon: Icon, description }: { title: string, value: string | number, icon: any, description: string }) {
-  return (
+function StatCard({ title, value, icon: Icon, description, href }: { title: string, value: string | number, icon: any, description: string, href?: string }) {
+  const content = (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
@@ -32,13 +34,15 @@ function StatCard({ title, value, icon: Icon, description }: { title: string, va
       </CardContent>
     </Card>
   );
+
+  return href ? <Link href={href}>{content}</Link> : content;
 }
 
 export default function AdminDashboardPage() {
     const firestore = useFirestore();
     const { toast } = useToast();
 
-    const [stats, setStats] = useState({ users: 0, posts: 0, workshops: 0, feedback: 0 });
+    const [stats, setStats] = useState({ users: 0, posts: 0, workshops: 0, feedback: 0, openReports: 0 });
     const [recentPosts, setRecentPosts] = useState<Post[]>([]);
     const [isLoadingData, setIsLoadingData] = useState(true);
 
@@ -52,19 +56,22 @@ export default function AdminDashboardPage() {
                 const postsRef = collection(firestore, 'posts');
                 const wsRef = collection(firestore, 'workshops');
                 const fbRef = collection(firestore, 'feedback');
+                const reportsRef = query(collection(firestore, 'reports'), where('status', '==', 'open'));
 
-                const [usersCount, postsCount, workshopsCount, feedbackCount] = await Promise.all([
+                const [usersCount, postsCount, workshopsCount, feedbackCount, openReportsCount] = await Promise.all([
                     getCountFromServer(usersRef),
                     getCountFromServer(postsRef),
                     getCountFromServer(wsRef),
-                    getCountFromServer(fbRef)
+                    getCountFromServer(fbRef),
+                    getCountFromServer(reportsRef)
                 ]);
                 
                 setStats({
                     users: usersCount.data().count,
                     posts: postsCount.data().count,
                     workshops: workshopsCount.data().count,
-                    feedback: feedbackCount.data().count
+                    feedback: feedbackCount.data().count,
+                    openReports: openReportsCount.data().count,
                 });
 
                 // Fetch recent posts
@@ -96,10 +103,10 @@ export default function AdminDashboardPage() {
             <h1 className="text-3xl font-bold tracking-tight">Дашборд</h1>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <StatCard title="Пользователи" value={stats.users} icon={Users} description="Всего зарегистрировано" />
+                <StatCard title="Пользователи" value={stats.users} icon={Users} description="Всего зарегистрировано" href="/admin/users"/>
                 <StatCard title="Посты" value={stats.posts} icon={FileText} description="Всего публикаций" />
+                <StatCard title="Жалобы" value={stats.openReports} icon={Shield} description="Открытых жалоб" href="/admin/reports" />
                 <StatCard title="Мастерские" value={stats.workshops} icon={Wrench} description="Сервисов в каталоге" />
-                <StatCard title="Обратная связь" value={stats.feedback} icon={MessageSquare} description="Всего сообщений" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -125,12 +132,13 @@ export default function AdminDashboardPage() {
                     </CardContent>
                 </Card>
                 <Card>
-                    <CardHeader>
-                        <CardTitle>Жалобы</CardTitle>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <CardTitle>Обратная связь</CardTitle>
+                        <Badge>{stats.feedback}</Badge>
                     </CardHeader>
                     <CardContent className="flex flex-col items-center justify-center h-full min-h-[200px] text-center">
-                         <Shield className="h-10 w-10 text-muted-foreground mb-3" />
-                        <p className="text-muted-foreground">Нет активных жалоб.</p>
+                         <MessageSquare className="h-10 w-10 text-muted-foreground mb-3" />
+                        <p className="text-muted-foreground">Здесь будут отображаться сообщения от пользователей.</p>
                         <p className="text-xs text-muted-foreground mt-1">(Функционал в разработке)</p>
                     </CardContent>
                 </Card>
