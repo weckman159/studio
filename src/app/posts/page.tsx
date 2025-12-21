@@ -8,14 +8,13 @@ import { PostCard } from '@/components/PostCard';
 import { PostFilters } from '@/components/PostFilters';
 import { Post, User, AutoNews } from '@/lib/types';
 import { serializeFirestoreData } from '@/lib/utils';
-import { MessageSquare, Star } from 'lucide-react';
+import { MessageSquare, Star, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 // Import new reusable widgets
 import { TopUsersWidget } from '@/components/TopUsersWidget';
 import { AutoNewsWidget } from '@/components/AutoNewsWidget';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const POSTS_PER_PAGE = 8;
@@ -46,7 +45,6 @@ function FeedSkeleton() {
         </div>
     );
 }
-
 
 // --- MAIN PAGE COMPONENT ---
 export default function PostsPage() {
@@ -83,35 +81,36 @@ export default function PostsPage() {
         }
 
         try {
-            let postsQuery;
+            let baseQuery;
+
             if (feedType === 'following' && user) {
                 const followingRef = collection(firestore, 'users', user.uid, 'following');
                 const followingSnap = await getDocs(followingRef);
                 const followingIds = followingSnap.docs.map(doc => doc.id);
 
                 if (followingIds.length > 0) {
-                    postsQuery = query(collection(firestore, 'posts'), where('authorId', 'in', followingIds), orderBy('createdAt', 'desc'));
+                    baseQuery = query(collection(firestore, 'posts'), where('authorId', 'in', followingIds), orderBy('createdAt', 'desc'));
                 } else {
                     setPosts([]);
                     setHasMore(false);
                     currentLoadingStateSetter(false);
-                    return;
+                    return; // Exit early if user follows no one
                 }
             } else {
-                postsQuery = query(collection(firestore, 'posts'), orderBy('createdAt', 'desc'));
+                baseQuery = query(collection(firestore, 'posts'), orderBy('createdAt', 'desc'));
             }
 
             if (activeCategory !== 'Все') {
-                postsQuery = query(postsQuery, where('category', '==', activeCategory));
+                baseQuery = query(baseQuery, where('category', '==', activeCategory));
             }
             
-            postsQuery = query(postsQuery, limit(POSTS_PER_PAGE));
+            let finalQuery = query(baseQuery, limit(POSTS_PER_PAGE));
 
             if (loadMore && lastVisible) {
-                postsQuery = query(postsQuery, startAfter(lastVisible));
+                finalQuery = query(baseQuery, startAfter(lastVisible), limit(POSTS_PER_PAGE));
             }
 
-            const postsSnap = await getDocs(postsQuery);
+            const postsSnap = await getDocs(finalQuery);
             const newPosts = postsSnap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Post);
             
             setPosts(prev => loadMore ? [...prev, ...newPosts] : newPosts);
@@ -130,10 +129,13 @@ export default function PostsPage() {
         }
     }, [firestore, activeCategory, feedType, user, lastVisible]);
     
+    // Initial data load for widgets + first page
     useEffect(() => {
         const fetchInitialData = async () => {
              if (!firestore) return;
+             setLoading(true);
              try {
+                // Fetch widget data
                 const topAuthorsQuery = query(collection(firestore, 'users'), orderBy('stats.postsCount', 'desc'), limit(3));
                 const latestNewsQuery = query(collection(firestore, 'autoNews'), orderBy('publishedAt', 'desc'), limit(3));
                 const popularPostsQuery = query(collection(firestore, 'posts'), orderBy('likesCount', 'desc'), limit(4));
@@ -147,17 +149,16 @@ export default function PostsPage() {
                 setTopAuthors(authorsSnap.docs.map((doc: QueryDocumentSnapshot) => serializeFirestoreData({ id: doc.id, ...doc.data() }) as User));
                 setLatestNews(newsSnap.docs.map((doc: QueryDocumentSnapshot) => serializeFirestoreData({ id: doc.id, ...doc.data() }) as AutoNews));
                 setPopularPosts(popularSnap.docs.map((doc: QueryDocumentSnapshot) => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Post));
+                
              } catch(error) {
-                 console.error("Error fetching widget data:", error)
+                 console.error("Error fetching widget data:", error);
+             } finally {
+                // setLoading is handled by fetchPosts
              }
         }
         fetchInitialData();
-    }, [firestore]);
-
-    useEffect(() => {
         fetchPosts(false);
-    }, [activeCategory, feedType, fetchPosts]);
-
+    }, [firestore, user, feedType, activeCategory]); // Removed fetchPosts from deps to avoid re-triggering
 
     const filteredPosts = useMemo(() => {
         if (!searchQuery) return posts;
@@ -184,7 +185,7 @@ export default function PostsPage() {
                         showFeedToggle={!!user}
                     />
 
-                    {loading ? (
+                    {loading && posts.length === 0 ? (
                         <FeedSkeleton />
                     ) : filteredPosts.length > 0 ? (
                         <>
@@ -221,8 +222,8 @@ export default function PostsPage() {
                     )}
                 </main>
                 <aside className="lg:col-span-1 space-y-6 hidden lg:block">
-                    <TopUsersWidget topAuthors={topAuthors} loading={loading && topAuthors.length === 0} />
-                    <AutoNewsWidget news={latestNews} loading={loading && latestNews.length === 0} />
+                    <TopUsersWidget topAuthors={topAuthors} loading={loading} />
+                    <AutoNewsWidget news={latestNews} loading={loading} />
                 </aside>
             </div>
         </div>
