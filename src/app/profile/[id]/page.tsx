@@ -63,7 +63,8 @@ async function getProfileData(profileId: string) {
 
 async function getCurrentUserId() {
   try {
-    const sessionCookie = cookies().get('session')?.value;
+    // ПОЧЕМУ ИСПРАВЛЕНО: функция cookies() теперь асинхронна и требует await.
+    const sessionCookie = (await cookies()).get('session')?.value;
     if (!sessionCookie) return null;
     const decodedToken = await getAuth(adminApp!).verifySessionCookie(sessionCookie, true);
     return decodedToken.uid;
