@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -11,32 +12,25 @@ import { MessageSquare, Loader2, Star } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-
-// Import the new reusable widgets
 import { TopUsersWidget } from '@/components/TopUsersWidget';
 import { AutoNewsWidget } from '@/components/AutoNewsWidget';
 
-const POSTS_PER_PAGE = 8;
+const POSTS_PER_PAGE = 9; // Changed to be a multiple of 3
 
 function FeedSkeleton() {
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {[...Array(4)].map((_, i) => (
-                <div key={i} className="flex flex-col gap-6 p-4 border border-border rounded-xl holographic-panel">
-                    <Skeleton className="w-full h-56 rounded-lg" />
-                    <div className="flex-1 space-y-4">
-                        <Skeleton className="h-8 w-3/4" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[...Array(6)].map((_, i) => (
+                <div key={i} className="flex flex-col gap-4">
+                    <Skeleton className="w-full h-56 rounded-xl" />
+                    <div className="space-y-2">
+                        <Skeleton className="h-6 w-3/4" />
                         <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-5/6" />
-                        <div className="flex items-center justify-between pt-4">
-                            <div className="flex items-center gap-3">
-                                <Skeleton className="h-10 w-10 rounded-full" />
-                                <div className="space-y-1">
-                                    <Skeleton className="h-4 w-24" />
-                                    <Skeleton className="h-3 w-16" />
-                                </div>
-                            </div>
-                            <Skeleton className="h-6 w-16" />
+                    </div>
+                     <div className="flex items-center gap-3 pt-2">
+                        <Skeleton className="h-10 w-10 rounded-full" />
+                        <div className="space-y-1">
+                            <Skeleton className="h-4 w-24" />
                         </div>
                     </div>
                 </div>
@@ -45,24 +39,20 @@ function FeedSkeleton() {
     );
 }
 
-// --- MAIN PAGE COMPONENT ---
 export default function PostsPage() {
     const firestore = useFirestore();
     const { user } = useUser();
+    const { toast } = useToast();
     
-    // States for data
     const [posts, setPosts] = useState<Post[]>([]);
-    const [popularPosts, setPopularPosts] = useState<Post[]>([]);
     const [topAuthors, setTopAuthors] = useState<User[]>([]);
     const [latestNews, setLatestNews] = useState<AutoNews[]>([]);
     
-    // States for loading and pagination
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
     const [lastVisible, setLastVisible] = useState<DocumentSnapshot | null>(null);
     const [hasMore, setHasMore] = useState(true);
     
-    // States for filters
     const [activeCategory, setActiveCategory] = useState('Все');
     const [searchQuery, setSearchQuery] = useState('');
     const [feedType, setFeedType] = useState<'global' | 'following'>('global');
@@ -123,10 +113,15 @@ export default function PostsPage() {
 
         } catch (error) {
             console.error("Error fetching posts:", error);
+            toast({
+                variant: "destructive",
+                title: "Ошибка загрузки постов",
+                description: "Не удалось загрузить ленту. Попробуйте обновить страницу.",
+            });
         } finally {
             currentLoadingSetter(false);
         }
-    }, [firestore, activeCategory, feedType, user, lastVisible]);
+    }, [firestore, activeCategory, feedType, user, lastVisible, toast]);
     
     useEffect(() => {
         const fetchInitialData = async () => {
@@ -135,22 +130,18 @@ export default function PostsPage() {
              try {
                 const topAuthorsQuery = query(collection(firestore, 'users'), orderBy('stats.postsCount', 'desc'), limit(3));
                 const latestNewsQuery = query(collection(firestore, 'autoNews'), orderBy('publishedAt', 'desc'), limit(3));
-                const popularPostsQuery = query(collection(firestore, 'posts'), orderBy('likesCount', 'desc'), limit(4));
                 
-                const [authorsSnap, newsSnap, popularSnap] = await Promise.all([
+                const [authorsSnap, newsSnap] = await Promise.all([
                     getDocs(topAuthorsQuery),
                     getDocs(latestNewsQuery),
-                    getDocs(popularPostsQuery)
                 ]);
 
                 setTopAuthors(authorsSnap.docs.map((doc: QueryDocumentSnapshot) => serializeFirestoreData({ id: doc.id, ...doc.data() }) as User));
                 setLatestNews(newsSnap.docs.map((doc: QueryDocumentSnapshot) => serializeFirestoreData({ id: doc.id, ...doc.data() }) as AutoNews));
-                setPopularPosts(popularSnap.docs.map((doc: QueryDocumentSnapshot) => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Post));
                 
              } catch(error) {
                  console.error("Error fetching widget data:", error);
              } finally {
-                // Initial post fetch will set loading to false
                 fetchPosts(false);
              }
         }
@@ -166,33 +157,48 @@ export default function PostsPage() {
         );
     }, [posts, searchQuery]);
 
-
     return (
         <div className="p-4 md:p-8">
-            <h1 className="text-4xl font-bold mb-8 text-white">Лента блогов</h1>
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                <main className="lg:col-span-3 space-y-6">
-                    <PostFilters 
-                        activeType={activeCategory}
-                        onTypeChange={setActiveCategory}
-                        searchQuery={searchQuery}
-                        onSearchChange={setSearchQuery}
-                        feedType={feedType}
-                        onFeedTypeChange={setFeedType}
-                        showFeedToggle={!!user}
-                    />
+            <h1 className="text-4xl font-bold mb-4 text-white">Лента блогов</h1>
+            <p className="text-text-secondary mb-8 max-w-2xl">
+                Лучшие публикации от нашего сообщества. Делитесь историями, задавайте вопросы и находите единомышленников.
+            </p>
+            
+            <main className="space-y-12">
+                <PostFilters 
+                    activeType={activeCategory}
+                    onTypeChange={setActiveCategory}
+                    searchQuery={searchQuery}
+                    onSearchChange={setSearchQuery}
+                    feedType={feedType}
+                    onFeedTypeChange={setFeedType}
+                    showFeedToggle={!!user}
+                />
+                
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <TopUsersWidget topAuthors={topAuthors} loading={loading} />
+                    <AutoNewsWidget news={latestNews} loading={loading} />
+                    <div className="holographic-panel p-6 rounded-xl flex flex-col justify-center items-center text-center">
+                         <h3 className="font-bold text-white text-lg">Хочешь поделиться?</h3>
+                         <p className="text-text-secondary text-sm my-2">Создай свою публикацию и стань частью сообщества.</p>
+                         <Button asChild className="mt-2">
+                             <Link href="/posts/create">Начать писать</Link>
+                         </Button>
+                    </div>
+                </div>
 
+                <div>
                     {loading ? (
                         <FeedSkeleton />
                     ) : filteredPosts.length > 0 ? (
                         <>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                                 {filteredPosts.map(post => <PostCard key={post.id} post={post} />)}
                             </div>
                              {hasMore && !loading && (
-                                <div className="flex justify-center mt-8">
-                                    <Button onClick={() => fetchPosts(true)} disabled={loadingMore}>
-                                        {loadingMore ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Ещё'}
+                                <div className="flex justify-center mt-12">
+                                    <Button onClick={() => fetchPosts(true)} disabled={loadingMore} variant="outline" size="lg">
+                                        {loadingMore ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Загрузить ещё'}
                                     </Button>
                                 </div>
                             )}
@@ -206,23 +212,8 @@ export default function PostsPage() {
                             </p>
                         </div>
                     )}
-
-                    {!loading && popularPosts.length > 0 && (
-                        <div className="pt-8 mt-8 border-t border-border/20">
-                            <h2 className="text-2xl font-bold mb-6 text-white flex items-center gap-2">
-                                <Star className="text-primary" /> Популярные публикации
-                            </h2>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                {popularPosts.map(post => <PostCard key={post.id} post={post} />)}
-                            </div>
-                        </div>
-                    )}
-                </main>
-                <aside className="lg:col-span-1 space-y-6 hidden lg:block">
-                    <TopUsersWidget topAuthors={topAuthors} loading={loading} />
-                    <AutoNewsWidget news={latestNews} loading={loading} />
-                </aside>
-            </div>
+                </div>
+            </main>
         </div>
     );
 }
