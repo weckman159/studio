@@ -3,19 +3,18 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-// ПОЧЕМУ ИСПРАВЛЕНО: Заменяем прямой импорт 'adminApp' на вызов функций-геттеров,
-// чтобы соответствовать правилам 'use server' модулей.
 import { getAdminDb, getAdminAuth } from '@/lib/firebase-admin';
 import { cookies } from 'next/headers';
 import { FieldValue } from 'firebase-admin/firestore';
 
 async function getUserIdFromSession(): Promise<string | null> {
   try {
-    const sessionCookie = cookies().get('session')?.value;
+    // ПОЧЕМУ ИСПРАВЛЕНО: функция cookies() теперь асинхронна и требует await.
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get('session')?.value;
     if (!sessionCookie) {
       return null;
     }
-    // ПОЧЕМУ ИСПРАВЛЕНО: Используем 'getAdminAuth()' вместо 'getAuth(adminApp)'.
     const decodedToken = await getAdminAuth().verifySessionCookie(sessionCookie, true);
     return decodedToken.uid;
   } catch (error) {
