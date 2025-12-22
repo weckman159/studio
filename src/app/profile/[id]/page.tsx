@@ -1,3 +1,4 @@
+
 // src/app/profile/[id]/page.tsx
 import { getAdminDb } from '@/lib/firebase-admin';
 import { notFound } from 'next/navigation';
@@ -7,9 +8,9 @@ import { ProfileSidebar } from '@/components/profile/ProfileSidebar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ProfileActions } from '@/components/profile/ProfileActions';
 import { ProfileTabs } from '@/components/profile/ProfileTabs';
-import { getAuth } from 'firebase-admin/auth';
+// ПОЧЕМУ ИСПРАВЛЕНО: Заменяем прямой импорт 'adminApp' и 'getAuth' на вызов единой функции-геттера.
+import { getAdminAuth } from '@/lib/firebase-admin';
 import { cookies } from 'next/headers';
-import { adminApp } from '@/lib/firebase-admin';
 
 /**
  * ПОЧЕМУ ИСПРАВЛЕНО:
@@ -63,10 +64,13 @@ async function getProfileData(profileId: string) {
 
 async function getCurrentUserId() {
   try {
-    // ПОЧЕМУ ИСПРАВЛЕНО: функция cookies() теперь асинхронна и требует await.
+    // ПОЧЕМУ ИСПРАВЛЕНО: Добавлен await для асинхронной функции cookies().
     const sessionCookie = (await cookies()).get('session')?.value;
     if (!sessionCookie) return null;
-    const decodedToken = await getAuth(adminApp!).verifySessionCookie(sessionCookie, true);
+    
+    // ПОЧЕМУ ИСПРАВЛЕНО: Используем 'getAdminAuth()' вместо 'getAuth(adminApp)'.
+    const auth = getAdminAuth();
+    const decodedToken = await auth.verifySessionCookie(sessionCookie, true);
     return decodedToken.uid;
   } catch (error) {
     // Session cookie is invalid or expired.
