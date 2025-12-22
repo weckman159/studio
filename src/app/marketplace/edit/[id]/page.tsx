@@ -1,4 +1,3 @@
-
 // src/app/marketplace/edit/[id]/page.tsx
 'use client';
 
@@ -57,6 +56,7 @@ function EditMarketplaceItemClient({ itemId }: { itemId: string }) {
 }
 
 export default async function EditMarketplaceItemPage({ params }: { params: Promise<{ id: string }> }) {
+    // ПОЧЕМУ ИСПРАВЛЕНО: В Next.js 15 params является Promise. Используем await.
     const { id } = await params;
     return <EditMarketplaceItemClient itemId={id} />
 }

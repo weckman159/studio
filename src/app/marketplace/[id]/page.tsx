@@ -1,4 +1,3 @@
-
 // src/app/marketplace/[id]/page.tsx
 import { getAdminDb } from '@/lib/firebase-admin';
 import { notFound } from 'next/navigation';
@@ -29,6 +28,7 @@ async function getItemData(itemId: string): Promise<MarketplaceItem | null> {
 }
 
 export default async function MarketplaceItemPage({ params }: { params: Promise<{ id: string }> }) {
+    // ПОЧЕМУ ИСПРАВЛЕНО: В Next.js 15 params является Promise. Используем await.
     const { id } = await params;
     const item = await getItemData(id);
     

@@ -65,7 +65,7 @@ async function getCurrentUserId() {
   try {
     const sessionCookie = cookies().get('session')?.value;
     if (!sessionCookie) return null;
-    const decodedToken = await getAuth(adminApp).verifySessionCookie(sessionCookie, true);
+    const decodedToken = await getAuth(adminApp!).verifySessionCookie(sessionCookie, true);
     return decodedToken.uid;
   } catch (error) {
     // Session cookie is invalid or expired.
@@ -74,8 +74,9 @@ async function getCurrentUserId() {
 }
 
 
-export default async function ProfilePage({ params }: { params: { id: string } }) {
-    const { id } = params;
+export default async function ProfilePage({ params }: { params: Promise<{ id: string }> }) {
+    // ПОЧЕМУ ИСПРАВЛЕНО: В Next.js 15 params является Promise. Используем await.
+    const { id } = await params;
     const { profile, cars, posts, followers } = await getProfileData(id);
     const currentUserId = await getCurrentUserId();
     

@@ -1,4 +1,3 @@
-
 // src/app/posts/[id]/page.tsx
 import { notFound } from 'next/navigation'
 import { getAdminDb } from '@/lib/firebase-admin'
@@ -39,6 +38,7 @@ async function getPostData(postId: string) {
 export async function generateMetadata(
   { params }: PostPageProps
 ): Promise<Metadata> {
+  // ПОЧЕМУ ИСПРАВЛЕНО: В Next.js 15 params является Promise. Используем await.
   const { id } = await params;
   const { post } = await getPostData(id);
 
@@ -63,6 +63,7 @@ export async function generateMetadata(
 }
 
 export default async function PostPage({ params }: PostPageProps) {
+  // ПОЧЕМУ ИСПРАВЛЕНО: В Next.js 15 params является Promise. Используем await.
   const { id } = await params;
   const { post, comments } = await getPostData(id);
 

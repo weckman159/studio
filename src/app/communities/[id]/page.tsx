@@ -1,4 +1,3 @@
-
 // src/app/communities/[id]/page.tsx
 import { getAdminDb } from '@/lib/firebase-admin';
 import { notFound } from 'next/navigation';
@@ -63,10 +62,9 @@ async function getCommunityData(communityId: string): Promise<{ community: Commu
 
 
 export default async function CommunityDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    // ПОЧЕМУ ИСПРАВЛЕНО: В Next.js 15 params является Promise. Используем await.
     const { id } = await params;
     const { community, posts, members } = await getCommunityData(id);
 
     return <CommunityDetailClient initialCommunity={community!} initialPosts={posts} initialMembers={members} />
 }
-
-    

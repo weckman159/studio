@@ -1,4 +1,3 @@
-
 // src/app/voting/[id]/page.tsx
 'use client';
 
@@ -94,6 +93,7 @@ function VotingDetailClient({ votingId }: { votingId: string }) {
 }
 
 export default async function VotingDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    // ПОЧЕМУ ИСПРАВЛЕНО: В Next.js 15 params является Promise. Используем await.
     const { id } = await params;
     return <VotingDetailClient votingId={id} />
 }

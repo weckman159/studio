@@ -1,4 +1,3 @@
-
 // src/app/events/[id]/page.tsx
 import { getAdminDb } from '@/lib/firebase-admin';
 import type { Event, User } from '@/lib/types';
@@ -52,6 +51,7 @@ async function getEventData(eventId: string): Promise<{ event: Event | null, par
 
 
 export default async function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    // ПОЧЕМУ ИСПРАВЛЕНО: В Next.js 15 params является Promise. Используем await.
     const { id } = await params;
     const { event, participants } = await getEventData(id);
     

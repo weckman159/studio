@@ -1,4 +1,3 @@
-
 // src/app/communities/[id]/posts/[postId]/page.tsx
 
 import { getAdminDb } from '@/lib/firebase-admin';
@@ -48,6 +47,7 @@ async function getPostData(postId: string): Promise<{ post: Post | null, comment
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ postId: string }> }): Promise<Metadata> {
+  // ПОЧЕМУ ИСПРАВЛЕНО: В Next.js 15 params является Promise. Используем await.
   const { postId } = await params;
   const { post } = await getPostData(postId);
 
@@ -70,6 +70,7 @@ export async function generateMetadata({ params }: { params: Promise<{ postId: s
 
 
 export default async function CommunityPostPage({ params }: { params: Promise<{ id: string, postId: string }> }) {
+    // ПОЧЕМУ ИСПРАВЛЕНО: В Next.js 15 params является Promise. Используем await.
     const { postId } = await params;
     const { post, comments } = await getPostData(postId);
 

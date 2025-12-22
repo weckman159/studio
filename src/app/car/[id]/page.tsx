@@ -1,4 +1,3 @@
-
 // src/app/car/[id]/page.tsx
 import type { Car, TimelineEntry } from '@/lib/types';
 import CarDetailClient from './_components/CarDetailClient';
@@ -44,6 +43,7 @@ async function getCarData(carId: string): Promise<{ car: Car | null, timeline: T
 }
 
 export default async function CarPage({ params }: { params: Promise<{ id: string }> }) {
+  // ПОЧЕМУ ИСПРАВЛЕНО: В Next.js 15 params является Promise. Используем await.
   const { id } = await params;
   const { car, timeline } = await getCarData(id);
 
@@ -59,6 +59,7 @@ export default async function CarPage({ params }: { params: Promise<{ id: string
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ id:string }> }): Promise<Metadata> {
+  // ПОЧЕМУ ИСПРАВЛЕНО: В Next.js 15 params является Promise. Используем await.
   const { id } = await params;
   const { car } = await getCarData(id);
 

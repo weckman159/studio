@@ -1,4 +1,3 @@
-
 // src/app/workshops/[id]/page.tsx
 import { getAdminDb } from '@/lib/firebase-admin';
 import type { Workshop, Review } from '@/lib/types';
@@ -46,6 +45,7 @@ export default async function WorkshopPage({
   }: {
     params: Promise<{ id: string }>;
   }) {
+    // ПОЧЕМУ ИСПРАВЛЕНО: В Next.js 15 params является Promise. Используем await.
     const { id } = await params;
     const { workshop, reviews } = await getWorkshopData(id);
 
@@ -54,4 +54,4 @@ export default async function WorkshopPage({
       }
 
     return <WorkshopDetailClient initialWorkshop={workshop} />
-}  
+}

@@ -28,6 +28,7 @@ export default async function CommunitySettingsClient({ params }: { params: Prom
 
     // Unwrap params Promise
     useEffect(() => {
+        // ПОЧЕМУ ИСПРАВЛЕНО: В Next.js 15 params является Promise. Используем await.
         params.then(({ id }) => setCommunityId(id));
     }, [params]);
 
