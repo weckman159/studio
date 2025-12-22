@@ -64,6 +64,7 @@
     "react-markdown": "latest",
     "recharts": "latest",
     "remark-gfm": "latest",
+    "server-only": "latest",
     "tailwind-merge": "latest",
     "tailwindcss-animate": "latest",
     "zod": "latest"

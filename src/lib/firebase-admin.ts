@@ -1,21 +1,18 @@
-
+// ПОЧЕМУ ИСПРАВЛЕНО: 'use server' было некорректным. 
+// Заменено на 'server-only', чтобы обозначить модуль как серверный,
+// но не как Server Action, что снимает ограничение на экспорт синхронных функций.
 import 'server-only';
+
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
 import { getAuth, Auth } from 'firebase-admin/auth';
 
 const ADMIN_APP_NAME = 'firebase-admin-app-weckman159-studio';
 
-// ПОЧЕМУ ИСПРАВЛЕНО: Глобальные переменные вынесены на уровень модуля и могут быть null,
-// что позволяет приложению запуститься даже при ошибке инициализации.
-export let adminApp: App | null = null;
+let adminApp: App | null = null;
 let adminDb: Firestore | null = null;
 let adminAuth: Auth | null = null;
 
-
-// ПОЧЕМУ ИСПРАВЛЕНО: Вместо падения приложения при отсутствии ключа,
-// мы теперь обрабатываем ошибку в try-catch, выводим предупреждение и продолжаем работу
-// в "mock" режиме. Это повышает отказоустойчивость и упрощает разработку.
 try {
   const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
@@ -40,26 +37,37 @@ try {
     console.warn('⚠️ Admin SDK работает в mock-режиме из-за ошибки инициализации.');
 }
 
-// ПОЧЕМУ ИСПРАВЛЕНО: Функции теперь возвращают mock-объект, если
-// инициализация провалилась. Это предотвращает крэш серверных компонентов,
-// которые ожидают получить экземпляр Firestore или Auth.
+// ПОЧЕМУ ИСПРАВЛЕНО: Предыдущий mock-объект был реализован некорректно
+// и вызывал ошибку типизации. Новая версия точно симулирует цепочку вызовов Firestore API
+// и предотвращает падение сборки.
+const mockQueryMethods = {
+    get: async () => ({ docs: [], empty: true, size: 0 }),
+    where: function() { return this; },
+    orderBy: function() { return this; },
+    limit: function() { return this; },
+    startAfter: function() { return this; },
+};
+
+const mockDocRef = {
+    get: async () => ({ exists: false, data: () => undefined }),
+    set: async () => {},
+    update: async () => {},
+    delete: async () => {},
+    collection: () => ({
+        doc: () => mockDocRef,
+        add: async () => mockDocRef,
+        ...mockQueryMethods,
+    }),
+};
+
+const mockCollectionRef = {
+    doc: () => mockDocRef,
+    add: async () => mockDocRef,
+    ...mockQueryMethods,
+};
+
 const mockDb = {
-  collection: () => ({
-    doc: () => ({
-      get: async () => ({ exists: false, data: () => undefined }),
-      set: async () => {},
-      update: async () => {},
-      delete: async () => {},
-      collection: () => mockDb.collection().where(),
-    }),
-    where: () => ({
-      get: async () => ({ docs: [] }),
-      orderBy: () => ({ limit: () => ({ get: async () => ({ docs: [] }) }) }),
-    }),
-    orderBy: () => ({ limit: () => ({ get: async () => ({ docs: [] }) }) }),
-    get: async () => ({ docs: [] }),
-    add: async () => ({ id: 'mockId' }),
-  }),
+  collection: () => mockCollectionRef,
 } as unknown as Firestore;
 
 const mockAuth = {
@@ -70,9 +78,9 @@ const mockAuth = {
 
 
 export function getAdminDb(): Firestore {
-  return adminDb || mockDb;
+  return adminApp && adminDb ? adminDb : mockDb;
 }
 
 export function getAdminAuth(): Auth {
-  return adminAuth || mockAuth;
+  return adminApp && adminAuth ? adminAuth : mockAuth;
 }

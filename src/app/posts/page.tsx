@@ -2,7 +2,8 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { collection, query, getDocs, orderBy, where, limit, QueryDocumentSnapshot, DocumentSnapshot, startAfter } from 'firebase/firestore';
+// ПОЧЕМУ ИСПРАВЛЕНО: Добавлен импорт QueryDocumentSnapshot для явной типизации.
+import { collection, query, getDocs, orderBy, where, limit, type QueryDocumentSnapshot, type DocumentSnapshot, startAfter } from 'firebase/firestore';
 import { useFirestore, useUser } from '@/firebase';
 import { PostCard } from '@/components/PostCard';
 import { PostFilters } from '@/components/PostFilters';
@@ -97,11 +98,12 @@ export default function PostsPage() {
             let finalQuery = query(baseQuery, limit(POSTS_PER_PAGE));
 
             if (loadMore && lastVisible) {
-                finalQuery = query(finalQuery, startAfter(lastVisible), limit(POSTS_PER_PAGE));
+                finalQuery = query(finalQuery, startAfter(lastVisible));
             }
 
             const postsSnap = await getDocs(finalQuery);
-            const newPosts = postsSnap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Post);
+            // ПОЧЕМУ ИСПРАВЛЕНО: Явно типизируем `doc` как QueryDocumentSnapshot для устранения ошибки `any`.
+            const newPosts = postsSnap.docs.map((doc: QueryDocumentSnapshot) => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Post);
             
             setPosts(prev => loadMore ? [...prev, ...newPosts] : newPosts);
             
