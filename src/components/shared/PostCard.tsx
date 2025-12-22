@@ -1,4 +1,3 @@
-
 import Link from 'next/link';
 import Image from 'next/image';
 import { Post } from '@/lib/types';
@@ -13,14 +12,12 @@ interface PostCardProps {
 }
 
 export function PostCard({ post, className }: PostCardProps) {
-  // Создаем краткое описание из HTML-контента
   const excerpt = post.content?.replace(/<[^>]*>?/gm, '').substring(0, 100) + '...' || 'Нет описания.';
   const postUrl = post.communityId ? `/communities/${post.communityId}/posts/${post.id}` : `/posts/${post.id}`;
 
   return (
     <div className={cn(
       "group rounded-xl border border-white/10 bg-black/20 backdrop-blur-md overflow-hidden transition-all duration-300 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/10",
-      "hover:scale-[1.02] transition-transform duration-300",
       className
     )}>
       <Link href={postUrl} className="flex flex-col h-full">

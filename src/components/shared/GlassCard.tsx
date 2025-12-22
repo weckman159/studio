@@ -1,4 +1,3 @@
-
 import { cn } from "@/lib/utils";
 import React from "react";
 
@@ -7,7 +6,7 @@ import React from "react";
  */
 export function GlassCard({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("rounded-xl border border-white/20 bg-black/10 backdrop-blur-md", className)}>
+    <div className={cn("rounded-xl border border-white/10 bg-black/20 backdrop-blur-md", className)}>
       {children}
     </div>
   );
