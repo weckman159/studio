@@ -1,3 +1,4 @@
+
 // src/components/profile/ProfileClientPage.tsx
 'use client';
 
@@ -234,7 +235,7 @@ export function ProfileClientPage({ profileId }: ProfileClientPageProps) {
                         {isOwner && (
                             <Button asChild size="lg" className="mt-6">
                                 <Link href="/posts/create">
-                                    <Plus className="mr-2 h-4 w-4" /> Создать первый пост
+                                    Создать первый пост
                                 </Link>
                             </Button>
                         )}
