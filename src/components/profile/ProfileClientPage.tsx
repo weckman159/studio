@@ -1,3 +1,4 @@
+
 // src/components/profile/ProfileClientPage.tsx
 'use client';
 
@@ -6,7 +7,17 @@ import { doc, getDoc, collection, query, where, orderBy, getDocs, setDoc, delete
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ProfileSidebar } from '@/components/profile/ProfileSidebar';
 import { CarCard } from '@/components/profile/CarCard';
-import { Wrench, Calendar, Camera, ShoppingBag, Edit, UserPlus, UserCheck, MessageCircle, MessageSquare } from 'lucide-react';
+import { 
+  Wrench, 
+  Calendar, 
+  Camera, 
+  ShoppingBag, 
+  Edit, 
+  UserPlus, 
+  UserCheck, 
+  MessageCircle, 
+  MessageSquare 
+} from 'lucide-react';
 import { useUser, useFirestore } from '@/firebase';
 import type { Car, User, Post } from '@/lib/types';
 import { EditProfileModal } from '@/components/EditProfileModal';
