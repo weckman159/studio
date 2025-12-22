@@ -1,5 +1,4 @@
 
-import { collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
 import { getAdminDb } from '@/lib/firebase-admin';
 import { serializeFirestoreData } from '@/lib/utils';
 import { Post } from '@/lib/types';
@@ -10,24 +9,22 @@ import { TrendingUp, Sparkles } from 'lucide-react';
 async function getFeedData() {
     const db = getAdminDb();
     
-    // Популярные посты: сортировка по лайкам
-    const popularQuery = query(
-        collection(db, 'posts'),
-        orderBy('likesCount', 'desc'),
-        limit(3)
-    );
+    // Запрос для популярных постов с использованием Admin SDK
+    const popularQuery = db.collection('posts')
+        .where('status', '==', 'published')
+        .orderBy('likesCount', 'desc')
+        .limit(3);
 
-    // Новые посты: сортировка по дате создания
-    const newQuery = query(
-        collection(db, 'posts'),
-        orderBy('createdAt', 'desc'),
-        limit(10)
-    );
+    // Запрос для новых постов с использованием Admin SDK
+    const newQuery = db.collection('posts')
+        .where('status', '==', 'published')
+        .orderBy('createdAt', 'desc')
+        .limit(10);
 
     try {
         const [popularSnap, newSnap] = await Promise.all([
-            getDocs(popularQuery),
-            getDocs(newQuery)
+            popularQuery.get(),
+            newQuery.get()
         ]);
 
         const popularPosts = popularSnap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Post);
@@ -36,7 +33,7 @@ async function getFeedData() {
         return { popularPosts, newPosts };
     } catch (error) {
         console.error("Error fetching feed data:", error);
-        // В случае ошибки возвращаем пустые массивы, чтобы страница не падала
+        // Возвращаем пустые массивы при ошибке, чтобы страница не падала
         return { popularPosts: [], newPosts: [] };
     }
 }
@@ -57,7 +54,7 @@ export default async function FeedPage() {
                         <PostCard 
                             key={post.id} 
                             post={post} 
-                            className="h-[300px]"
+                            className="h-[300px] hover:scale-[1.02] transition-transform duration-300"
                         />
                     ))}
                 </div>
@@ -74,7 +71,7 @@ export default async function FeedPage() {
                         <PostCard 
                             key={post.id} 
                             post={post} 
-                            className="h-[450px]"
+                            className="h-[450px] hover:scale-[1.02] transition-transform duration-300"
                         />
                     ))}
                 </div>

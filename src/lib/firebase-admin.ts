@@ -1,123 +1,45 @@
 
 import 'server-only';
-// src/lib/firebase-admin.ts - Server-side Firebase Admin SDK
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
 import { getAuth, Auth } from 'firebase-admin/auth';
 
-let adminApp: App | undefined;
-let adminDb: Firestore | undefined;
-let adminAuth: Auth | undefined;
+const ADMIN_APP_NAME = 'firebase-admin-app-weckman159-studio';
 
-/**
- * Initialize Firebase Admin SDK (server-side only)
- * Uses service account credentials from environment variable
- */
-function initializeAdmin() {
-  const existingApp = getApps().find(app => app.name === 'firebase-admin-app');
-  
+let adminApp: App | undefined;
+
+function getAdminApp(): App {
+  // Если приложение уже было создано, возвращаем его
+  const existingApp = getApps().find(app => app.name === ADMIN_APP_NAME);
   if (existingApp) {
-    if (!adminApp) {
-        adminApp = existingApp;
-        adminDb = getFirestore(adminApp);
-        adminAuth = getAuth(adminApp);
-    }
-    return;
+    return existingApp;
+  }
+
+  const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  if (!serviceAccountKey) {
+    throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY не установлена. Firebase Admin SDK не может быть инициализирован.');
   }
 
   try {
-    const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+    const serviceAccount = JSON.parse(serviceAccountKey);
     
-    if (!serviceAccountKey) {
-      console.warn('⚠️ FIREBASE_SERVICE_ACCOUNT_KEY not found. Admin SDK will not be initialized. Build may fail.');
-      return;
-    }
-
-    let serviceAccount;
-    try {
-      serviceAccount = JSON.parse(serviceAccountKey);
-    } catch (e) {
-      console.error('❌ Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY as JSON. Ensure it is a valid JSON string.', e);
-      return;
-    }
-
-    // Initialize the admin app with a unique name
+    // Инициализируем приложение с уникальным именем
     adminApp = initializeApp({
       credential: cert(serviceAccount),
-    }, 'firebase-admin-app');
-
-    adminDb = getFirestore(adminApp);
-    adminAuth = getAuth(adminApp);
+    }, ADMIN_APP_NAME);
     
-    console.log('✅ Firebase Admin SDK initialized successfully.');
-
+    console.log('✅ Firebase Admin SDK инициализирован успешно.');
+    return adminApp;
   } catch (error: any) {
-    if (!/already exists/i.test(error.message)) {
-        console.error('❌ Error initializing Firebase Admin SDK:', error);
-    }
+    console.error('❌ Ошибка инициализации Firebase Admin SDK:', error.message);
+    throw new Error('Не удалось инициализировать Firebase Admin SDK. Проверьте ключ сервисного аккаунта.');
   }
 }
 
-// Call initialization on module load
-initializeAdmin();
-
-
-/**
- * Get Firestore Admin instance (server-side only)
- * Returns a mock implementation if Admin SDK is not initialized to allow build to pass in some CI environments
- */
 export function getAdminDb(): Firestore {
-  if (!adminDb) {
-    console.warn('⚠️ Using mock Firestore Admin - configure FIREBASE_SERVICE_ACCOUNT_KEY for production.');
-    return {
-      collection: (name: string) => ({
-        doc: (id: string) => ({
-          get: async () => ({ exists: false, data: () => null }),
-          update: async () => {},
-          set: async () => {},
-          collection: (sub: string) => ({
-            get: async () => ({ docs: [] })
-          })
-        }),
-        where: () => ({
-          orderBy: () => ({
-            limit: () => ({
-              get: async () => ({ docs: [] })
-            }),
-            get: async () => ({ docs: [] })
-          }),
-          get: async () => ({ docs: [] })
-        }),
-        orderBy: () => ({
-          limit: () => ({
-            get: async () => ({ docs: [] })
-          }),
-          get: async () => ({ docs: [] })
-        }),
-        limit: () => ({
-          get: async () => ({ docs: [] })
-        }),
-        get: async () => ({ docs: [] }),
-        add: async () => ({})
-      })
-    } as unknown as Firestore;
-  }
-  return adminDb;
+  return getFirestore(getAdminApp());
 }
 
-/**
- * Get Auth Admin instance (server-side only)
- */
 export function getAdminAuth(): Auth {
-  if (!adminAuth) {
-    console.warn('⚠️ Using mock Auth Admin - configure FIREBASE_SERVICE_ACCOUNT_KEY for production.');
-    return {
-      verifyIdToken: async (token: string) => null,
-      getUser: async (uid: string) => null,
-      createUser: async (data: any) => null,
-      updateUser: async (uid: string, data: any) => null,
-      deleteUser: async (uid: string) => {},
-    } as unknown as Auth;
-  }
-  return adminAuth;
+  return getAuth(getAdminApp());
 }
