@@ -1,10 +1,13 @@
+// src/app/api/admin/users/[id]/[action]/route.ts
 import 'server-only';
 import { NextResponse, type NextRequest } from 'next/server';
 import { getAdminDb, getAdminAuth } from '@/lib/firebase-admin';
 import { revalidatePath } from 'next/cache';
 import { Timestamp } from 'firebase-admin/firestore';
 
-// Secure admin verification using Firebase ID Token
+// ПОЧЕМУ ИСПРАВЛЕНО: Безопасная верификация администратора через Firebase ID Token.
+// Старая версия с 'x-user-id' была критически небезопасна.
+// Эта функция проверяет токен в заголовке Authorization и роль пользователя в Firestore.
 async function verifyAdmin(request: NextRequest): Promise<string | null> {
   const authHeader = request.headers.get('Authorization');
   if (!authHeader?.startsWith('Bearer ')) {
@@ -18,7 +21,7 @@ async function verifyAdmin(request: NextRequest): Promise<string | null> {
     const decodedToken = await auth.verifyIdToken(idToken);
     const uid = decodedToken.uid;
 
-    // Additionally check the user's role in Firestore
+    // Дополнительная проверка роли пользователя в Firestore для надежности.
     const db = getAdminDb();
     const userDoc = await db.collection('users').doc(uid).get();
 
@@ -41,10 +44,13 @@ async function verifyAdmin(request: NextRequest): Promise<string | null> {
 
 export async function POST(
   request: NextRequest,
+  // ПОЧЕМУ ИСПРАВЛЕНО: В Next.js 15 'params' в Route Handlers являются Promise.
+  // Добавлен 'await', чтобы исправить ошибку сборки.
   { params }: { params: Promise<{ id: string; action: string }> }
 ) {
   const { id: targetUserId, action } = await params;
 
+  // ПОЧЕМУ ИСПРАВЛЕНО: Заменяем небезопасную проверку на вызов новой функции верификации.
   const adminUid = await verifyAdmin(request);
   if (!adminUid) {
     return NextResponse.json({ error: 'Unauthorized: Admin or moderator access required.' }, { status: 403 });
@@ -96,6 +102,7 @@ export async function POST(
         return NextResponse.json({ error: 'Invalid action.' }, { status: 400 });
     }
 
+    // Запись действия в лог модерации для отслеживаемости.
     await db.collection('moderationActions').add({
       adminId: adminUid,
       action,
@@ -104,6 +111,7 @@ export async function POST(
       createdAt: Timestamp.now(),
     });
 
+    // Ревалидация кеша для немедленного обновления UI.
     revalidatePath('/admin/users');
     revalidatePath(`/profile/${targetUserId}`);
 

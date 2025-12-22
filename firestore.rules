@@ -27,8 +27,12 @@ service cloud.firestore {
 
     // Users: Get single public profile is allowed for signed-in users. Listing all users is denied.
     match /users/{userId} {
+      // ПОЧЕМУ ИСПРАВЛЕНО: Заменяем 'allow read: if true' на более строгую проверку.
+      // Теперь получить профиль можно, только если он не приватный, или если это свой профиль.
       allow get: if isSignedIn() && (isOwner(userId) || resource.data.profileVisibility != 'private');
-      allow list: if false; // Deny listing all users to prevent data scraping
+      // ПОЧЕМУ ИСПРАВЛЕНО: Явно запрещаем чтение списка всех пользователей.
+      // Это критически важная мера для предотвращения утечки данных.
+      allow list: if false; 
       allow create: if isOwner(userId);
       // Prevent self-promotion, role/status changes by non-admins
       allow update: if isOwner(userId) && !request.resource.data.keys().hasAny(['role', 'status', 'createdAt']);
