@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { TopUsersWidget } from '@/components/TopUsersWidget';
 import { AutoNewsWidget } from '@/components/AutoNewsWidget';
+import { useToast } from '@/hooks/use-toast';
 
 const POSTS_PER_PAGE = 9; // Changed to be a multiple of 3
 
