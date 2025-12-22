@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import React from "react";
 
 /**
- * A simple layout wrapper that provides consistent padding and max-width.
+ * Простая обертка для страниц, которая обеспечивает консистентные отступы и максимальную ширину.
  */
 export function PageShell({ children, className }: { children: React.ReactNode; className?: string }) {
   return (

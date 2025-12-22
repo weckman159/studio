@@ -13,6 +13,7 @@ interface PostCardProps {
 }
 
 export function PostCard({ post, className }: PostCardProps) {
+  // Создаем краткое описание из HTML-контента
   const excerpt = post.content?.replace(/<[^>]*>?/gm, '').substring(0, 100) + '...' || 'Нет описания.';
   const postUrl = post.communityId ? `/communities/${post.communityId}/posts/${post.id}` : `/posts/${post.id}`;
 
