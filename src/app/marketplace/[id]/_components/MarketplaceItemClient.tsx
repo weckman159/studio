@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -17,9 +18,15 @@ export default function MarketplaceItemClient({ item }: { item: MarketplaceItem 
   const router = useRouter();
   const { user } = useUser();
   const firestore = useFirestore();
-  const [activeImage, setActiveImage] = useState(item.imageUrl);
 
-  const allImages = [item.imageUrl, ...(item.gallery || [])].filter(Boolean);
+  // Нормализуем структуру данных для изображений, чтобы избежать смешения типов
+  const allImages = [
+    item.imageUrl ? { url: item.imageUrl, blurhash: item.blurhash } : undefined,
+    ...(item.gallery || [])
+  ].filter((img): img is { url: string; blurhash?: string } => !!img && !!img.url);
+
+  const [activeImage, setActiveImage] = useState(allImages[0]?.url || item.imageUrl);
+
 
   const handleContactSeller = async () => {
       if (!user) return router.push('/auth');
@@ -83,8 +90,8 @@ export default function MarketplaceItemClient({ item }: { item: MarketplaceItem 
               {allImages.length > 1 && (
                   <div className="flex gap-2 overflow-x-auto pb-2">
                       {allImages.map((img, i) => (
-                          <button key={i} onClick={() => setActiveImage(img)} className={`relative w-20 h-20 shrink-0 rounded-lg overflow-hidden border-2 ${activeImage === img ? 'border-primary' : 'border-transparent'}`}>
-                              <Image src={img as string} alt="" fill className="object-cover" />
+                          <button key={i} onClick={() => setActiveImage(img.url)} className={`relative w-20 h-20 shrink-0 rounded-lg overflow-hidden border-2 ${activeImage === img.url ? 'border-primary' : 'border-transparent'}`}>
+                              <Image src={img.url} alt={`Thumbnail ${i+1}`} fill className="object-cover" />
                           </button>
                       ))}
                   </div>
