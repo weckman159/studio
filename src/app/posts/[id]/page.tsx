@@ -12,10 +12,6 @@ import { Calendar } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import Link from 'next/link'
 
-type PostPageProps = {
-  params: { id: string }
-}
-
 // Утилита для получения ID текущего пользователя на сервере
 async function getCurrentUserId() {
   try {
@@ -54,10 +50,12 @@ async function getPostData(postId: string) {
     return { post, comments, isLiked };
 }
 
-export async function generateMetadata(
-  { params }: PostPageProps
-): Promise<Metadata> {
-  const { id } = params;
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
   const { post } = await getPostData(id);
 
   if (!post) {
@@ -78,8 +76,12 @@ export async function generateMetadata(
   }
 }
 
-export default async function PostPage({ params }: PostPageProps) {
-  const { id } = params;
+export default async function PostPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
   const { post, comments, isLiked } = await getPostData(id);
 
   const coverImage = post.imageUrl;
