@@ -115,8 +115,8 @@ export default function HomePage() {
                         </div>
                     )}
                     {hasMore && (
-                        <div className="flex justify-center">
-                            <Button variant="outline" size="lg" onClick={() => fetchPosts(true)} disabled={loadingMore}>
+                        <div className="flex justify-center mt-10">
+                            <Button variant="outline" size="lg" onClick={() => fetchPosts(true)} disabled={loadingMore} className="bg-[#111] border-[#333] hover:opacity-80 px-8 py-3 h-12">
                                 {loadingMore ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'ЕЩЕ'}
                             </Button>
                         </div>

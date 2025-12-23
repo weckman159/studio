@@ -35,7 +35,7 @@ export function PostCard({ post, communityId, isSquare = false }: { post: Post, 
 
   if (isSquare) {
     return (
-        <Link href={postUrl} className="group relative aspect-square rounded-lg overflow-hidden holographic-panel hover:border-primary/50 transition-all">
+        <Link href={postUrl} className="group relative aspect-square rounded-sm overflow-hidden bg-[#151515] transition-all duration-300">
             {post.imageUrl && (
                  <Image
                     src={post.imageUrl}
@@ -46,10 +46,10 @@ export function PostCard({ post, communityId, isSquare = false }: { post: Post, 
                 />
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col justify-end p-4">
-                 <h3 className="text-base font-bold text-white line-clamp-2 mb-2 group-hover:text-primary transition-colors">
+                 <h3 className="text-sm font-bold text-[#EEE] line-clamp-2 mb-2 group-hover:text-primary transition-colors">
                     {post.title}
                  </h3>
-                 <div className="flex items-center justify-between text-xs text-text-secondary">
+                 <div className="flex items-center justify-between text-xs text-[#AAA]">
                     <div className="flex items-center gap-2">
                         <Avatar className="w-5 h-5">
                             <AvatarImage src={post.authorAvatar} />
