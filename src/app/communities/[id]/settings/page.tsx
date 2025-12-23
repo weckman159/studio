@@ -14,8 +14,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import { Community } from '@/lib/types';
 
-export default function CommunitySettingsClient({ params }: { params: { id: string } }) {
-    const { id: communityId } = params;
+// Client Component containing the form logic
+function CommunitySettingsClient({ communityId }: { communityId: string }) {
     const [community, setCommunity] = useState<Community | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -25,7 +25,6 @@ export default function CommunitySettingsClient({ params }: { params: { id: stri
     const firestore = useFirestore();
     const { toast } = useToast();
     
-    // ИСПРАВЛЕНИЕ: Логика для кнопки "Назад"
     const [canGoBack, setCanGoBack] = useState(false);
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -85,7 +84,6 @@ export default function CommunitySettingsClient({ params }: { params: { id: stri
 
     return (
         <div className="container max-w-2xl py-8">
-            {/* ИСПРАВЛЕНИЕ: Кнопка "Назад" с проверкой history */}
             {canGoBack && (
                 <Button variant="ghost" className="mb-4" onClick={() => router.back()}>
                     <ArrowLeft className="mr-2 h-4 w-4" /> Назад к сообществу
@@ -122,4 +120,10 @@ export default function CommunitySettingsClient({ params }: { params: { id: stri
             </Card>
         </div>
     );
+}
+
+// Server Component wrapper to handle params
+export default async function CommunitySettingsPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
+    return <CommunitySettingsClient communityId={id} />;
 }
