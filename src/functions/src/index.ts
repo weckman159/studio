@@ -9,29 +9,23 @@ const db = admin.firestore();
 // ЛАЙКИ (Likes)
 // ===========================
 
-// Триггер: Когда создается документ в подколлекции likes
 export const onPostLike = functions.firestore
     .document('posts/{postId}/likes/{userId}')
     .onCreate(async (snap, context) => {
         const { postId, userId } = context.params;
         const postRef = db.collection('posts').doc(postId);
 
-        // 1. Атомарно увеличиваем счетчик
         await postRef.update({
             likesCount: admin.firestore.FieldValue.increment(1)
         });
 
-        // 2. Отправляем уведомление автору поста
         const postSnap = await postRef.get();
         const postData = postSnap.data();
 
-        // Не уведомляем, если лайкнул сам себя
         if (postData && postData.authorId !== userId) {
-            // Получаем инфо о том, кто лайкнул
             const userSnap = await db.collection('users').doc(userId).get();
             const userData = userSnap.data();
-
-            await db.collection('notifications').add({
+            await createNotification({
                 recipientId: postData.authorId,
                 senderId: userId,
                 senderData: {
@@ -40,27 +34,19 @@ export const onPostLike = functions.firestore
                 },
                 type: 'like',
                 title: 'Новый лайк',
-                message: 'понравилась ваша публикация',
+                message: `оценил(а) вашу публикацию: "${postData.title.substring(0, 20)}..."`,
                 actionURL: `/posts/${postId}`,
                 relatedEntityId: postId,
-                read: false,
-                createdAt: admin.firestore.FieldValue.serverTimestamp()
             });
         }
     });
 
-// Триггер: Когда удаляется лайк (Unlike)
 export const onPostUnlike = functions.firestore
     .document('posts/{postId}/likes/{userId}')
     .onDelete(async (snap, context) => {
-        const { postId } = context.params;
-        
-        // Уменьшаем счетчик
-        await db.collection('posts').doc(postId).update({
+        await db.collection('posts').doc(context.params.postId).update({
             likesCount: admin.firestore.FieldValue.increment(-1)
         });
-        
-        // Опционально: можно удалять уведомление, но обычно это не делают
     });
 
 
@@ -73,20 +59,16 @@ export const onCommentCreated = functions.firestore
     .onCreate(async (snap, context) => {
         const commentData = snap.data();
         const postId = commentData.postId;
-
         if (!postId) return;
 
-        // 1. Увеличиваем счетчик
         await db.collection('posts').doc(postId).update({
             commentsCount: admin.firestore.FieldValue.increment(1)
         });
 
-        // 2. Уведомление автору поста
         const postSnap = await db.collection('posts').doc(postId).get();
         const postData = postSnap.data();
-
         if (postData && postData.authorId !== commentData.authorId) {
-            await db.collection('notifications').add({
+            await createNotification({
                 recipientId: postData.authorId,
                 senderId: commentData.authorId,
                 senderData: {
@@ -95,11 +77,9 @@ export const onCommentCreated = functions.firestore
                 },
                 type: 'comment',
                 title: 'Новый комментарий',
-                message: `прокомментировал: "${commentData.content.substring(0, 20)}..."`,
+                message: `прокомментировал(а): "${commentData.content.substring(0, 20)}..."`,
                 actionURL: `/posts/${postId}`,
                 relatedEntityId: postId,
-                read: false,
-                createdAt: admin.firestore.FieldValue.serverTimestamp()
             });
         }
     });
@@ -107,12 +87,61 @@ export const onCommentCreated = functions.firestore
 export const onCommentDeleted = functions.firestore
     .document('comments/{commentId}')
     .onDelete(async (snap, context) => {
-        const commentData = snap.data();
-        const postId = commentData.postId;
-
+        const postId = snap.data().postId;
         if (postId) {
             await db.collection('posts').doc(postId).update({
                 commentsCount: admin.firestore.FieldValue.increment(-1)
             });
         }
     });
+
+// ===========================
+// ЧАТ И СООБЩЕНИЯ
+// ===========================
+export const onMessageCreated = functions.firestore
+    .document('messages/{messageId}')
+    .onCreate(async (snap, context) => {
+        const messageData = snap.data();
+        const { dialogId, authorId, text } = messageData;
+        if (!dialogId || !authorId) return;
+
+        const dialogRef = db.collection('dialogs').doc(dialogId);
+        const dialogSnap = await dialogRef.get();
+        if (!dialogSnap.exists) return;
+
+        const dialogData = dialogSnap.data();
+        const participants = dialogData?.participantIds || [];
+
+        const batch = db.batch();
+        
+        // Обновляем последнее сообщение и время
+        batch.update(dialogRef, {
+            lastMessageText: text,
+            lastMessageAt: messageData.createdAt || admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        // Увеличиваем счетчик непрочитанных для всех, кроме автора
+        participants.forEach((participantId: string) => {
+            if (participantId !== authorId) {
+                batch.update(dialogRef, {
+                    [`unreadCount.${participantId}`]: admin.firestore.FieldValue.increment(1)
+                });
+            }
+        });
+        
+        await batch.commit();
+    });
+
+// --- HELPER FUNCTIONS ---
+async function createNotification(params: any) {
+    const { recipientId, senderId } = params;
+    if (recipientId === senderId) return;
+
+    await db.collection('notifications').add({
+      ...params,
+      read: false,
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+}
+
+    

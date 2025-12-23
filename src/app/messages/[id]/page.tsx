@@ -20,24 +20,31 @@ export default function DialogClient({ params }: { params: Promise<{ id: string 
   const [partner, setPartner] = useState<any>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Unwrap params Promise
   useEffect(() => {
     params.then(({ id }) => setDialogId(id));
   }, [params]);
 
-  // Загрузка собеседника
+  // Загрузка собеседника и сброс счетчика
   useEffect(() => {
-      if (!firestore || !dialogId || !user) return;
-      getDoc(doc(firestore, 'dialogs', dialogId)).then(async (snap) => {
-          if (snap.exists()) {
-              const data = snap.data();
-              const partnerId = data.participantIds.find((id: string) => id !== user.uid);
-              if (partnerId) {
-                  const userSnap = await getDoc(doc(firestore, 'users', partnerId));
-                  if (userSnap.exists()) setPartner(userSnap.data());
-              }
-          }
-      });
+    if (!firestore || !dialogId || !user) return;
+    
+    const dialogRef = doc(firestore, 'dialogs', dialogId);
+
+    // Сброс счетчика непрочитанных сообщений
+    updateDoc(dialogRef, { [`unreadCount.${user.uid}`]: 0 })
+        .catch(err => console.error("Failed to mark messages as read:", err));
+
+    // Загрузка данных о собеседнике
+    getDoc(dialogRef).then(async (snap) => {
+        if (snap.exists()) {
+            const data = snap.data();
+            const partnerId = data.participantIds.find((id: string) => id !== user.uid);
+            if (partnerId) {
+                const userSnap = await getDoc(doc(firestore, 'users', partnerId));
+                if (userSnap.exists()) setPartner(userSnap.data());
+            }
+        }
+    });
   }, [firestore, dialogId, user]);
 
   // Подписка на сообщения
@@ -57,21 +64,17 @@ export default function DialogClient({ params }: { params: Promise<{ id: string 
     const text = input;
     setInput('');
     
+    // Cloud Function `onMessageCreated` обработает обновление диалога
     await addDoc(collection(firestore, 'messages'), {
         dialogId,
         authorId: user.uid,
         text,
         createdAt: serverTimestamp()
     });
-    
-    await updateDoc(doc(firestore, 'dialogs', dialogId), {
-        lastMessageText: text,
-        lastMessageAt: serverTimestamp()
-    });
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)] md:h-[calc(100vh-100px)] max-w-2xl mx-auto bg-background border-x">
+    <div className="flex flex-col h-[calc(100vh-64px)] md:h-full max-w-2xl mx-auto bg-background border-x">
       {/* Header */}
       <div className="flex items-center justify-between p-3 border-b bg-background/95 backdrop-blur sticky top-0 z-10">
           <div className="flex items-center gap-3">
@@ -125,3 +128,5 @@ export default function DialogClient({ params }: { params: Promise<{ id: string 
     </div>
   );
 }
+
+    

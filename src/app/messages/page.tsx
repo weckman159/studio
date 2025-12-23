@@ -2,41 +2,33 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { useFirestore, useUser } from '@/firebase';
 import Link from 'next/link';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MessageSquare } from 'lucide-react';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { Badge } from '@/components/ui/badge';
 
-// Интерфейс диалога
 interface Dialog {
   id: string;
   participantIds: string[];
   lastMessageText?: string;
   lastMessageAt?: any;
+  unreadCount?: { [key: string]: number };
 }
 
-// Интерфейс пользователя для отображения
-interface ParticipantProfile {
-    id: string;
-    name: string;
-    photoURL?: string;
-}
-
-// Компонент одного диалога
 function DialogItem({ dialog, currentUser }: { dialog: Dialog, currentUser: any }) {
     const otherUserId = dialog.participantIds.find(id => id !== currentUser.uid);
     const { profile: otherUser, isLoading } = useUserProfile(otherUserId);
+    const unread = dialog.unreadCount?.[currentUser.uid] || 0;
 
     const formatDate = (timestamp: any) => {
         if (!timestamp) return '';
         const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-        return new Intl.DateTimeFormat('ru-RU', {
-            hour: '2-digit', minute: '2-digit'
-        }).format(date);
+        return new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' }).format(date);
     };
 
     if(isLoading) {
@@ -60,20 +52,22 @@ function DialogItem({ dialog, currentUser }: { dialog: Dialog, currentUser: any 
                     {otherUser.photoURL && <AvatarImage src={otherUser.photoURL} alt={otherUser.name} />}
                     <AvatarFallback>{otherUser.name?.[0]}</AvatarFallback>
                 </Avatar>
-                <div className="flex-1">
+                <div className="flex-1 overflow-hidden">
                     <div className="flex justify-between items-start">
-                        <p className="font-semibold">{otherUser.name}</p>
-                        <p className="text-xs text-muted-foreground">{formatDate(dialog.lastMessageAt)}</p>
+                        <p className="font-semibold truncate">{otherUser.name}</p>
+                        <p className="text-xs text-muted-foreground shrink-0">{formatDate(dialog.lastMessageAt)}</p>
                     </div>
-                    <p className="text-sm text-muted-foreground line-clamp-1">
-                        {dialog.lastMessageText || 'Нет сообщений'}
-                    </p>
+                    <div className="flex justify-between items-start gap-2">
+                        <p className="text-sm text-muted-foreground line-clamp-1">
+                            {dialog.lastMessageText || 'Нет сообщений'}
+                        </p>
+                        {unread > 0 && <Badge className="bg-primary hover:bg-primary">{unread}</Badge>}
+                    </div>
                 </div>
             </div>
         </Link>
     );
 }
-
 
 export default function MessagesPage() {
   const { user } = useUser();
@@ -82,7 +76,10 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user || !firestore) return;
+    if (!user || !firestore) {
+        if(!user) setLoading(false); // If no user, stop loading
+        return;
+    };
 
     setLoading(true);
     const q = query(
@@ -91,15 +88,16 @@ export default function MessagesPage() {
       orderBy('lastMessageAt', 'desc')
     );
 
-    getDocs(q).then(snapshot => {
-      const dialogsData = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Dialog));
-      setDialogs(dialogsData);
-      setLoading(false);
-    }).catch(err => {
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const dialogsData = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Dialog));
+        setDialogs(dialogsData);
+        setLoading(false);
+    }, (err) => {
         console.error("Error fetching dialogs:", err);
         setLoading(false);
     });
 
+    return () => unsubscribe();
   }, [user, firestore]);
 
   if (loading) {
@@ -121,6 +119,17 @@ export default function MessagesPage() {
             </Card>
         </div>
      );
+  }
+
+  if (!user) {
+       return (
+         <div className="max-w-2xl mx-auto p-8 text-center">
+            <h1 className="text-3xl font-bold mb-6">Сообщения</h1>
+            <p className="text-muted-foreground">
+                <Link href="/auth" className="text-primary underline">Войдите</Link>, чтобы просмотреть свои диалоги.
+            </p>
+         </div>
+       );
   }
 
   return (
@@ -148,3 +157,5 @@ export default function MessagesPage() {
     </div>
   );
 }
+
+    

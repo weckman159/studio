@@ -1,10 +1,11 @@
+
 // src/components/layout/LeftNav.tsx
 'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Sparkles, Car, Users, Rss, Store, Bell, MessageSquare } from 'lucide-react';
+import { Sparkles, Car, Users, Rss, Store, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUser, useFirestore } from '@/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
@@ -26,23 +27,23 @@ export function LeftNav() {
   const [unreadCounts, setUnreadCounts] = useState({ messages: 0 });
 
   useEffect(() => {
-    if (!user || !firestore) return;
+    if (!user || !firestore) {
+      setUnreadCounts({ messages: 0 });
+      return;
+    }
 
-    // Real-time listener for unread messages
     const q = query(
       collection(firestore, 'dialogs'),
       where('participantIds', 'array-contains', user.uid)
-      // We would also need a 'readBy' map to properly count unread messages.
-      // For now, this is a placeholder for a real implementation.
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      // Placeholder logic: just showing a badge if there are any dialogs.
-      if (!snapshot.empty) {
-        setUnreadCounts(prev => ({ ...prev, messages: 1 })); // Simulate 1 unread
-      } else {
-        setUnreadCounts(prev => ({ ...prev, messages: 0 }));
-      }
+      let totalUnread = 0;
+      snapshot.forEach(doc => {
+        const dialog = doc.data();
+        totalUnread += dialog.unreadCount?.[user.uid] || 0;
+      });
+      setUnreadCounts(prev => ({ ...prev, messages: totalUnread }));
     });
 
     return () => unsubscribe();
@@ -52,7 +53,7 @@ export function LeftNav() {
     <nav className="flex flex-col gap-2 p-4">
       {navItems.map((item) => {
         const isActive = pathname === item.href;
-        const hasBadge = item.badgeKey && unreadCounts[item.badgeKey as keyof typeof unreadCounts] > 0;
+        const badgeCount = item.badgeKey ? unreadCounts[item.badgeKey as keyof typeof unreadCounts] : 0;
 
         return (
           <Link 
@@ -65,7 +66,6 @@ export function LeftNav() {
                 : "text-muted-foreground hover:text-white hover:bg-white/5 border border-transparent"
             )}
           >
-            {/* Активный индикатор (полоска слева) */}
             {isActive && (
               <motion.div 
                 layoutId="nav-active"
@@ -81,9 +81,10 @@ export function LeftNav() {
             
             <span className="text-sm font-bold tracking-wide uppercase">{item.label}</span>
 
-            {/* Динамический бейдж */}
-            {hasBadge && (
-              <span className="ml-auto flex h-2 w-2 rounded-full bg-secondary animate-pulse shadow-[0_0_8px_#f43f5e]" />
+            {badgeCount > 0 && (
+              <span className="ml-auto flex items-center justify-center h-5 min-w-[1.25rem] rounded-full bg-secondary text-secondary-foreground text-xs px-1.5 shadow-[0_0_8px_#f43f5e]">
+                {badgeCount > 9 ? '9+' : badgeCount}
+              </span>
             )}
           </Link>
         );
@@ -91,3 +92,5 @@ export function LeftNav() {
     </nav>
   );
 }
+
+    
