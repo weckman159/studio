@@ -9,7 +9,7 @@ import { Heart, MessageCircle } from 'lucide-react'
 import type { Post } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
-export function PostCard({ post, communityId }: { post: Post, communityId?: string }) {
+export function PostCard({ post, communityId, isSquare = false }: { post: Post, communityId?: string, isSquare?: boolean }) {
   const formatDate = (timestamp: any) => {
     if (!timestamp) return ''
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp)
@@ -20,19 +20,54 @@ export function PostCard({ post, communityId }: { post: Post, communityId?: stri
     })
   }
 
-  const getExcerpt = (html: string) => {
+  const getExcerpt = (html: string, length: number = 100) => {
     if (!html) return '';
     return html
       .replace(/<[^>]*>/g, '')
       .replace(/\s+/g, ' ')
       .trim()
-      .slice(0, 100)
+      .slice(0, length)
   }
 
   const postUrl = communityId 
     ? `/communities/${communityId}/posts/${post.id}`
     : `/posts/${post.id}`
 
+  if (isSquare) {
+    return (
+        <Link href={postUrl} className="group relative aspect-square rounded-lg overflow-hidden holographic-panel hover:border-primary/50 transition-all">
+            {post.imageUrl && (
+                 <Image
+                    src={post.imageUrl}
+                    alt={post.title}
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col justify-end p-4">
+                 <h3 className="text-base font-bold text-white line-clamp-2 mb-2 group-hover:text-primary transition-colors">
+                    {post.title}
+                 </h3>
+                 <div className="flex items-center justify-between text-xs text-text-secondary">
+                    <div className="flex items-center gap-2">
+                        <Avatar className="w-5 h-5">
+                            <AvatarImage src={post.authorAvatar} />
+                            <AvatarFallback className="text-[10px]">{post.authorName?.[0]}</AvatarFallback>
+                        </Avatar>
+                        <span className="truncate">{post.authorName}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="flex items-center gap-1"><Heart className="w-3 h-3" /> {post.likesCount || 0}</span>
+                        <span className="flex items-center gap-1"><MessageCircle className="w-3 h-3" /> {post.commentsCount || 0}</span>
+                    </div>
+                 </div>
+            </div>
+        </Link>
+    )
+  }
+
+  // Default non-square layout
   return (
     <Link href={postUrl} className="group flex flex-col space-y-4 rounded-xl holographic-panel p-4 transition-transform duration-300 hover:-translate-y-1">
       {post.imageUrl && (
