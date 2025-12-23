@@ -12,11 +12,10 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
 import { Event } from '@/lib/types';
 
-export default async function EventSettingsClient({ params }: { params: Promise<{ id: string }> }) {
-    const [eventId, setEventId] = useState<string>('');
+export default function EventSettingsClient({ params }: { params: { id: string } }) {
+    const { id: eventId } = params;
     const [event, setEvent] = useState<Event | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -26,10 +25,13 @@ export default async function EventSettingsClient({ params }: { params: Promise<
     const firestore = useFirestore();
     const { toast } = useToast();
 
-    // Unwrap params Promise
+    // ИСПРАВЛЕНИЕ: Логика для кнопки "Назад"
+    const [canGoBack, setCanGoBack] = useState(false);
     useEffect(() => {
-        params.then(({ id }) => setEventId(id));
-    }, [params]);
+        if (typeof window !== 'undefined') {
+          setCanGoBack(window.history.length > 1);
+        }
+    }, []);
 
     useEffect(() => {
         if (!user || !firestore || !eventId) return;
@@ -85,9 +87,12 @@ export default async function EventSettingsClient({ params }: { params: Promise<
 
     return (
         <div className="container max-w-2xl py-8">
-            <Link href={`/events/${eventId}`}>
-                <Button variant="ghost" className="mb-4"><ArrowLeft className="mr-2 h-4 w-4" /> Назад к событию</Button>
-            </Link>
+            {/* ИСПРАВЛЕНИЕ: Кнопка "Назад" с проверкой history */}
+            {canGoBack && (
+                <Button variant="ghost" className="mb-4" onClick={() => router.back()}>
+                    <ArrowLeft className="mr-2 h-4 w-4" /> Назад к событию
+                </Button>
+            )}
             <Card>
                 <CardHeader>
                     <CardTitle>Редактирование события</CardTitle>

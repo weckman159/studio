@@ -2,7 +2,7 @@
 'use client';
 import React, { Suspense } from 'react';
 import Link from 'next/link';
-import { Sparkles, Users, Rss, Store, Car, Zap, Shield } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
@@ -11,33 +11,16 @@ import { ThemeProvider } from "next-themes";
 import { Analytics } from '@vercel/analytics/react';
 import { Sidebar, SidebarProvider } from '@/components/ui/sidebar';
 import { Footer } from '@/components/Footer';
-import { useUserProfile } from '@/hooks/useUserProfile';
 import { Header } from '@/components/Header';
+import { LeftNav } from '@/components/layout/LeftNav'; // Импортируем новый компонент
 
 
 // Left Sidebar Component
 const LeftSidebar = () => {
-    const pathname = usePathname();
-    const { user } = useUser();
-    const { profile } = useUserProfile(user?.uid);
-
-    const navItems = [
-        { href: '/', label: 'Главная', icon: Sparkles },
-        { href: '/communities', label: 'Сообщества', icon: Users },
-        { href: '/posts', label: 'Блоги', icon: Rss },
-        { href: '/marketplace', label: 'Маркетплейс', icon: Store },
-        { href: '/garage', label: 'Гараж', icon: Car },
-        { href: '/events', label: 'События', icon: Zap },
-    ];
-
-    if (profile?.roles?.isAdmin) {
-      navItems.push({ href: '/admin', label: 'Админка', icon: Shield });
-    }
-
     return (
         <Sidebar>
             <div className="flex flex-col h-full">
-                <div className="flex items-center gap-3 mb-10 p-6">
+                <div className="flex items-center gap-3 mb-6 p-6">
                     <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-background-dark glow">
                         <Sparkles className="text-[24px] filled" />
                     </div>
@@ -46,14 +29,8 @@ const LeftSidebar = () => {
                         <p className="text-primary text-xs font-mono">COMMAND HUB v3.0</p>
                     </div>
                 </div>
-                <nav className="flex flex-col gap-3 px-6">
-                    {navItems.map(item => (
-                        <Link key={item.label} href={item.href} className={`group flex items-center gap-4 px-5 py-3 rounded-lg transition-all duration-300 border-l-4 ${pathname === item.href ? 'bg-primary/10 border-primary text-primary glow' : 'text-white/70 hover:text-white hover:bg-primary/10 hover:border-primary/50 border-transparent'}`}>
-                            <item.icon className="group-hover:scale-110 transition-transform text-[20px]" />
-                            <span className="text-base font-medium tracking-wide group-data-[collapsible=icon]:hidden">{item.label}</span>
-                        </Link>
-                    ))}
-                </nav>
+                {/* ЗАМЕНА: Статичное меню заменено на динамический компонент */}
+                <LeftNav />
             </div>
         </Sidebar>
     );

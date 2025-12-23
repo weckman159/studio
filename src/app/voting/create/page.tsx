@@ -1,17 +1,16 @@
 // src/app/voting/create/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useFirestore, useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ArrowLeft, Loader2, Plus, Trash } from 'lucide-react';
-import Link from 'next/link';
 
 export default function CreateVotingPage() {
   const router = useRouter();
@@ -22,6 +21,14 @@ export default function CreateVotingPage() {
   const [options, setOptions] = useState<string[]>(['', '']);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  // ИСПРАВЛЕНИЕ: Логика для кнопки "Назад"
+  const [canGoBack, setCanGoBack] = useState(false);
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setCanGoBack(window.history.length > 1);
+    }
+  }, []);
 
   const handleOptionChange = (idx: number, val: string) => {
     setOptions(arr => arr.map((opt, i) => i === idx ? val : opt));
@@ -70,7 +77,11 @@ export default function CreateVotingPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl">
-      <Link href="/voting"><Button variant="ghost" className="mb-4"><ArrowLeft className="mr-2 h-4 w-4" /> Назад</Button></Link>
+      {canGoBack && (
+          <Button variant="ghost" className="mb-4" onClick={() => router.back()}>
+              <ArrowLeft className="mr-2 h-4 w-4" /> Назад
+          </Button>
+      )}
       <h1 className="text-3xl font-bold mb-6">Новый опрос</h1>
       {error && <Alert variant="destructive" className="mb-4"><AlertDescription>{error}</AlertDescription></Alert>}
       

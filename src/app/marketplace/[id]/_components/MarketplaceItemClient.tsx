@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -12,43 +12,42 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MessageCircle, ArrowLeft, MapPin, Share2, Heart } from 'lucide-react';
-import Link from 'next/link';
 
 export default function MarketplaceItemClient({ item }: { item: MarketplaceItem }) {
   const router = useRouter();
   const { user } = useUser();
   const firestore = useFirestore();
 
-  // Нормализуем структуру данных для изображений, чтобы избежать смешения типов
   const allImages = [
-    item.imageUrl ? { url: item.imageUrl, blurhash: item.blurhash } : undefined,
+    item.imageUrl ? { url: item.imageUrl, blurhash: undefined } : undefined,
     ...(item.gallery || [])
   ].filter((img): img is { url: string; blurhash?: string } => !!img && !!img.url);
 
-  const [activeImage, setActiveImage] = useState(allImages[0]?.url || item.imageUrl);
-
+  const [activeImage, setActiveImage] = useState(allImages[0]?.url);
+  
+  // ИСПРАВЛЕНИЕ: Логика для кнопки "Назад"
+  const [canGoBack, setCanGoBack] = useState(false);
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setCanGoBack(window.history.length > 1);
+    }
+  }, []);
 
   const handleContactSeller = async () => {
-      if (!user) return router.push('/auth');
+      if (!user || !firestore) return router.push('/auth');
       if (user.uid === item.sellerId) return;
 
       try {
-          // 1. Проверяем, есть ли уже диалог
-          const q = query(
-              collection(firestore, 'dialogs'),
-              where('participantIds', 'array-contains', user.uid)
-          );
+          const q = query(collection(firestore, 'dialogs'), where('participantIds', 'array-contains', user.uid));
           const snap = await getDocs(q);
           let dialogId = null;
 
           snap.forEach(doc => {
-              const data = doc.data();
-              if (data.participantIds.includes(item.sellerId)) {
+              if (doc.data().participantIds.includes(item.sellerId)) {
                   dialogId = doc.id;
               }
           });
 
-          // 2. Если нет - создаем
           if (!dialogId) {
               const newDialog = await addDoc(collection(firestore, 'dialogs'), {
                   participantIds: [user.uid, item.sellerId],
@@ -57,16 +56,12 @@ export default function MarketplaceItemClient({ item }: { item: MarketplaceItem 
                   lastMessageText: `Здравствуйте! По поводу объявления "${item.title}"`
               });
               dialogId = newDialog.id;
-              
-              // Отправляем первое сообщение автоматически
               await addDoc(collection(firestore, 'messages'), {
-                  dialogId,
-                  authorId: user.uid,
+                  dialogId, authorId: user.uid,
                   text: `Здравствуйте! Интересует объявление "${item.title}". Оно еще актуально?`,
                   createdAt: serverTimestamp()
               });
           }
-
           router.push(`/messages/${dialogId}`);
       } catch (e) {
           console.error(e);
@@ -75,10 +70,13 @@ export default function MarketplaceItemClient({ item }: { item: MarketplaceItem 
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
-       <Link href="/marketplace"><Button variant="ghost" className="mb-4"><ArrowLeft className="mr-2 h-4 w-4"/> Назад</Button></Link>
+       {canGoBack && (
+          <Button variant="ghost" className="mb-4" onClick={() => router.back()}>
+            <ArrowLeft className="mr-2 h-4 w-4"/> Назад
+          </Button>
+       )}
        
        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Gallery */}
           <div className="space-y-4">
               <div className="relative aspect-[4/3] w-full bg-muted rounded-xl overflow-hidden border">
                    {activeImage ? (
@@ -90,7 +88,7 @@ export default function MarketplaceItemClient({ item }: { item: MarketplaceItem 
               {allImages.length > 1 && (
                   <div className="flex gap-2 overflow-x-auto pb-2">
                       {allImages.map((img, i) => (
-                          <button key={i} onClick={() => setActiveImage(img.url)} className={`relative w-20 h-20 shrink-0 rounded-lg overflow-hidden border-2 ${activeImage === img.url ? 'border-primary' : 'border-transparent'}`}>
+                          <button key={img.url + i} onClick={() => setActiveImage(img.url)} className={`relative w-20 h-20 shrink-0 rounded-lg overflow-hidden border-2 ${activeImage === img.url ? 'border-primary' : 'border-transparent'}`}>
                               <Image src={img.url} alt={`Thumbnail ${i+1}`} fill className="object-cover" />
                           </button>
                       ))}
@@ -98,7 +96,6 @@ export default function MarketplaceItemClient({ item }: { item: MarketplaceItem 
               )}
           </div>
 
-          {/* Info */}
           <div className="space-y-6">
               <div>
                   <div className="flex justify-between items-start">

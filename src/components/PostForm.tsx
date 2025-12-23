@@ -10,6 +10,7 @@ import { upsertPost, type ActionState } from '@/app/lib/actions/posts';
 import { useFileUpload } from '@/hooks/use-file-upload';
 import { useToast } from '@/hooks/use-toast';
 import { GithubEditor } from '@/components/GithubEditor';
+import { SmartButton } from '@/components/shared/SmartButton'; // ЗАМЕНА
 
 // UI Components
 import { Button } from '@/components/ui/button';
@@ -19,22 +20,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, ImagePlus, ArrowLeft, Trash, AlertCircle } from 'lucide-react';
-import Link from 'next/link';
+import { ImagePlus, ArrowLeft, Trash, AlertCircle } from 'lucide-react';
 
 const postTypes = ['Блог', 'Фотоотчет', 'Вопрос', 'Мой опыт', 'Обзор', 'Ремонт', 'Тюнинг', 'Путешествия'];
-
-// Отдельный компонент для кнопки отправки, чтобы использовать useFormStatus
-function SubmitButton({ isEditMode }: { isEditMode: boolean }) {
-  const { pending } = useFormStatus();
-  
-  return (
-    <Button type="submit" disabled={pending} size="lg">
-      {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-      {pending ? (isEditMode ? 'Сохранение...' : 'Публикация...') : (isEditMode ? 'Сохранить' : 'Опубликовать')}
-    </Button>
-  );
-}
 
 interface PostFormProps {
   postToEdit?: Post;
@@ -53,8 +41,15 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
   const [content, setContent] = useState(postToEdit?.content || '');
   const { uploadFiles, uploading, progress } = useFileUpload({ maxFiles: 1, maxSizeInMB: 10 });
   const [coverPreview, setCoverPreview] = useState<string>(postToEdit?.imageUrl || '');
-  const [blurhash, setBlurhash] = useState<string>(postToEdit?.blurhash || '');
   const coverInputRef = useRef<HTMLInputElement>(null);
+  
+  // ИСПРАВЛЕНИЕ: Логика для кнопки "Назад"
+  const [canGoBack, setCanGoBack] = useState(false);
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setCanGoBack(window.history.length > 1);
+    }
+  }, []);
 
   // Реакция на успешное завершение Server Action
   useEffect(() => {
@@ -73,14 +68,12 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
         const uploadResult = await uploadFiles([file], 'posts', postToEdit?.id || 'new');
         if (uploadResult.length > 0) {
             setCoverPreview(uploadResult[0].url);
-            setBlurhash(uploadResult[0].blurhash);
         }
     }
   };
 
   const handleRemoveCover = () => {
     setCoverPreview('');
-    setBlurhash('');
     if (coverInputRef.current) coverInputRef.current.value = '';
   };
   
@@ -89,12 +82,18 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
         <form action={formAction}>
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
-                    <Link href={communityId ? `/communities/${communityId}` : "/posts"}>
-                        <Button variant="ghost" size="icon" type="button"><ArrowLeft /></Button>
-                    </Link>
+                    {/* ИСПРАВЛЕНИЕ: Кнопка "Назад" с проверкой history */}
+                    {canGoBack && (
+                        <Button variant="ghost" size="icon" type="button" onClick={() => router.back()}>
+                            <ArrowLeft />
+                        </Button>
+                    )}
                     <h1 className="text-2xl font-bold">{isEditMode ? 'Редактировать' : 'Создать публикацию'}</h1>
                 </div>
-                <SubmitButton isEditMode={isEditMode} />
+                {/* ЗАМЕНА: Используем SmartButton */}
+                <SmartButton type="submit" size="lg" loadingText={isEditMode ? 'Сохранение...' : 'Публикация...'}>
+                  {isEditMode ? 'Сохранить' : 'Опубликовать'}
+                </SmartButton>
             </div>
 
             {communityName && (
@@ -111,11 +110,9 @@ export function PostForm({ postToEdit, communityId, communityName }: PostFormPro
             )}
 
             <div className="space-y-6">
-                {/* Скрытые поля для передачи данных в Server Action */}
                 {isEditMode && <input type="hidden" name="id" value={postToEdit.id} />}
                 {communityId && <input type="hidden" name="communityId" value={communityId} />}
                 <input type="hidden" name="imageUrl" value={coverPreview} />
-                <input type="hidden" name="blurhash" value={blurhash} />
                 <input type="hidden" name="content" value={content} />
 
                 <div className="space-y-2">
