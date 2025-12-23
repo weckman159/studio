@@ -1,6 +1,6 @@
-// src/app/communities/[id]/posts/[postId]/page.tsx
 
-import { getAdminDb } from '@/lib/firebase-admin';
+// src/app/communities/[id]/posts/[postId]/page.tsx
+import { getAdminDb, getAdminAuth } from '@/lib/firebase-admin';
 import { PostActions } from '@/app/posts/[id]/_components/PostActions';
 import { PostComments } from '@/app/posts/[id]/_components/PostComments';
 import { Badge } from '@/components/ui/badge';
@@ -13,41 +13,56 @@ import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { serializeFirestoreData } from '@/lib/utils';
 import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
+import { cookies } from 'next/headers';
 
 export const dynamic = 'force-dynamic';
 
-async function getPostData(postId: string): Promise<{ post: Post | null, comments: Comment[] }> {
+async function getCurrentUserId() {
+  try {
+    const sessionCookie = (await cookies()).get('session')?.value;
+    if (!sessionCookie) return null;
+    const auth = getAdminAuth();
+    return (await auth.verifySessionCookie(sessionCookie, true)).uid;
+  } catch {
+    return null;
+  }
+}
+
+async function getPostData(postId: string): Promise<{ post: Post | null, comments: Comment[], isLiked: boolean }> {
     try {
         const adminDb = getAdminDb();
+        const currentUserId = await getCurrentUserId();
         if (!adminDb) {
             console.error("Firebase Admin not initialized");
-            return { post: null, comments: [] };
+            return { post: null, comments: [], isLiked: false };
         }
+        
         const postDocRef = adminDb.collection('posts').doc(postId);
-        const postDocSnap = await postDocRef.get();
+        const commentsQuery = adminDb.collection('comments').where('postId', '==', postId).orderBy('createdAt', 'asc');
+        const likeRef = currentUserId ? adminDb.collection('posts').doc(postId).collection('likes').doc(currentUserId) : null;
+        
+        const [postDocSnap, commentsSnapshot, likeSnap] = await Promise.all([
+          postDocRef.get(),
+          commentsQuery.get(),
+          likeRef ? likeRef.get() : Promise.resolve(null)
+        ]);
 
         if (!postDocSnap.exists) {
             notFound();
         }
 
         const post = serializeFirestoreData({ id: postDocSnap.id, ...postDocSnap.data() } as Post);
-
-        const commentsQuery = adminDb.collection('comments')
-            .where('postId', '==', postId)
-            .orderBy('createdAt', 'asc');
-        
-        const commentsSnapshot = await commentsQuery.get();
         const comments = commentsSnapshot.docs.map((doc: QueryDocumentSnapshot) => serializeFirestoreData({ id: doc.id, ...doc.data() } as Comment));
+        const isLiked = likeSnap?.exists ?? false;
 
-        return { post, comments };
+        return { post, comments, isLiked };
     } catch (error) {
         console.error("Error fetching post data on server:", error);
-        return { post: null, comments: [] };
+        return { post: null, comments: [], isLiked: false };
     }
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ postId: string }> }): Promise<Metadata> {
-  // ПОЧЕМУ ИСПРАВЛЕНО: В Next.js 15 params является Promise. Используем await.
   const { postId } = await params;
   const { post } = await getPostData(postId);
 
@@ -70,9 +85,8 @@ export async function generateMetadata({ params }: { params: Promise<{ postId: s
 
 
 export default async function CommunityPostPage({ params }: { params: Promise<{ id: string, postId: string }> }) {
-    // ПОЧЕМУ ИСПРАВЛЕНО: В Next.js 15 params является Promise. Используем await.
     const { postId } = await params;
-    const { post, comments } = await getPostData(postId);
+    const { post, comments, isLiked } = await getPostData(postId);
 
     if (!post) {
         notFound();
@@ -129,7 +143,7 @@ export default async function CommunityPostPage({ params }: { params: Promise<{ 
                   <span>{post.createdAt ? new Date(post.createdAt).toLocaleString('ru-RU') : ''}</span>
                 </div>
     
-                <PostActions post={post} />
+                <PostActions post={post} isLiked={isLiked} />
               </div>
     
               <div 
