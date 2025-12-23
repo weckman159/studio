@@ -1,145 +1,148 @@
-
+// src/app/marketplace/page.tsx
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { collection, query, orderBy, getDocs } from 'firebase/firestore';
+import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { collection, query, orderBy, getDocs, where, limit, type Query, type DocumentData, type DocumentSnapshot, startAfter } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
-import Link from 'next/link';
-import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Plus, ShoppingCart, MapPin, Loader2 } from 'lucide-react';
+import { Loader2, ShoppingCart } from 'lucide-react';
 import { MarketplaceItem } from '@/lib/types';
-import { Skeleton } from '@/components/ui/skeleton';
+import { serializeFirestoreData } from '@/lib/utils';
+import { useDebounce } from '@/hooks/use-debounce';
+import { MarketplaceFilters } from '@/components/MarketplaceFilters';
+import { MarketplaceItemCard } from '@/components/MarketplaceItemCard';
 
-const categories = ['all', 'Запчасти', 'Аксессуары', 'Шины и диски', 'Электроника', 'Тюнинг', 'Автомобили', 'Инструменты', 'Другое'];
+const ITEMS_PER_PAGE = 12;
 
 function MarketplaceSkeleton() {
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {[...Array(8)].map((_, i) => (
-                <Card key={i} className="holographic-panel">
-                    <Skeleton className="aspect-square w-full" />
-                    <CardHeader><Skeleton className="h-6 w-3/4" /><Skeleton className="h-4 w-1/2" /></CardHeader>
-                    <CardContent><Skeleton className="h-8 w-2/4 mb-2" /><Skeleton className="h-5 w-1/4" /></CardContent>
-                    <CardFooter><Skeleton className="h-4 w-full" /></CardFooter>
-                </Card>
+            {[...Array(ITEMS_PER_PAGE)].map((_, i) => (
+                <div key={i} className="holographic-panel rounded-xl animate-pulse">
+                    <div className="aspect-square w-full bg-surface/50 rounded-t-xl"></div>
+                    <div className="p-4 space-y-3">
+                        <div className="h-5 w-3/4 bg-surface/50 rounded"></div>
+                        <div className="h-8 w-1/2 bg-surface/50 rounded"></div>
+                        <div className="h-4 w-1/4 bg-surface/50 rounded"></div>
+                    </div>
+                </div>
             ))}
         </div>
     );
 }
 
-export default function MarketplacePage() {
+function MarketplaceGrid() {
   const firestore = useFirestore();
+  const searchParams = useSearchParams();
+  
   const [items, setItems] = useState<MarketplaceItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [sortBy, setSortBy] = useState('createdAt_desc');
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [lastVisible, setLastVisible] = useState<DocumentSnapshot | null>(null);
+  const [hasMore, setHasMore] = useState(true);
 
-  useEffect(() => {
-    if (firestore) {
-        fetchItems();
+  // --- Получение и дебаунсинг параметров из URL ---
+  const searchQuery = searchParams.get('q') || '';
+  const debouncedQuery = useDebounce(searchQuery, 300);
+  const brand = searchParams.get('brand') || '';
+  const model = searchParams.get('model') || '';
+  const priceFrom = searchParams.get('priceFrom');
+  const priceTo = searchParams.get('priceTo');
+  const yearFrom = searchParams.get('yearFrom');
+  const sortBy = searchParams.get('sortBy') || 'createdAt_desc';
+
+  const buildQuery = useCallback((forLoadMore = false) => {
+    if (!firestore) return null;
+
+    let q: Query<DocumentData> = collection(firestore, 'marketplace');
+    
+    // Фильтрация
+    if (brand) q = query(q, where('brand', '==', brand));
+    if (model) q = query(q, where('model', '==', model));
+    if (priceFrom) q = query(q, where('price', '>=', Number(priceFrom)));
+    if (priceTo) q = query(q, where('price', '<=', Number(priceTo)));
+    if (yearFrom) q = query(q, where('year', '>=', Number(yearFrom)));
+    if (debouncedQuery) q = query(q, where('title', '>=', debouncedQuery), where('title', '<=', debouncedQuery + '\uf8ff'));
+
+    // Сортировка
+    if (sortBy === 'price_asc') q = query(q, orderBy('price', 'asc'));
+    else if (sortBy === 'price_desc') q = query(q, orderBy('price', 'desc'));
+    else q = query(q, orderBy('createdAt', 'desc'));
+
+    q = query(q, limit(ITEMS_PER_PAGE));
+
+    if (forLoadMore && lastVisible) {
+      q = query(q, startAfter(lastVisible));
     }
-  }, [firestore]);
+    
+    return q;
+  }, [firestore, brand, model, priceFrom, priceTo, yearFrom, sortBy, debouncedQuery, lastVisible]);
+  
+  const fetchItems = useCallback(async (loadMore = false) => {
+    const q = buildQuery(loadMore);
+    if (!q) return;
 
-  const fetchItems = async () => {
-    if (!firestore) return;
+    const loader = loadMore ? setLoadingMore : setLoading;
+    loader(true);
+
     try {
-      setLoading(true);
-      const q = query(collection(firestore, 'marketplace'), orderBy('createdAt', 'desc'));
-      const querySnapshot = await getDocs(q);
-      const itemsData: MarketplaceItem[] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MarketplaceItem));
-      setItems(itemsData);
+        const snapshot = await getDocs(q);
+        const newItems = snapshot.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as MarketplaceItem);
+        
+        setItems(prev => loadMore ? [...prev, ...newItems] : newItems);
+        
+        const lastDoc = snapshot.docs[snapshot.docs.length - 1];
+        setLastVisible(lastDoc || null);
+        setHasMore(snapshot.docs.length === ITEMS_PER_PAGE);
+
     } catch (error) {
-      console.error('Ошибка загрузки товаров:', error);
+        console.error("Ошибка загрузки объявлений:", error);
     } finally {
-      setLoading(false);
+        loader(false);
     }
-  };
+  }, [buildQuery]);
 
-  const filteredItems = useMemo(() => {
-    let result = [...items];
-    if (selectedCategory !== 'all') {
-      result = result.filter(item => item.category === selectedCategory);
-    }
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(item => item.title.toLowerCase().includes(q) || item.description.toLowerCase().includes(q));
-    }
-    if (sortBy === 'price_asc') {
-      result.sort((a, b) => a.price - b.price);
-    } else if (sortBy === 'price_desc') {
-      result.sort((a, b) => b.price - a.price);
-    } 
-    return result;
-  }, [searchQuery, selectedCategory, sortBy, items]);
-
-  const formatPrice = (price: number, currency: string) => `${price.toLocaleString('ru-RU')} ${currency === 'RUB' ? '₽' : currency}`;
+  // Эффект для перезагрузки данных при смене фильтров
+  useEffect(() => {
+    setLastVisible(null); // Сбрасываем пагинацию при смене фильтров
+    fetchItems(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brand, model, priceFrom, priceTo, yearFrom, sortBy, debouncedQuery]); // Нет `fetchItems` в зависимостях, чтобы избежать лишних перезагрузок
 
   return (
-    <div className="p-4 md:p-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-        <div>
-          <h1 className="text-4xl font-bold mb-2 text-white">Маркетплейс</h1>
-          <p className="text-text-secondary">Покупайте и продавайте автозапчасти, аксессуары и автомобили</p>
-        </div>
-        <Link href="/marketplace/create"><Button size="lg"><Plus className="mr-2 h-5 w-5" />Разместить объявление</Button></Link>
-      </div>
-
-      <div className="mb-8 space-y-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted h-5 w-5" />
-          <Input type="text" placeholder="Поиск товаров..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 h-12 bg-surface border-border"/>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex flex-wrap gap-2">
-            {categories.map(cat => <Button key={cat} variant={selectedCategory === cat ? 'default' : 'outline'} onClick={() => setSelectedCategory(cat)} size="sm">{cat === 'all' ? 'Все категории' : cat}</Button>)}
-          </div>
-          <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-full sm:w-[200px] bg-surface border-border"><SelectValue placeholder="Сортировать" /></SelectTrigger>
-            <SelectContent><SelectItem value="createdAt_desc">По дате</SelectItem><SelectItem value="price_asc">Цена: по возрастанию</SelectItem><SelectItem value="price_desc">Цена: по убыванию</SelectItem></SelectContent>
-          </Select>
-        </div>
-      </div>
-
+    <div className="space-y-8">
       {loading ? <MarketplaceSkeleton /> : (
-          filteredItems.length === 0 ? (
+          items.length === 0 ? (
             <div className="text-center py-12 holographic-panel rounded-xl">
               <ShoppingCart className="mx-auto h-16 w-16 text-text-muted mb-4" />
-              <h3 className="text-xl font-semibold mb-2 text-white">Товары не найдены</h3>
-              <p className="text-text-secondary mb-6">Попробуйте изменить параметры поиска или разместите первое объявление</p>
-              <Link href="/marketplace/create"><Button><Plus className="mr-2 h-5 w-5" />Разместить объявление</Button></Link>
+              <h3 className="text-xl font-semibold mb-2 text-white">Объявления не найдены</h3>
+              <p className="text-text-secondary">Попробуйте изменить параметры поиска.</p>
             </div>
           ) : (
-            <>
-              <div className="mb-4 text-sm text-text-secondary">Найдено: {filteredItems.length} {filteredItems.length === 1 ? 'товар' : 'товаров'}</div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredItems.map(item => (
-                  <Link key={item.id} href={`/marketplace/${item.id}`}>
-                    <Card className="holographic-panel h-full hover:border-primary/50 transition-all cursor-pointer flex flex-col">
-                      <div className="relative aspect-square w-full overflow-hidden">
-                        {item.imageUrl ? <Image src={item.imageUrl} alt={item.title} fill className="object-cover"/> : <div className="bg-surface h-full flex items-center justify-center"><ShoppingCart className="h-16 w-16 text-text-muted" /></div>}
-                      </div>
-                      <CardHeader className="flex-grow"><CardTitle className="text-lg line-clamp-2 text-white">{item.title}</CardTitle><CardDescription className="line-clamp-2 text-text-secondary">{item.description}</CardDescription></CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          <div className="text-2xl font-bold text-primary">{formatPrice(item.price, item.currency)}</div>
-                          <div className="flex gap-2 flex-wrap"><Badge variant="outline">{item.category}</Badge><Badge variant="secondary">{item.condition}</Badge></div>
-                        </div>
-                      </CardContent>
-                      <CardFooter className="text-sm text-text-secondary"><div className="flex items-center gap-1"><MapPin className="h-4 w-4" /><span>{item.location}</span></div></CardFooter>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
-            </>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {items.map(item => <MarketplaceItemCard key={item.id} item={item} />)}
+            </div>
           )
-        )
-      }
+      )}
+      {hasMore && !loading && (
+          <div className="flex justify-center">
+              <Button onClick={() => fetchItems(true)} disabled={loadingMore} variant="outline" size="lg">
+                  {loadingMore ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Загрузить ещё'}
+              </Button>
+          </div>
+      )}
     </div>
   );
+}
+
+export default function MarketplacePage() {
+    return (
+        <div className="p-4 md:p-8">
+             <Suspense fallback={<MarketplaceSkeleton />}>
+                <MarketplaceFilters />
+                <MarketplaceGrid />
+            </Suspense>
+        </div>
+    );
 }

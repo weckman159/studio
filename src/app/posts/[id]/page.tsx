@@ -1,6 +1,7 @@
 // src/app/posts/[id]/page.tsx
 import { notFound } from 'next/navigation'
-import { getAdminDb } from '@/lib/firebase-admin'
+import { getAdminDb, getAdminAuth } from '@/lib/firebase-admin'
+import { cookies } from 'next/headers';
 import type { Metadata } from 'next'
 import { stripHtml, serializeFirestoreData } from '@/lib/utils'
 import Image from 'next/image'
@@ -12,17 +13,34 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import Link from 'next/link'
 
 type PostPageProps = {
-  params: Promise<{ id: string }>
+  params: { id: string }
+}
+
+// Утилита для получения ID текущего пользователя на сервере
+async function getCurrentUserId() {
+  try {
+    const sessionCookie = (await cookies()).get('session')?.value;
+    if (!sessionCookie) return null;
+    const auth = getAdminAuth();
+    return (await auth.verifySessionCookie(sessionCookie, true)).uid;
+  } catch {
+    return null;
+  }
 }
 
 async function getPostData(postId: string) {
     const db = getAdminDb();
+    const currentUserId = await getCurrentUserId();
+    
     const postRef = db.collection('posts').doc(postId);
     const commentsQuery = db.collection('comments').where('postId', '==', postId).orderBy('createdAt', 'asc');
+    // Проверяем, существует ли лайк от текущего пользователя
+    const likeRef = currentUserId ? db.collection('posts').doc(postId).collection('likes').doc(currentUserId) : null;
     
-    const [postSnap, commentsSnap] = await Promise.all([
+    const [postSnap, commentsSnap, likeSnap] = await Promise.all([
       postRef.get(),
-      commentsQuery.get()
+      commentsQuery.get(),
+      likeRef ? likeRef.get() : Promise.resolve(null)
     ]);
 
     if (!postSnap.exists) {
@@ -31,21 +49,19 @@ async function getPostData(postId: string) {
 
     const post = serializeFirestoreData({ id: postSnap.id, ...postSnap.data() }) as Post;
     const comments = commentsSnap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() })) as Comment[];
+    const isLiked = likeSnap?.exists ?? false;
     
-    return { post, comments };
+    return { post, comments, isLiked };
 }
 
 export async function generateMetadata(
   { params }: PostPageProps
 ): Promise<Metadata> {
-  // ПОЧЕМУ ИСПРАВЛЕНО: В Next.js 15 params является Promise. Используем await.
-  const { id } = await params;
+  const { id } = params;
   const { post } = await getPostData(id);
 
   if (!post) {
-    return {
-      title: 'Пост не найден',
-    }
+    return { title: 'Пост не найден' }
   }
 
   const description = stripHtml(post.content || '').slice(0, 150) || 'Статья из AutoSphere';
@@ -63,9 +79,8 @@ export async function generateMetadata(
 }
 
 export default async function PostPage({ params }: PostPageProps) {
-  // ПОЧЕМУ ИСПРАВЛЕНО: В Next.js 15 params является Promise. Используем await.
-  const { id } = await params;
-  const { post, comments } = await getPostData(id);
+  const { id } = params;
+  const { post, comments, isLiked } = await getPostData(id);
 
   const coverImage = post.imageUrl;
 
@@ -74,13 +89,7 @@ export default async function PostPage({ params }: PostPageProps) {
         <div className="max-w-4xl mx-auto">
             {coverImage && (
                 <div className="relative w-full aspect-video mb-8 rounded-2xl overflow-hidden shadow-2xl shadow-black/20">
-                    <Image
-                        src={coverImage}
-                        alt={post.title}
-                        fill
-                        className="object-cover"
-                        priority
-                    />
+                    <Image src={coverImage} alt={post.title} fill className="object-cover" priority />
                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
                 </div>
             )}
@@ -91,23 +100,14 @@ export default async function PostPage({ params }: PostPageProps) {
 
             <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-text-secondary mb-6 pb-6 border-b border-border">
                 <Link href={`/profile/${post.authorId}`} className="flex items-center gap-3 group">
-                    <Avatar className="h-10 w-10">
-                        <AvatarImage src={post.authorAvatar} alt={post.authorName} />
-                        <AvatarFallback>{post.authorName?.[0]}</AvatarFallback>
-                    </Avatar>
+                    <Avatar className="h-10 w-10"><AvatarImage src={post.authorAvatar} alt={post.authorName} /><AvatarFallback>{post.authorName?.[0]}</AvatarFallback></Avatar>
                     <div>
-                        <div className="font-medium text-text-primary group-hover:text-primary transition-colors">
-                            {post.authorName ?? 'Автор'}
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                            <Calendar className="h-3 w-3" />
-                            <span>
-                                {post.createdAt ? new Date(post.createdAt).toLocaleDateString('ru-RU') : ''}
-                            </span>
-                        </div>
+                        <div className="font-medium text-text-primary group-hover:text-primary transition-colors">{post.authorName ?? 'Автор'}</div>
+                        <div className="flex items-center gap-1.5"><Calendar className="h-3 w-3" /><span>{post.createdAt ? new Date(post.createdAt).toLocaleDateString('ru-RU') : ''}</span></div>
                     </div>
                 </Link>
-                <PostActions post={post} />
+                {/* Передаем начальное состояние лайка в компонент */}
+                <PostActions post={post} isLiked={isLiked} />
             </div>
 
             <article

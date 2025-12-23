@@ -1,3 +1,4 @@
+
 {
   "name": "nextn",
   "version": "0.1.0",
@@ -76,6 +77,7 @@
     "@tailwindcss/typography": "latest",
     "@types/node": "latest",
     "@types/react": "latest",
+    "@types/react-blurhash": "^0.3.1",
     "@types/react-dom": "latest",
     "autoprefixer": "10.4.19",
     "eslint-config-next": "latest",

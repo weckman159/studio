@@ -1,14 +1,14 @@
-
+// src/components/PostForm.tsx
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useActionState, useRef } from 'react';
+import { useFormStatus } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { useFirestore, useUser } from '@/firebase';
-import { useFileUpload } from '@/hooks/use-file-upload';
-import { deleteFile } from '@/lib/storage';
 import { Post } from '@/lib/types';
+import { upsertPost, type ActionState } from '@/app/lib/actions/posts';
+import { useFileUpload } from '@/hooks/use-file-upload';
+import { useToast } from '@/hooks/use-toast';
 import { GithubEditor } from '@/components/GithubEditor';
 
 // UI Components
@@ -17,16 +17,24 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
-import { Loader2, X, MapPin, ImagePlus, ArrowLeft, Trash } from 'lucide-react';
-import Link from 'next/link';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { trackEvent } from '@/lib/analytics';
+import { Loader2, ImagePlus, ArrowLeft, Trash, AlertCircle } from 'lucide-react';
+import Link from 'next/link';
 
-const postTypes = [
-  'Блог', 'Фотоотчет', 'Вопрос', 'Мой опыт', 'Обзор', 'Ремонт', 'Тюнинг', 'Путешествия'
-];
+const postTypes = ['Блог', 'Фотоотчет', 'Вопрос', 'Мой опыт', 'Обзор', 'Ремонт', 'Тюнинг', 'Путешествия'];
+
+// Отдельный компонент для кнопки отправки, чтобы использовать useFormStatus
+function SubmitButton({ isEditMode }: { isEditMode: boolean }) {
+  const { pending } = useFormStatus();
+  
+  return (
+    <Button type="submit" disabled={pending} size="lg">
+      {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+      {pending ? (isEditMode ? 'Сохранение...' : 'Публикация...') : (isEditMode ? 'Сохранить' : 'Опубликовать')}
+    </Button>
+  );
+}
 
 interface PostFormProps {
   postToEdit?: Post;
@@ -36,230 +44,146 @@ interface PostFormProps {
 
 export function PostForm({ postToEdit, communityId, communityName }: PostFormProps) {
   const router = useRouter();
-  const { user } = useUser();
-  const firestore = useFirestore();
   const { toast } = useToast();
-  const { uploadFiles, uploading, progress } = useFileUpload({ maxFiles: 1, maxSizeInMB: 10 });
-  const coverInputRef = useRef<HTMLInputElement>(null);
-
-  const [postId] = useState(() => postToEdit?.id || doc(collection(firestore, 'posts')).id);
-
-  const [title, setTitle] = useState(postToEdit?.title || '');
-  const [content, setContent] = useState(postToEdit?.content || ''); 
-  const [category, setCategory] = useState(postToEdit?.category || 'Блог');
-  
-  const [coverFile, setCoverFile] = useState<File | null>(null);
-  const [coverPreview, setCoverPreview] = useState<string>(postToEdit?.imageUrl || '');
-  
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   const isEditMode = !!postToEdit;
 
-  useEffect(() => {
-    return () => {
-      if (coverPreview && coverPreview.startsWith('blob:')) {
-        URL.revokeObjectURL(coverPreview);
-      }
-    };
-  }, [coverPreview]);
+  const initialState: ActionState = { message: '', errors: {}, success: false };
+  const [state, formAction] = useActionState(upsertPost, initialState);
+  
+  const [content, setContent] = useState(postToEdit?.content || '');
+  const { uploadFiles, uploading, progress } = useFileUpload({ maxFiles: 1, maxSizeInMB: 10 });
+  const [coverPreview, setCoverPreview] = useState<string>(postToEdit?.imageUrl || '');
+  const [blurhash, setBlurhash] = useState<string>(postToEdit?.blurhash || '');
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
-  const handleCoverSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Реакция на успешное завершение Server Action
+  useEffect(() => {
+    if (state.success && state.postId) {
+      toast({ title: 'Успешно!', description: state.message });
+      const redirectUrl = communityId 
+        ? `/communities/${communityId}/posts/${state.postId}`
+        : `/posts/${state.postId}`;
+      router.push(redirectUrl);
+    }
+  }, [state, router, toast, communityId]);
+
+  const handleCoverSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setCoverFile(file);
-      setCoverPreview(URL.createObjectURL(file));
+        const uploadResult = await uploadFiles([file], 'posts', postToEdit?.id || 'new');
+        if (uploadResult.length > 0) {
+            setCoverPreview(uploadResult[0].url);
+            setBlurhash(uploadResult[0].blurhash);
+        }
     }
   };
 
   const handleRemoveCover = () => {
-    setCoverFile(null);
     setCoverPreview('');
+    setBlurhash('');
     if (coverInputRef.current) coverInputRef.current.value = '';
   };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!user || !firestore) {
-      toast({ variant: 'destructive', title: 'Ошибка', description: 'Вы не авторизованы' });
-      return;
-    }
-
-    if (!title.trim()) {
-      toast({ variant: 'destructive', title: 'Ошибка', description: 'Введите заголовок' });
-      return;
-    }
-
-    const hasContent = content.trim().length > 0;
-    const hasCover = !!coverPreview;
-    
-    if (!hasContent && !hasCover) {
-        toast({ variant: 'destructive', title: 'Пусто', description: 'Добавьте текст или фото' });
-        return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      const postRef = doc(firestore, 'posts', postId);
-      let finalCoverUrl = coverPreview;
-
-      if (coverFile) {
-        if (isEditMode && postToEdit?.imageUrl && !postToEdit.imageUrl.startsWith('blob:')) {
-             try { await deleteFile(postToEdit.imageUrl); } catch(e) { console.warn('Old image delete fail', e); }
-        }
-
-        const uploadResult = await uploadFiles([coverFile], 'posts', postId);
-        if (uploadResult.length > 0) {
-            finalCoverUrl = uploadResult[0].url;
-        }
-      } else if (!coverPreview) {
-          finalCoverUrl = '';
-      }
-
-      const postData: any = {
-        id: postId,
-        authorId: user.uid,
-        authorName: user.displayName || 'Пользователь',
-        authorAvatar: user.photoURL,
-        title: title.trim(),
-        content: content,
-        category,
-        type: category, 
-        imageUrl: finalCoverUrl,
-        updatedAt: serverTimestamp(),
-      };
-
-      if (!isEditMode) {
-        postData.createdAt = serverTimestamp();
-        postData.likesCount = 0;
-        postData.likedBy = [];
-        postData.commentsCount = 0;
-        postData.views = 0;
-        postData.status = 'published';
-        if (communityId) postData.communityId = communityId;
-      }
-
-      await setDoc(postRef, postData, { merge: true });
-
-      toast({ title: 'Успешно!', description: 'Ваш пост опубликован.' });
-      
-      // Track the event
-      trackEvent(isEditMode ? 'post_edited' : 'post_created', {
-          category: category,
-          hasCover: !!finalCoverUrl,
-          communityId: communityId || 'none',
-      });
-
-      const redirectUrl = communityId 
-        ? `/communities/${communityId}/posts/${postId}`
-        : `/posts/${postId}`;
-      router.push(redirectUrl);
-
-    } catch (error: any) {
-      console.error(error);
-      toast({ variant: 'destructive', title: 'Ошибка', description: error.message });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const loading = isSubmitting || uploading;
-
+  
   return (
     <div className="max-w-5xl mx-auto p-4 md:py-8">
-        <div className="flex items-center justify-between mb-6">
-             <div className="flex items-center gap-4">
-                <Link href={communityId ? `/communities/${communityId}` : "/posts"}>
-                    <Button variant="ghost" size="icon"><ArrowLeft /></Button>
-                </Link>
-                <h1 className="text-2xl font-bold">{isEditMode ? 'Редактировать' : 'Создать публикацию'}</h1>
-             </div>
-             <Button type="submit" onClick={handleSubmit} disabled={loading} size="lg">
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isEditMode ? 'Сохранить' : 'Опубликовать'}
-            </Button>
-        </div>
+        <form action={formAction}>
+            <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4">
+                    <Link href={communityId ? `/communities/${communityId}` : "/posts"}>
+                        <Button variant="ghost" size="icon" type="button"><ArrowLeft /></Button>
+                    </Link>
+                    <h1 className="text-2xl font-bold">{isEditMode ? 'Редактировать' : 'Создать публикацию'}</h1>
+                </div>
+                <SubmitButton isEditMode={isEditMode} />
+            </div>
 
-        {communityName && (
-            <Alert className="mb-6 border-primary/20 bg-primary/5">
-                <AlertDescription>
-                    Публикация в сообщество: <strong>{communityName}</strong>
-                </AlertDescription>
-            </Alert>
-        )}
+            {communityName && (
+                <Alert className="mb-6 border-primary/20 bg-primary/5">
+                    <AlertDescription>Публикация в сообщество: <strong>{communityName}</strong></AlertDescription>
+                </Alert>
+            )}
 
-        <div className="space-y-6">
-            <Input 
-                id="title" 
-                placeholder="Заголовок поста" 
-                value={title}
-                onChange={e => setTitle(e.target.value)}
-                disabled={loading}
-                className="text-2xl font-bold h-14 border-2 focus-visible:ring-primary"
-            />
-            
-            <GithubEditor 
-                value={content}
-                onChange={setContent}
-                placeholder="Напишите вашу историю здесь..."
-            />
+            {state.message && !state.success && (
+                <Alert variant="destructive" className="mb-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{state.message}</AlertDescription>
+                </Alert>
+            )}
 
-            <Card className="overflow-hidden">
-                <div className="p-4 pb-2 font-semibold text-sm">Обложка (для ленты)</div>
-                <CardContent className="p-4 pt-0">
-                    {coverPreview ? (
-                        <div className="relative w-full aspect-video rounded-lg overflow-hidden border bg-muted group">
-                            <Image src={coverPreview} alt="Cover" fill className="object-cover" />
-                            <Button 
-                                type="button"
-                                variant="destructive" 
-                                size="icon" 
-                                className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={handleRemoveCover}
-                                disabled={loading}
-                            >
-                                <Trash className="h-4 w-4" />
-                            </Button>
-                        </div>
-                    ) : (
-                        <div 
-                            className="flex flex-col items-center justify-center w-full aspect-video border-2 border-dashed border-muted-foreground/20 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
-                            onClick={() => coverInputRef.current?.click()}
-                        >
-                            <ImagePlus className="h-8 w-8 text-muted-foreground mb-2" />
-                            <span className="text-xs text-muted-foreground">Загрузить обложку</span>
-                        </div>
-                    )}
-                    
-                    <input 
-                        ref={coverInputRef}
-                        type="file" 
-                        accept="image/*" 
-                        className="hidden" 
-                        onChange={handleCoverSelect}
-                        disabled={loading}
+            <div className="space-y-6">
+                {/* Скрытые поля для передачи данных в Server Action */}
+                {isEditMode && <input type="hidden" name="id" value={postToEdit.id} />}
+                {communityId && <input type="hidden" name="communityId" value={communityId} />}
+                <input type="hidden" name="imageUrl" value={coverPreview} />
+                <input type="hidden" name="blurhash" value={blurhash} />
+                <input type="hidden" name="content" value={content} />
+
+                <div className="space-y-2">
+                    <Input 
+                        id="title"
+                        name="title"
+                        placeholder="Заголовок поста" 
+                        defaultValue={postToEdit?.title}
+                        className="text-2xl font-bold h-14 border-2 focus-visible:ring-primary"
+                        required
                     />
-                    {uploading && <Progress value={progress} className="h-1 mt-2" />}
-                </CardContent>
-            </Card>
+                    {state.errors?.title && <p className="text-sm text-destructive mt-1">{state.errors.title[0]}</p>}
+                </div>
+                
+                <GithubEditor value={content} onChange={setContent} placeholder="Напишите вашу историю здесь..." />
 
-            <Card>
-                 <CardContent className="p-4 space-y-4">
-                    <div className="space-y-2">
-                        <Label>Категория</Label>
-                        <Select value={category} onValueChange={setCategory} disabled={loading}>
-                            <SelectTrigger>
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {postTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                 </CardContent>
-            </Card>
-        </div>
+                <Card className="overflow-hidden">
+                    <div className="p-4 pb-2 font-semibold text-sm">Обложка (для ленты)</div>
+                    <CardContent className="p-4 pt-0">
+                        {coverPreview ? (
+                            <div className="relative w-full aspect-video rounded-lg overflow-hidden border bg-muted group">
+                                <Image src={coverPreview} alt="Cover" fill className="object-cover" />
+                                <Button 
+                                    type="button"
+                                    variant="destructive" 
+                                    size="icon" 
+                                    className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={handleRemoveCover}
+                                >
+                                    <Trash className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        ) : (
+                            <div 
+                                className="flex flex-col items-center justify-center w-full aspect-video border-2 border-dashed border-muted-foreground/20 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                                onClick={() => coverInputRef.current?.click()}
+                            >
+                                <ImagePlus className="h-8 w-8 text-muted-foreground mb-2" />
+                                <span className="text-xs text-muted-foreground">Загрузить обложку</span>
+                            </div>
+                        )}
+                        <input 
+                            ref={coverInputRef}
+                            type="file" 
+                            accept="image/*" 
+                            className="hidden" 
+                            onChange={handleCoverSelect}
+                        />
+                        {uploading && <Progress value={progress} className="h-1 mt-2" />}
+                    </CardContent>
+                </Card>
+
+                <Card>
+                     <CardContent className="p-4 space-y-4">
+                        <div className="space-y-2">
+                            <Label>Категория</Label>
+                            <Select name="category" defaultValue={postToEdit?.category || 'Блог'}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    {postTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            {state.errors?.category && <p className="text-sm text-destructive mt-1">{state.errors.category[0]}</p>}
+                        </div>
+                     </CardContent>
+                </Card>
+            </div>
+        </form>
     </div>
   );
 }

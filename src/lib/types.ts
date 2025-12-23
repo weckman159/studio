@@ -1,4 +1,4 @@
-
+// src/lib/types.ts
 import type { Timestamp } from 'firebase/firestore';
 
 // --- ENUMS AND TYPES FROM OLDER CAR.TS ---
@@ -144,7 +144,7 @@ export interface Car {
   make: string;
   model: string;
   year: number;
-  photos: string[];
+  photos: { url: string; blurhash?: string; }[];
   tuv: TUVStatus;
   tuvHistory?: TUVHistory[];
   expenses: CarExpense[];
@@ -255,6 +255,7 @@ export interface Post {
   title: string;
   content: string; // Main HTML content
   imageUrl?: string; // The primary image for the post
+  blurhash?: string; // Blurhash for the primary image
   tags?: string[];
   category: string;
   status: 'published' | 'hidden' | 'draft';
@@ -316,6 +317,9 @@ export interface Voting {
 export interface MarketplaceItem {
   id: string;
   title: string;
+  brand?: string;
+  model?: string;
+  year?: number;
   description: string;
   fullDescription?: string;
   price: number;
@@ -324,7 +328,7 @@ export interface MarketplaceItem {
   condition: string;
   location: string;
   imageUrl?: string;
-  gallery?: string[]; // Дополнительные фото
+  gallery?: { url: string; blurhash?: string }[];
   sellerId: string;
   sellerName: string;
   sellerAvatar?: string;

@@ -1,133 +1,105 @@
-
+// src/app/posts/[id]/_components/PostActions.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useUser, useFirestore } from '@/firebase';
-import { doc, onSnapshot, writeBatch, increment, serverTimestamp, collection, addDoc } from 'firebase/firestore';
+import { useOptimistic, useTransition } from 'react';
+import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useUser } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { toggleLike } from '@/app/lib/actions/like-actions';
+
+// UI
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Heart, MessageCircle, Share2, Edit3, MoreHorizontal, Flag } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Edit3, MoreHorizontal, Flag, Loader2 } from 'lucide-react';
 import type { Post } from '@/lib/types';
-import Link from 'next/link';
+
 
 interface PostActionsProps {
   post: Post;
+  isLiked: boolean; // Начальное состояние лайка от сервера
 }
 
-export function PostActions({ post }: PostActionsProps) {
+type OptimisticLikeState = {
+  isLiked: boolean;
+  likesCount: number;
+};
+
+export function PostActions({ post, isLiked: initialIsLiked }: PostActionsProps) {
   const { user } = useUser();
-  const firestore = useFirestore();
   const { toast } = useToast();
+  const [isPending, startTransition] = useTransition();
 
-  const [isLiked, setIsLiked] = useState(false);
-  const [likesCount, setLikesCount] = useState(post.likesCount || 0);
-  const [isReporting, setIsReporting] = useState(false);
+  // --- Optimistic UI с помощью useOptimistic ---
+  const [optimisticState, setOptimisticLike] = useOptimistic<OptimisticLikeState>(
+    { isLiked: initialIsLiked, likesCount: post.likesCount || 0 },
+    (state, newLikeState: boolean) => ({
+      isLiked: newLikeState,
+      likesCount: newLikeState ? state.likesCount + 1 : state.likesCount - 1,
+    })
+  );
 
-  // Следим за состоянием лайка текущего юзера
-  useEffect(() => {
-    if (!user || !firestore) return;
-    const likeDocRef = doc(firestore, 'posts', post.id, 'likes', user.uid);
-    const unsub = onSnapshot(likeDocRef, (snap) => setIsLiked(snap.exists()));
-    return () => unsub();
-  }, [user, firestore, post.id]);
-
-  // Следим за реальным счетчиком поста (чтобы видеть лайки других)
-  useEffect(() => {
-      if (!firestore) return;
-      const postRef = doc(firestore, 'posts', post.id);
-      const unsub = onSnapshot(postRef, (snap) => {
-          if (snap.exists()) setLikesCount(snap.data().likesCount || 0);
-      });
-      return () => unsub();
-  }, [firestore, post.id]);
-
-  const handleLike = async () => {
-    if (!user || !firestore) {
+  const handleLikeAction = async () => {
+    if (!user) {
       toast({ variant: 'destructive', title: 'Войдите, чтобы оценить' });
       return;
     }
-
-    const newIsLiked = !isLiked;
-    setIsLiked(newIsLiked);
-    setLikesCount(prev => newIsLiked ? prev + 1 : prev - 1);
-
-    try {
-      const batch = writeBatch(firestore);
-      const postRef = doc(firestore, 'posts', post.id);
-      const likeRef = doc(firestore, 'posts', post.id, 'likes', user.uid);
-
-      if (newIsLiked) {
-        batch.set(likeRef, { userId: user.uid, createdAt: serverTimestamp() });
-        batch.update(postRef, { likesCount: increment(1) });
-      } else {
-        batch.delete(likeRef);
-        batch.update(postRef, { likesCount: increment(-1) });
+    
+    startTransition(async () => {
+      // Мгновенно обновляем UI
+      setOptimisticLike(!optimisticState.isLiked);
+      
+      try {
+        // Выполняем Server Action
+        await toggleLike(post.id, optimisticState.isLiked);
+      } catch (error) {
+        // Если Server Action вернул ошибку, useOptimistic автоматически
+        // откатит состояние. Дополнительно показываем ошибку.
+        toast({ variant: 'destructive', title: 'Ошибка', description: (error as Error).message });
       }
-
-      await batch.commit();
-    } catch (error) {
-      console.error('Like error:', error);
-      setIsLiked(!newIsLiked);
-      setLikesCount(prev => !newIsLiked ? prev + 1 : prev - 1);
-    }
+    });
   };
 
   const handleShare = async () => {
      const url = window.location.href;
      try {
-        if (navigator.share) {
-            await navigator.share({ title: post.title, url });
-        } else {
-            await navigator.clipboard.writeText(url);
-            toast({ title: 'Ссылка скопирована' });
-        }
+        await navigator.share({ title: post.title, url });
      } catch(e) {
-        toast({ title: 'Ошибка', description: 'Не удалось поделиться', variant: 'destructive' });
+        toast({ title: 'Ссылка скопирована', description: 'Вы можете вставить ее в любом приложении.' });
+        await navigator.clipboard.writeText(url);
      }
   };
   
-  const handleReport = async () => {
-    if (!user || !firestore) {
-      toast({ variant: 'destructive', title: 'Необходимо войти в систему', description: 'Вы должны быть авторизованы, чтобы отправить жалобу.' });
-      return;
-    }
-    if (isReporting) return;
-
-    setIsReporting(true);
-    try {
-      await addDoc(collection(firestore, 'reports'), {
-        entityId: post.id,
-        entityType: 'post',
-        entityTitle: post.title,
-        reportedBy: user.uid,
-        status: 'open',
-        createdAt: serverTimestamp(),
-      });
-      toast({ title: 'Жалоба отправлена', description: 'Спасибо! Модераторы рассмотрят вашу жалобу в ближайшее время.' });
-    } catch (error) {
-      console.error('Failed to submit report', error);
-      toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось отправить жалобу.' });
-    } finally {
-      setIsReporting(false);
-    }
-  };
-
   const isAuthor = user && post.authorId === user.uid;
+  
+  const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' ');
 
   return (
-    <div className="flex items-center gap-2 ml-auto">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleLike}
-          className={isLiked ? 'text-red-500 hover:text-red-600' : ''}
-        >
-          <Heart className={`mr-2 h-5 w-5 ${isLiked ? 'fill-current' : ''}`} />
-          {likesCount}
-        </Button>
+    <div className="flex items-center gap-1 ml-auto">
+        <form action={handleLikeAction}>
+            <Button
+              type="submit"
+              variant="ghost"
+              size="sm"
+              disabled={isPending}
+              className={cn(optimisticState.isLiked ? 'text-red-500 hover:text-red-600' : 'text-text-secondary hover:text-white')}
+            >
+              <AnimatePresence>
+                <motion.div
+                  key={optimisticState.isLiked ? 'liked' : 'unliked'}
+                  initial={{ scale: 0.8, rotate: -20 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 10, duration: 0.2 }}
+                  className="flex items-center"
+                >
+                  <Heart className={cn("mr-2 h-5 w-5", optimisticState.isLiked && 'fill-current')} />
+                </motion.div>
+              </AnimatePresence>
+              {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : optimisticState.likesCount}
+            </Button>
+        </form>
         
-        <Button variant="ghost" size="sm" asChild>
+        <Button variant="ghost" size="sm" asChild className="text-text-secondary hover:text-white">
            <a href="#comments">
              <MessageCircle className="mr-2 h-5 w-5" />
              {post.commentsCount || 0}
@@ -136,29 +108,12 @@ export function PostActions({ post }: PostActionsProps) {
 
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                    <MoreHorizontal className="h-5 w-5" />
-                </Button>
+                <Button variant="ghost" size="icon" className="text-text-secondary hover:text-white"><MoreHorizontal className="h-5 w-5" /></Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={handleShare}>
-                    <Share2 className="mr-2 h-4 w-4" />
-                    <span>Поделиться</span>
-                </DropdownMenuItem>
-                {isAuthor && (
-                    <DropdownMenuItem asChild>
-                        <Link href={`/posts/edit/${post.id}`}>
-                            <Edit3 className="mr-2 h-4 w-4" />
-                            <span>Редактировать</span>
-                        </Link>
-                    </DropdownMenuItem>
-                )}
-                {!isAuthor && (
-                    <DropdownMenuItem onSelect={handleReport} disabled={isReporting} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
-                        <Flag className="mr-2 h-4 w-4" />
-                        <span>{isReporting ? 'Отправка...' : 'Пожаловаться'}</span>
-                    </DropdownMenuItem>
-                )}
+                <DropdownMenuItem onSelect={handleShare}><Share2 className="mr-2 h-4 w-4" /><span>Поделиться</span></DropdownMenuItem>
+                {isAuthor && (<DropdownMenuItem asChild><Link href={`/posts/edit/${post.id}`}><Edit3 className="mr-2 h-4 w-4" /><span>Редактировать</span></Link></DropdownMenuItem>)}
+                {!isAuthor && (<DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive"><Flag className="mr-2 h-4 w-4" /><span>Пожаловаться</span></DropdownMenuItem>)}
             </DropdownMenuContent>
         </DropdownMenu>
       </div>
