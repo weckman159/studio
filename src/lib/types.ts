@@ -1,5 +1,28 @@
+
 // src/lib/types.ts
 import type { Timestamp } from 'firebase/firestore';
+
+// --- BRANDED TYPES ---
+export type UserId = string & { readonly __brand: 'UserId' };
+export type PostId = string & { readonly __brand: 'PostId' };
+export type CarId = string & { readonly __brand: 'CarId' };
+export type CommentId = string & { readonly __brand: 'CommentId' };
+export type CommunityId = string & { readonly __brand: 'CommunityId' };
+export type ListingId = string & { readonly __brand: 'ListingId' };
+export type EventId = string & { readonly __brand: 'EventId' };
+export type NotificationId = string & { readonly __brand: 'NotificationId' };
+export type WorkshopId = string & { readonly __brand: 'WorkshopId' };
+export type ReviewId = string & { readonly __brand: 'ReviewId' };
+export type VotingId = string & { readonly __brand: 'VotingId' };
+export type NewsId = string & { readonly __brand: 'NewsId' };
+export type FeedbackId = string & { readonly __brand: 'FeedbackId' };
+export type DialogId = string & { readonly __brand: 'DialogId' };
+export type MessageId = string & { readonly __brand: 'MessageId' };
+export type AchievementId = string & { readonly __brand: 'AchievementId' };
+export type TimelineEntryId = string & { readonly __brand: 'TimelineEntryId' };
+export type ExpenseId = string & { readonly __brand: 'ExpenseId' };
+export type InventoryItemId = string & { readonly __brand: 'InventoryItemId' };
+
 
 // --- ENUMS AND TYPES FROM OLDER CAR.TS ---
 export type CarStatus = 'owned' | 'sold' | 'project' | 'dream' | 'parted';
@@ -16,13 +39,13 @@ export interface WheelSetup {
 }
 
 export interface Modification {
-  id: string;
+  id: string; // Keep as string for sub-collection items without brand
   part: string;
   brand: string;
   model: string;
   price?: number;
   installedAt?: Timestamp;
-  postId?: string;
+  postId?: PostId;
   affiliateLink?: string;
 }
 
@@ -36,7 +59,7 @@ export interface UserRoles {
 }
 
 export interface Achievement {
-  id: string;
+  id: AchievementId;
   icon: string;
   title: string;
   unlocked: boolean;
@@ -44,8 +67,8 @@ export interface Achievement {
 
 // Merged User type
 export interface User {
-  id: string;
-  uid: string;
+  id: UserId;
+  uid: UserId;
   displayName: string;
   name: string; // for compatibility
   email?: string;
@@ -83,36 +106,6 @@ export interface User {
   role?: 'user' | 'moderator' | 'admin';
 }
 
-export interface ProfileLocation {
-  city: string;
-  region: string;
-  country: string;
-}
-
-export interface MarketplaceStats {
-  activeCount: number;
-  soldCount: number;
-  soldSumEUR: number;
-  listedSumEUR: number;
-  avgPriceEUR: number;
-}
-
-export interface PrivacySettings {
-  showSoldPublicly: boolean;
-}
-
-export interface Profile {
-  uid: string;
-  bio: string;
-  location: ProfileLocation;
-  avatarBlobUrl: string;
-  marketplaceStats: MarketplaceStats;
-  privacy: PrivacySettings;
-  favoritesLimit: number; // 20 base, -1 premium
-  createdAt: Date;
-  updatedAt: Date;
-}
-
 export interface TUVStatus {
   date: Date;
   daysRemaining: number;
@@ -128,7 +121,7 @@ export interface TUVHistory {
 }
 
 export interface CarExpense {
-  id: string;
+  id: ExpenseId;
   date: Date;
   category: 'fuel' | 'maintenance' | 'insurance' | 'tuning' | 'other';
   amountEUR: number;
@@ -138,23 +131,23 @@ export interface CarExpense {
 
 // MERGED Car type
 export interface Car {
-  id: string;
-  uid: string;
-  vin: string;
+  id: CarId;
+  uid: UserId;
+  vin?: string;
   make: string;
   model: string;
   year: number;
   photos: { url: string; blurhash?: string; }[];
-  tuv: TUVStatus;
+  tuv?: TUVStatus;
   tuvHistory?: TUVHistory[];
-  expenses: CarExpense[];
-  totalExpensesEUR: number;
+  expenses?: CarExpense[];
+  totalExpensesEUR?: number;
   createdAt: any;
   updatedAt: any;
   
   // Merged from old type for compatibility
   brand: string; // Redundant with 'make', but needed for old components
-  userId: string; // Redundant with 'uid', but needed for old components
+  userId: UserId; // Redundant with 'uid', but needed for old components
   description?: string;
   photoUrl?: string;
   engine?: string;
@@ -184,9 +177,9 @@ export interface Car {
 }
 
 export interface Listing {
-  id: string;
-  uid: string;
-  carId: string;
+  id: ListingId;
+  uid: UserId;
+  carId: CarId;
   title: string;
   description: string;
   priceEUR: number;
@@ -196,21 +189,14 @@ export interface Listing {
   expiresAt: Date; // 30 days from creation
   updatedAt: Date;
   viewCount?: number; // Premium only
-  priceHistory?: PriceChange[]; // Premium only
   soldAt?: Date;
   soldPriceEUR?: number;
 }
 
-export interface PriceChange {
-  date: Date;
-  oldPriceEUR: number;
-  newPriceEUR: number;
-}
-
 export interface Favorite {
-  id: string;
-  uid: string;
-  listingId: string;
+  id: string; // Subcollection doc id can be string
+  uid: UserId;
+  listingId: ListingId;
   createdAt: Date;
   notifyOnPriceChange: boolean;
   notifyOnSold: boolean;
@@ -232,8 +218,8 @@ export type DashboardNotificationType =
   | 'voting_poll_ended';
 
 export interface DashboardNotification {
-  id: string;
-  uid: string;
+  id: NotificationId;
+  uid: UserId;
   type: DashboardNotificationType;
   title: string;
   message: string;
@@ -244,14 +230,14 @@ export interface DashboardNotification {
 }
 
 
-// --- OLD TYPES TO PRESERVE FUNCTIONALITY ---
+// --- OLD TYPES TO PRESERVE FUNCTIONALITY (with Branded Types) ---
 
 export interface Post {
-  id: string;
-  authorId: string;
+  id: PostId;
+  authorId: UserId;
   authorName: string;
   authorAvatar?: string;
-  carId?: string;
+  carId?: CarId;
   title: string;
   content: string; // Main HTML content
   imageUrl?: string; // The primary image for the post
@@ -264,19 +250,19 @@ export interface Post {
   views: number;
   createdAt: any; // Can be server or client timestamp
   updatedAt?: any;
-  communityId?: string;
+  communityId?: CommunityId;
 }
 
 export interface FeaturedCar {
   date: string;
-  carId: string;
-  userId: string;
+  carId: CarId;
+  userId: UserId;
 }
 
 export interface Comment {
-    id: string;
-    postId: string;
-    authorId: string; // userId
+    id: CommentId;
+    postId: PostId;
+    authorId: UserId; // userId
     authorName: string;
     authorAvatar?: string;
     content: string;
@@ -284,7 +270,7 @@ export interface Comment {
 }
 
 export interface Community {
-  id: string;
+  id: CommunityId;
   name: string;
   description: string;
   fullDescription?: string;
@@ -296,26 +282,26 @@ export interface Community {
   createdAt: any;
   updatedAt?: any;
   isPrivate: boolean;
-  adminId: string;
-  memberIds: string[];
+  adminId: UserId;
+  memberIds: UserId[];
 }
 
 export interface Voting {
-  id: string;
+  id: VotingId;
   question: string;
   options: string[];
   votes: number[] | { [key: string]: number }; // number[] for polls, object for car voting
-  votedUserIds?: string[];
-  contenderCarIds?: string[]; // optional for car of the day
+  votedUserIds?: UserId[];
+  contenderCarIds?: CarId[]; // optional for car of the day
   isActive: boolean;
   createdAt: any;
   endsAt?: any;
   totalVotes: number;
-  authorId?: string;
+  authorId?: UserId;
 }
 
 export interface MarketplaceItem {
-  id: string;
+  id: ListingId;
   title: string;
   brand?: string;
   model?: string;
@@ -329,7 +315,7 @@ export interface MarketplaceItem {
   location: string;
   imageUrl?: string;
   gallery?: { url: string; blurhash?: string }[];
-  sellerId: string;
+  sellerId: UserId;
   sellerName: string;
   sellerAvatar?: string;
   sellerPhone?: string;
@@ -341,7 +327,7 @@ export interface MarketplaceItem {
 
 
 export interface Workshop {
-  id: string;
+  id: WorkshopId;
   name: string;
   city: string;
   address: string;
@@ -356,13 +342,13 @@ export interface Workshop {
   updatedAt?: any;
   lat?: number;
   lng?: number;
-  createdBy?: string;
+  createdBy?: UserId;
 }
 
 export interface Review {
-  id: string;
-  workshopId?: string;
-  userId: string;
+  id: ReviewId;
+  workshopId?: WorkshopId;
+  userId: UserId;
   userName: string;
   userAvatar?: string;
   rating: number;
@@ -371,14 +357,14 @@ export interface Review {
 }
 
 export interface Feedback {
-  id: string;
+  id: FeedbackId;
   email?: string;
   msg: string;
   createdAt: any;
 }
 
 export interface Event {
-  id: string;
+  id: EventId;
   title: string;
   description: string;
   fullDescription?: string;
@@ -388,10 +374,10 @@ export interface Event {
   endDate?: any;
   category: string;
   imageUrl?: string;
-  organizerId: string;
+  organizerId: UserId;
   organizerName: string;
   organizerAvatar?: string;
-  participantIds: string[];
+  participantIds: UserId[];
   participantsCount: number;
   maxParticipants?: number;
   createdAt: any;
@@ -400,9 +386,9 @@ export interface Event {
 }
 
 export interface Notification {
-  id: string;
-  recipientId: string;
-  senderId?: string;
+  id: NotificationId;
+  recipientId: UserId;
+  senderId?: UserId;
   senderData?: {
     displayName: string;
     photoURL?: string;
@@ -411,14 +397,14 @@ export interface Notification {
   title: string;
   message: string;
   actionURL?: string;
-  relatedEntityId?: string;
+  relatedEntityId?: PostId | CarId | CommentId;
   relatedEntityType?: 'post' | 'car' | 'comment';
   read: boolean;
   createdAt: any;
 }
 
 export interface AutoNews {
-  id: string;
+  id: NewsId;
   title: string;
   description: string;
   imageUrl?: string;
@@ -430,8 +416,8 @@ export interface AutoNews {
 }
 
 export interface TimelineEntry {
-  id: string;
-  carId: string;
+  id: TimelineEntryId;
+  carId: CarId;
   date: any;
   type: TimelineType;
   title: string;
@@ -444,8 +430,8 @@ export interface TimelineEntry {
 }
 
 export interface InventoryItem {
-  id: string;
-  carId: string;
+  id: InventoryItemId;
+  carId: CarId;
   name: string;
   category: string;
   quantity: number;
@@ -460,7 +446,23 @@ export interface Report {
     entityId: string;
     entityType: 'post' | 'comment' | 'user';
     entityTitle: string;
-    reportedBy: string;
+    reportedBy: UserId;
     status: 'open' | 'resolved' | 'dismissed';
     createdAt: any;
+}
+
+export interface Dialog {
+  id: DialogId,
+  participantIds: UserId[];
+  lastMessageText?: string;
+  lastMessageAt?: any;
+  unreadCount?: { [key: string]: number };
+}
+
+export interface Message {
+  id: MessageId,
+  dialogId: DialogId,
+  authorId: UserId,
+  text: string;
+  createdAt: any;
 }
