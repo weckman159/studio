@@ -11,9 +11,8 @@ import { Calendar, FileText } from 'lucide-react';
 import type { Post, Comment } from '@/lib/types';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
-import { serializeFirestoreData } from '@/lib/utils';
-import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { cookies } from 'next/headers';
+import { postConverter, commentConverter } from '@/lib/firestore-converters';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,8 +36,8 @@ async function getPostData(postId: string): Promise<{ post: Post | null, comment
             return { post: null, comments: [], isLiked: false };
         }
         
-        const postDocRef = adminDb.collection('posts').doc(postId);
-        const commentsQuery = adminDb.collection('comments').where('postId', '==', postId).orderBy('createdAt', 'asc');
+        const postDocRef = adminDb.collection('posts').withConverter(postConverter).doc(postId);
+        const commentsQuery = adminDb.collection('comments').withConverter(commentConverter).where('postId', '==', postId).orderBy('createdAt', 'asc');
         const likeRef = currentUserId ? adminDb.collection('posts').doc(postId).collection('likes').doc(currentUserId) : null;
         
         const [postDocSnap, commentsSnapshot, likeSnap] = await Promise.all([
@@ -51,8 +50,10 @@ async function getPostData(postId: string): Promise<{ post: Post | null, comment
             notFound();
         }
 
-        const post = serializeFirestoreData({ id: postDocSnap.id, ...postDocSnap.data() } as Post);
-        const comments = commentsSnapshot.docs.map((doc: QueryDocumentSnapshot) => serializeFirestoreData({ id: doc.id, ...doc.data() } as Comment));
+        const post = postDocSnap.data();
+        if(!post) notFound();
+        
+        const comments = commentsSnapshot.docs.map(doc => doc.data());
         const isLiked = likeSnap?.exists ?? false;
 
         return { post, comments, isLiked };

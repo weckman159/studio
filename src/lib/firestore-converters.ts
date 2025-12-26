@@ -78,7 +78,7 @@ export const converter = <T>(): FirestoreDataConverter<T> => ({
 export const userConverter = converter<T.User>();
 export const postConverter = converter<T.Post>();
 export const carConverter = converter<T.Car>();
-export const timelineEntryConverter = converter<T.TimelineEntry>(); // Added
+export const timelineEntryConverter = converter<T.TimelineEntry>();
 export const commentConverter = converter<T.Comment>();
 export const communityConverter = converter<T.Community>();
 export const marketplaceItemConverter = converter<T.MarketplaceItem>();
@@ -89,3 +89,4 @@ export const reviewConverter = converter<T.Review>();
 export const votingConverter = converter<T.Voting>();
 export const dialogConverter = converter<T.Dialog>();
 export const messageConverter = converter<T.Message>();
+export const autoNewsConverter = converter<T.AutoNews>(); // Added this

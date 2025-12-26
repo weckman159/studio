@@ -1,9 +1,10 @@
+
 // src/app/posts/[id]/page.tsx
 import { notFound } from 'next/navigation'
 import { getAdminDb, getAdminAuth } from '@/lib/firebase-admin'
 import { cookies } from 'next/headers';
 import type { Metadata } from 'next'
-import { stripHtml, serializeFirestoreData } from '@/lib/utils'
+import { stripHtml } from '@/lib/utils'
 import Image from 'next/image'
 import type { Post, Comment } from '@/lib/types'
 import { PostComments } from './_components/PostComments'
@@ -11,6 +12,7 @@ import { PostActions } from './_components/PostActions'
 import { Calendar } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import Link from 'next/link'
+import { postConverter, commentConverter } from '@/lib/firestore-converters';
 
 // Утилита для получения ID текущего пользователя на сервере
 async function getCurrentUserId() {
@@ -28,9 +30,9 @@ async function getPostData(postId: string) {
     const db = getAdminDb();
     const currentUserId = await getCurrentUserId();
     
-    const postRef = db.collection('posts').doc(postId);
-    const commentsQuery = db.collection('comments').where('postId', '==', postId).orderBy('createdAt', 'asc');
-    // Проверяем, существует ли лайк от текущего пользователя
+    // ПОЧЕМУ ИСПРАВЛЕНО: Применяем конвертеры для автоматической типизации
+    const postRef = db.collection('posts').withConverter(postConverter).doc(postId);
+    const commentsQuery = db.collection('comments').withConverter(commentConverter).where('postId', '==', postId).orderBy('createdAt', 'asc');
     const likeRef = currentUserId ? db.collection('posts').doc(postId).collection('likes').doc(currentUserId) : null;
     
     const [postSnap, commentsSnap, likeSnap] = await Promise.all([
@@ -43,8 +45,11 @@ async function getPostData(postId: string) {
         notFound();
     }
 
-    const post = serializeFirestoreData({ id: postSnap.id, ...postSnap.data() }) as Post;
-    const comments = commentsSnap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() })) as Comment[];
+    // ПОЧЕМУ ИСПРАВЛЕНО: `serializeFirestoreData` больше не нужен, данные уже типизированы
+    const post = postSnap.data();
+    if (!post) notFound();
+
+    const comments = commentsSnap.docs.map(doc => doc.data());
     const isLiked = likeSnap?.exists ?? false;
     
     return { post, comments, isLiked };
@@ -108,7 +113,6 @@ export default async function PostPage({
                         <div className="flex items-center gap-1.5"><Calendar className="h-3 w-3" /><span>{post.createdAt ? new Date(post.createdAt).toLocaleDateString('ru-RU') : ''}</span></div>
                     </div>
                 </Link>
-                {/* Передаем начальное состояние лайка в компонент */}
                 <PostActions post={post} isLiked={isLiked} />
             </div>
 

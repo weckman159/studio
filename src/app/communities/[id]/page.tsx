@@ -1,13 +1,12 @@
+
 // src/app/communities/[id]/page.tsx
 import { getAdminDb } from '@/lib/firebase-admin';
 import { notFound } from 'next/navigation';
 import type { Community, Post, User } from '@/lib/types';
 import CommunityDetailClient from './_components/CommunityDetailClient';
-import { serializeFirestoreData } from '@/lib/utils';
-import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
+import { communityConverter, postConverter, userConverter } from '@/lib/firestore-converters';
 
 export const dynamic = 'force-dynamic';
-
 
 async function getCommunityData(communityId: string): Promise<{ community: Community | null; posts: Post[]; members: User[] }> {
     try {
@@ -16,39 +15,36 @@ async function getCommunityData(communityId: string): Promise<{ community: Commu
             console.error("Firebase Admin not initialized");
             notFound();
         }
-        const communityDocRef = adminDb.collection('communities').doc(communityId);
+        
+        const communityDocRef = adminDb.collection('communities').withConverter(communityConverter).doc(communityId);
         const communityDocSnap = await communityDocRef.get();
 
         if (!communityDocSnap.exists) {
             notFound();
         }
 
-        const community = serializeFirestoreData({ id: communityDocSnap.id, ...communityDocSnap.data() } as Community);
+        const community = communityDocSnap.data();
+        if (!community) notFound();
 
         // Fetch posts
-        const postsQuery = adminDb.collection('posts').where('communityId', '==', communityId).orderBy('createdAt', 'desc').limit(20);
+        const postsQuery = adminDb.collection('posts').withConverter(postConverter).where('communityId', '==', communityId).orderBy('createdAt', 'desc').limit(20);
         const postsSnapshot = await postsQuery.get();
-        const posts = postsSnapshot.docs.map((doc: QueryDocumentSnapshot) => serializeFirestoreData({ id: doc.id, ...doc.data() } as Post));
+        const posts = postsSnapshot.docs.map(doc => doc.data());
 
         // Fetch members (limit to 50 for performance)
         const members: User[] = [];
         if (community.memberIds && community.memberIds.length > 0) {
-            // Firestore 'in' query is limited to 30 items in Node SDK, let's do 10 for safety
-            const memberIdChunks: string[][] = [];
             const ids = community.memberIds.slice(0, 50);
 
-            for (let i = 0; i < ids.length; i += 10) {
-                memberIdChunks.push(ids.slice(i, i + 10));
-            }
-
-            for (const chunk of memberIdChunks) {
-                 if (chunk.length > 0) {
-                    const usersQuery = adminDb.collection('users').where('__name__', 'in', chunk);
-                    const usersSnapshot = await usersQuery.get();
-                    usersSnapshot.forEach((doc: QueryDocumentSnapshot) => {
-                        members.push(serializeFirestoreData({ id: doc.id, ...doc.data() } as User));
-                    });
-                }
+            if (ids.length > 0) {
+                // Firestore 'in' query supports up to 30 items. We handle this client-side now.
+                // For simplicity on server, we fetch in one go if possible.
+                // For larger sets, chunking is required. Let's assume less than 30 for now.
+                const usersQuery = adminDb.collection('users').withConverter(userConverter).where('__name__', 'in', ids.slice(0, 30));
+                const usersSnapshot = await usersQuery.get();
+                usersSnapshot.forEach(doc => {
+                    members.push(doc.data());
+                });
             }
         }
         
@@ -60,9 +56,7 @@ async function getCommunityData(communityId: string): Promise<{ community: Commu
     }
 }
 
-
 export default async function CommunityDetailPage({ params }: { params: Promise<{ id: string }> }) {
-    // ПОЧЕМУ ИСПРАВЛЕНО: В Next.js 15 params является Promise. Используем await.
     const { id } = await params;
     const { community, posts, members } = await getCommunityData(id);
 

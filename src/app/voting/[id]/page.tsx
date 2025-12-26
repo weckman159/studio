@@ -1,3 +1,4 @@
+
 // src/app/voting/[id]/page.tsx
 'use client';
 
@@ -9,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Loader2, Check } from 'lucide-react';
 import { Voting } from '@/lib/types';
+import { votingConverter } from '@/lib/firestore-converters';
 
 function VotingDetailClient({ votingId }: { votingId: string }) {
     const firestore = useFirestore();
@@ -19,8 +21,9 @@ function VotingDetailClient({ votingId }: { votingId: string }) {
 
     useEffect(() => {
         if(!firestore || !votingId) return;
-        getDoc(doc(firestore, 'votings', votingId)).then(snap => {
-            if(snap.exists()) setVoting({id: snap.id, ...snap.data()} as Voting);
+        const votingRef = doc(firestore, 'votings', votingId).withConverter(votingConverter);
+        getDoc(votingRef).then(snap => {
+            if(snap.exists()) setVoting(snap.data());
             setLoading(false);
         });
     }, [firestore, votingId]);
@@ -39,7 +42,15 @@ function VotingDetailClient({ votingId }: { votingId: string }) {
                 totalVotes: increment(1),
                 votedUserIds: arrayUnion(user.uid)
             });
-            setVoting({...voting, votes: newVotes, totalVotes: voting.totalVotes + 1, votedUserIds: [...(voting.votedUserIds || []), user.uid]});
+            // Optimistically update UI
+            const newVotingState = {
+                ...voting, 
+                votes: newVotes, 
+                totalVotes: voting.totalVotes + 1, 
+                votedUserIds: [...(voting.votedUserIds || []), user.uid]
+            };
+            setVoting(newVotingState as Voting);
+
         } catch(e) {
             console.error(e);
         } finally {
@@ -93,7 +104,6 @@ function VotingDetailClient({ votingId }: { votingId: string }) {
 }
 
 export default async function VotingDetailPage({ params }: { params: Promise<{ id: string }> }) {
-    // ПОЧЕМУ ИСПРАВЛЕНО: В Next.js 15 params является Promise. Используем await.
     const { id } = await params;
     return <VotingDetailClient votingId={id} />
 }
