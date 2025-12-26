@@ -1,11 +1,10 @@
 // src/app/car/[id]/page.tsx
-import type { Car, TimelineEntry } from '@/lib/types';
-import CarDetailClient from './_components/CarDetailClient';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { getAdminDb } from '@/lib/firebase-admin';
-import { serializeFirestoreData } from '@/lib/utils';
-import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
+import { carConverter, timelineEntryConverter } from '@/lib/firestore-converters';
+import type { Car, TimelineEntry } from '@/lib/types';
+import CarDetailClient from './_components/CarDetailClient';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -14,28 +13,23 @@ async function getCarData(carId: string): Promise<{ car: Car | null, timeline: T
   try {
     const adminDb = getAdminDb();
 
-    const carRef = adminDb.collection('cars').doc(carId);
+    // ПОЧЕМУ ИСПРАВЛЕНО: Применяем конвертер для получения строго типизированных данных.
+    const carRef = adminDb.collection('cars').doc(carId).withConverter(carConverter);
     const carSnap = await carRef.get();
 
     if (!carSnap.exists) {
       notFound();
     }
+    const car = carSnap.data(); // `serializeFirestoreData` больше не нужен, т.к. конвертер делает всю работу.
 
-    const car = { id: carSnap.id, ...carSnap.data() } as Car;
-
-    // Fetch timeline subcollection
-    const timelineRef = carRef.collection('timeline');
-    const timelineQuery = timelineRef.orderBy('date', 'desc');
+    // ПОЧЕМУ ИСПРАВЛЕНО: Применяем конвертер к подколлекции.
+    const timelineQuery = carRef.collection('timeline').orderBy('date', 'desc').withConverter(timelineEntryConverter);
     const timelineSnap = await timelineQuery.get();
     
-    const timeline = timelineSnap.docs.map((doc: QueryDocumentSnapshot) => 
-        serializeFirestoreData({ id: doc.id, ...doc.data() }) as TimelineEntry
-    );
+    // `serializeFirestoreData` больше не нужен.
+    const timeline = timelineSnap.docs.map(doc => doc.data());
 
-    return { 
-        car: serializeFirestoreData(car), 
-        timeline 
-    };
+    return { car, timeline };
   } catch (error) {
     console.error("Error fetching car data on server:", error);
     return { car: null, timeline: [] };
@@ -43,7 +37,6 @@ async function getCarData(carId: string): Promise<{ car: Car | null, timeline: T
 }
 
 export default async function CarPage({ params }: { params: Promise<{ id: string }> }) {
-  // ПОЧЕМУ ИСПРАВЛЕНО: В Next.js 15 params является Promise. Используем await.
   const { id } = await params;
   const { car, timeline } = await getCarData(id);
 
@@ -51,6 +44,7 @@ export default async function CarPage({ params }: { params: Promise<{ id: string
     notFound();
   }
 
+  // Данные уже типизированы и сериализованы конвертером
   return (
     <div className="p-4 md:p-8">
       <CarDetailClient initialCar={car} initialTimeline={timeline} />
@@ -59,7 +53,6 @@ export default async function CarPage({ params }: { params: Promise<{ id: string
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ id:string }> }): Promise<Metadata> {
-  // ПОЧЕМУ ИСПРАВЛЕНО: В Next.js 15 params является Promise. Используем await.
   const { id } = await params;
   const { car } = await getCarData(id);
 
@@ -67,7 +60,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id:string
 
   const title = `${car.brand} ${car.model} ${car.year}`;
   const description = `${car.engine || ''}, ${car.specs?.mileage?.toLocaleString() || '?'} км. Бортжурнал и история обслуживания на AutoSphere.`;
-  const image = car.photoUrl || (car.photos && car.photos.length > 0 ? car.photos[0] : undefined);
+  const image = car.photoUrl || (car.photos && car.photos.length > 0 ? car.photos[0]?.url : undefined);
 
   return {
     title: `${title} | Гараж AutoSphere`,

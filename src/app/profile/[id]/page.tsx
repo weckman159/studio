@@ -1,36 +1,32 @@
-
 // src/app/profile/[id]/page.tsx
-import { getAdminDb } from '@/lib/firebase-admin';
+import { getAdminDb, getAdminAuth } from '@/lib/firebase-admin';
 import { notFound } from 'next/navigation';
-import { serializeFirestoreData } from '@/lib/utils';
+import { cookies } from 'next/headers';
 import type { Car, Post, User } from '@/lib/types';
 import { ProfileSidebar } from '@/components/profile/ProfileSidebar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ProfileActions } from '@/components/profile/ProfileActions';
 import { ProfileTabs } from '@/components/profile/ProfileTabs';
-// ПОЧЕМУ ИСПРАВЛЕНО: Заменяем прямой импорт 'adminApp' и 'getAuth' на вызов единой функции-геттера.
-import { getAdminAuth } from '@/lib/firebase-admin';
-import { cookies } from 'next/headers';
+import { userConverter, carConverter, postConverter } from '@/lib/firestore-converters';
 
 /**
  * ПОЧЕМУ ИСПРАВЛЕНО:
- * Компонент полностью переписан в Server Component.
- * 1. SERVER-SIDE FETCHING: Вся загрузка данных происходит на сервере одним пакетом. Это радикально ускоряет загрузку страницы и улучшает SEO.
- * 2. БЕЗОПАСНОСТЬ: Используется Admin SDK для прямого доступа к БД, минуя клиентские правила безопасности.
- * 3. ЧИСТАЯ АРХИТЕКТУРА: Компонент теперь отвечает только за получение данных и композицию "глупых" клиентских компонентов.
- * 4. УБРАН SKELETON: Так как данные грузятся на сервере, страница отдается сразу с контентом, устраняя "прыжки" UI.
+ * 1. FIREBASE CONVERTERS: Интегрированы Firestore-конвертеры для получения строго типизированных данных (`User`, `Car`, `Post`).
+ * 2. НЕТ РУЧНОЙ СЕРИАЛИЗАЦИИ: Удалены все вызовы `serializeFirestoreData`, так как эту работу теперь выполняет конвертер.
+ * 3. ПРОИЗВОДИТЕЛЬНОСТЬ: Все запросы к БД выполняются параллельно через `Promise.all`.
  */
 
 async function getProfileData(profileId: string) {
   const db = getAdminDb();
   try {
-    const userRef = db.collection('users').doc(profileId);
+    // ПОЧЕМУ ИСПРАВЛЕНО: Используем .withConverter для автоматического преобразования данных.
+    const userRef = db.collection('users').withConverter(userConverter).doc(profileId);
     
-    // Запускаем все запросы параллельно
+    // Запускаем все запросы параллельно для максимальной производительности
     const [userSnap, carsSnap, postsSnap, followersSnap, followingSnap] = await Promise.all([
       userRef.get(),
-      db.collection('cars').where('userId', '==', profileId).get(),
-      db.collection('posts').where('authorId', '==', profileId).orderBy('createdAt', 'desc').get(),
+      db.collection('cars').withConverter(carConverter).where('userId', '==', profileId).get(),
+      db.collection('posts').withConverter(postConverter).where('authorId', '==', profileId).orderBy('createdAt', 'desc').get(),
       userRef.collection('followers').get(),
       userRef.collection('following').get()
     ]);
@@ -39,10 +35,12 @@ async function getProfileData(profileId: string) {
       notFound();
     }
     
-    // Сериализуем данные для передачи в клиентский компонент
-    const profile = serializeFirestoreData({ id: userSnap.id, ...userSnap.data() }) as User;
-    const cars = carsSnap.docs.map(d => serializeFirestoreData({ id: d.id, ...d.data() }) as Car);
-    const posts = postsSnap.docs.map(d => serializeFirestoreData({ id: d.id, ...d.data() }) as Post);
+    // `serializeFirestoreData` больше не нужен. `userSnap.data()` уже возвращает типизированный объект `User`.
+    const profile = userSnap.data();
+    if (!profile) notFound(); // Добавлена проверка на случай, если data() вернет undefined
+
+    const cars = carsSnap.docs.map(d => d.data());
+    const posts = postsSnap.docs.map(d => d.data());
     const followers = followersSnap.docs.map(d => d.id);
     const following = followingSnap.docs.map(d => d.id);
 
@@ -64,11 +62,9 @@ async function getProfileData(profileId: string) {
 
 async function getCurrentUserId() {
   try {
-    // ПОЧЕМУ ИСПРАВЛЕНО: Добавлен await для асинхронной функции cookies().
     const sessionCookie = (await cookies()).get('session')?.value;
     if (!sessionCookie) return null;
     
-    // ПОЧЕМУ ИСПРАВЛЕНО: Используем 'getAdminAuth()' вместо 'getAuth(adminApp)'.
     const auth = getAdminAuth();
     const decodedToken = await auth.verifySessionCookie(sessionCookie, true);
     return decodedToken.uid;
@@ -78,9 +74,7 @@ async function getCurrentUserId() {
   }
 }
 
-
 export default async function ProfilePage({ params }: { params: Promise<{ id: string }> }) {
-    // ПОЧЕМУ ИСПРАВЛЕНО: В Next.js 15 params является Promise. Используем await.
     const { id } = await params;
     const { profile, cars, posts, followers } = await getProfileData(id);
     const currentUserId = await getCurrentUserId();

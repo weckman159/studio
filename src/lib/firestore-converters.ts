@@ -1,4 +1,3 @@
-
 // src/lib/firestore-converters.ts
 import {
   DocumentData,
@@ -7,7 +6,7 @@ import {
   SnapshotOptions,
   Timestamp,
   WithFieldValue,
-} from 'firebase-admin/firestore';
+} from 'firebase/firestore'; // Note: Using client types, but they are compatible with admin-sdk types for this purpose
 import * as T from '@/lib/types';
 
 /**
@@ -22,8 +21,7 @@ function isPlainObject(value: any): value is Record<string, any> {
 
 /**
  * Recursively converts Firestore Timestamps to JavaScript Dates in a data object.
- * @param data The data object from Firestore.
- * @returns A new object with Date objects instead of Timestamps.
+ * This is safe to run on data that has already been partially converted.
  */
 const fromFirestoreRecursive = (data: DocumentData): DocumentData => {
   const result: any = {};
@@ -31,6 +29,8 @@ const fromFirestoreRecursive = (data: DocumentData): DocumentData => {
     const value = data[key];
     if (value instanceof Timestamp) {
       result[key] = value.toDate();
+    } else if (value instanceof Date) {
+      result[key] = value; // Already a Date, no conversion needed
     } else if (Array.isArray(value)) {
       result[key] = value.map(item => isPlainObject(item) ? fromFirestoreRecursive(item) : item);
     } else if (isPlainObject(value)) {
@@ -78,6 +78,7 @@ export const converter = <T>(): FirestoreDataConverter<T> => ({
 export const userConverter = converter<T.User>();
 export const postConverter = converter<T.Post>();
 export const carConverter = converter<T.Car>();
+export const timelineEntryConverter = converter<T.TimelineEntry>(); // Added
 export const commentConverter = converter<T.Comment>();
 export const communityConverter = converter<T.Community>();
 export const marketplaceItemConverter = converter<T.MarketplaceItem>();

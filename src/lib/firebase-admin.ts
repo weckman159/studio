@@ -37,15 +37,16 @@ try {
     console.warn('⚠️ Admin SDK работает в mock-режиме из-за ошибки инициализации.');
 }
 
-// ПОЧЕМУ ИСПРАВЛЕНО: Предыдущий mock-объект был реализован некорректно
-// и вызывал ошибку типизации. Новая версия точно симулирует цепочку вызовов Firestore API
-// и предотвращает падение сборки.
+// ПОЧЕМУ ИСПРАВЛЕНО: Mock-объект обновлен для поддержки `.withConverter()`.
+// Это позволяет коду, использующему конвертеры, не падать в окружениях,
+// где Firebase Admin SDK не инициализирован (например, при локальной сборке без ключа).
 const mockQueryMethods = {
     get: async () => ({ docs: [], empty: true, size: 0 }),
     where: function() { return this; },
     orderBy: function() { return this; },
     limit: function() { return this; },
     startAfter: function() { return this; },
+    withConverter: function() { return this; }, // Возвращает себя же для чейнинга
 };
 
 const mockDocRef = {
@@ -58,6 +59,7 @@ const mockDocRef = {
         add: async () => mockDocRef,
         ...mockQueryMethods,
     }),
+    withConverter: function() { return this; },
 };
 
 const mockCollectionRef = {
